@@ -1,0 +1,32 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:KfChatDotNetGui.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="250"
+        x:Class="KfChatDotNetGui.Views.IdentitySettingsWindow"
+        Width="450"
+        Height="360"
+        Title="Identity Settings">
+    <Design.DataContext>
+        <vm:IdentitySettingsWindowViewModel/>
+    </Design.DataContext>
+    
+    <StackPanel Margin="10">
+        <Label>XenForo Session Token</Label>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBox Text="{Binding XfSessionToken}"/>
+            <Button Click="TestTokenButton_OnClick" Grid.Column="1">Test Token</Button>
+        </Grid>
+        <Label>SneedChat Websocket URL</Label>
+        <TextBox Text="{Binding WsUri}"/>
+        <Label>Websocket Timeout</Label>
+        <TextBox Text="{Binding ReconnectTimeout}"/>
+        <Label>Anti-DDoS PoW Cookie Value</Label>
+        <TextBox Text="{Binding AntiDdosPow}"/>
+        <Label>Forum Username (Only use if test token fails due to Anti-DDoS)</Label>
+        <TextBox Text="{Binding Username}"/>
+        <Button Margin="0, 10, 0, 0" Click="SaveButton_OnClick">Save</Button>
+        <TextBlock Margin="0, 10, 0, 0" Name="SaveResult" IsVisible="False"/>
+    </StackPanel>
+</Window>
