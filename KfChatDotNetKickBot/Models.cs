@@ -23,6 +23,6 @@ public class Models
         // Because his shitty bot crashed and it's annoying not having notifications
         public bool EnableGambaSeshDetect { get; set; } = true;
         public int GambaSeshUserId { get; set; } = 168162;
-        public string KickIcon { get; set; } = "https://i.ibb.co/pzB1Jrq/kick.png";
+        public string KickIcon { get; set; } = "https://i.ibb.co/0cqwscx/kick.png";
     }
 }
