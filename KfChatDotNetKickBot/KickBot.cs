@@ -18,6 +18,12 @@ public class KickBot
     private Models.ConfigModel _config;
     private Thread _pingThread;
     private bool _pingEnabled = true;
+    private bool _gambaSeshPresent = false;
+    // Oh no it's an ever expanding list that may never get cleaned up!
+    // BUY MORE RAM
+    private List<int> _seenMsgIds = new List<int>();
+    // Suppresses the command handler on initial start so it doesn't pick up things already handled on restart
+    private bool _initialStartCooldown = true;
 
     public KickBot()
     {
@@ -54,6 +60,7 @@ public class KickBot
         _kickClient.OnChatMessage += OnKickChatMessage;
         _kickClient.OnWsReconnect += OnPusherWsReconnected;
         _kickClient.OnPusherSubscriptionSucceeded += OnPusherSubscriptionSucceeded;
+        _kickClient.OnStopStreamBroadcast += OnStopStreamBroadcast;
 
         _kfClient.StartWsClient().Wait();
         _kfClient.JoinRoom(_config.KfChatRoomId);
@@ -82,6 +89,7 @@ public class KickBot
             _logger.Debug("Pinging KF and Pusher");
             _kfClient.SendMessage("/ping");
             _kickClient.SendPusherPing();
+            if (_initialStartCooldown) _initialStartCooldown = false;
         }
     }
 
@@ -94,7 +102,26 @@ public class KickBot
 
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
+        if (_config.EnableGambaSeshDetect && _gambaSeshPresent)
+        {
+            AnsiConsole.MarkupLine("[red]Suppressing live stream notification as GambaSesh is present[/]");
+            return;
+        }
         
+        AnsiConsole.MarkupLine("[green]Streamer is live!!![/]");
+        _kfClient.SendMessage($"Bossman Live! {e?.Livestream.SessionTitle} https://kick.com/bossmanjack [i]This action was automated");
+    }
+
+    private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
+    {
+        if (_config.EnableGambaSeshDetect && _gambaSeshPresent)
+        {
+            AnsiConsole.MarkupLine("[red]Suppressing live stream notification as GambaSesh is present[/]");
+            return;
+        }
+        
+        AnsiConsole.MarkupLine("[green]Stream stopped!!![/]");
+        _kfClient.SendMessage("The stream is so over. [i]This action was automated");
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
@@ -103,6 +130,24 @@ public class KickBot
         foreach (var message in messages)
         {
             AnsiConsole.MarkupLine($"[yellow]KF[/] <{message.Author.Username}> {message.Message.EscapeMarkup()} ({message.MessageDate.LocalDateTime.ToShortTimeString()})");
+            if (!(!_gambaSeshPresent && _config.EnableGambaSeshDetect) && !_seenMsgIds.Contains(message.MessageId) && !_initialStartCooldown)
+            {
+                if (message.MessageRaw.StartsWith("!time"))
+                {
+                    var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                        TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")), TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").BaseUtcOffset);
+                    _kfClient.SendMessage($"It's currently {bmt:h:mm:ss tt} BMT");
+                }
+                else if (message.MessageRaw.StartsWith("!twisted"))
+                {
+                    _kfClient.SendMessage("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯");
+                }
+                else if (message.MessageRaw.StartsWith("!insanity"))
+                {
+                    _kfClient.SendMessage("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
+                }
+            }
+            _seenMsgIds.Add(message.MessageId);
         }
     }
 
@@ -110,7 +155,17 @@ public class KickBot
     {
         if (e == null) return;
         AnsiConsole.MarkupLine($"[green]Kick[/] <{e.Sender.Username}> {e.Content.EscapeMarkup()} ({e.CreatedAt.LocalDateTime.ToShortTimeString()})");
+        AnsiConsole.MarkupLine($"[cyan]BB Code Translation: {e.Content.TranslateKickEmotes().EscapeMarkup()}[/]");
+        if (_gambaSeshPresent && _config.EnableGambaSeshDetect)
+        {
+            return;
+        }
 
+        if (e.Sender.Slug == "bossmanjack")
+        {
+            AnsiConsole.MarkupLine("[green]Message from BossmanJack[/]");
+            _kfClient.SendMessage($"[img]{_config.KickIcon}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
+        }
     }
     
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
@@ -118,12 +173,20 @@ public class KickBot
         _logger.Debug($"Received {users.Count} user join events");
         foreach (var user in users)
         {
+            if (user.Id == _config.GambaSeshUserId && _config.EnableGambaSeshDetect)
+            {
+                _gambaSeshPresent = true;
+            }
             AnsiConsole.MarkupLine($"[green]{user.Username.EscapeMarkup()} joined![/]");
         }
     }
 
     private void OnUsersParted(object sender, List<int> userIds)
     {
+        if (userIds.Contains(_config.GambaSeshUserId) && _config.EnableGambaSeshDetect)
+        {
+            _gambaSeshPresent = false;
+        }
         _logger.Debug($"Received {userIds.Count} user part events");
         foreach (var id in userIds)
         {

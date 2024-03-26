@@ -20,5 +20,9 @@ public class Models
         public int PusherReconnectTimeout { get; set; } = 30;
         // Todo: Find a way to extract this from the browser as it's not valid forever
         public string? XfTokenValue { get; set; }
+        // Because his shitty bot crashed and it's annoying not having notifications
+        public bool EnableGambaSeshDetect { get; set; } = true;
+        public int GambaSeshUserId { get; set; } = 168162;
+        public string KickIcon { get; set; } = "https://i.ibb.co/pzB1Jrq/kick.png";
     }
 }
