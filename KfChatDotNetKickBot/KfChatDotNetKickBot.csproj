@@ -24,8 +24,10 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
       <None Remove="config.json" />
-      <Content Include="config.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Content Include="config.json" />
+      <None Remove="NLog.config" />
+      <Content Include="NLog.config">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
 
