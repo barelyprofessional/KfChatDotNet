@@ -87,6 +87,7 @@ public class KickBot
         {
             Thread.Sleep(TimeSpan.FromSeconds(15));
             _logger.Debug("Pinging KF and Pusher");
+            AnsiConsole.MarkupLine("[yellow]Pinging KF and Pusher[/]");
             _kfClient.SendMessage("/ping");
             _kickClient.SendPusherPing();
             if (_initialStartCooldown) _initialStartCooldown = false;
@@ -102,26 +103,14 @@ public class KickBot
 
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
-        if (_config.EnableGambaSeshDetect && _gambaSeshPresent)
-        {
-            AnsiConsole.MarkupLine("[red]Suppressing live stream notification as GambaSesh is present[/]");
-            return;
-        }
-        
         AnsiConsole.MarkupLine("[green]Streamer is live!!![/]");
-        _kfClient.SendMessage($"Bossman Live! {e?.Livestream.SessionTitle} https://kick.com/bossmanjack [i]This action was automated");
+        _sendChatMessage($"Bossman Live! {e?.Livestream.SessionTitle} https://kick.com/bossmanjack [i]This action was automated");
     }
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
     {
-        if (_config.EnableGambaSeshDetect && _gambaSeshPresent)
-        {
-            AnsiConsole.MarkupLine("[red]Suppressing live stream notification as GambaSesh is present[/]");
-            return;
-        }
-        
         AnsiConsole.MarkupLine("[green]Stream stopped!!![/]");
-        _kfClient.SendMessage("The stream is so over. [i]This action was automated");
+        _sendChatMessage("The stream is so over. [i]This action was automated");
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
@@ -130,25 +119,40 @@ public class KickBot
         foreach (var message in messages)
         {
             AnsiConsole.MarkupLine($"[yellow]KF[/] <{message.Author.Username}> {message.Message.EscapeMarkup()} ({message.MessageDate.LocalDateTime.ToShortTimeString()})");
-            if (!(!_gambaSeshPresent && _config.EnableGambaSeshDetect) && !_seenMsgIds.Contains(message.MessageId) && !_initialStartCooldown)
+            if (!_seenMsgIds.Contains(message.MessageId) && !_initialStartCooldown)
             {
                 if (message.MessageRaw.StartsWith("!time"))
                 {
                     var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
                         TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")), TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").BaseUtcOffset);
-                    _kfClient.SendMessage($"It's currently {bmt:h:mm:ss tt} BMT");
+                    _sendChatMessage($"It's currently {bmt:h:mm:ss tt} BMT");
                 }
                 else if (message.MessageRaw.StartsWith("!twisted"))
                 {
-                    _kfClient.SendMessage("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯");
+                    _sendChatMessage("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯");
                 }
                 else if (message.MessageRaw.StartsWith("!insanity"))
                 {
-                    _kfClient.SendMessage("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
+                    _sendChatMessage("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
                 }
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[blue]_seenMsgIds check => {!_seenMsgIds.Contains(message.MessageId)}, _initialStartCooldown => {_initialStartCooldown}[/]");
             }
             _seenMsgIds.Add(message.MessageId);
         }
+    }
+
+    private void _sendChatMessage(string message)
+    {
+        if (_gambaSeshPresent && _config.EnableGambaSeshDetect)
+        {
+            AnsiConsole.MarkupLine($"[red]Not sending message '{message.EscapeMarkup()}' as GambaSesh is present[/]");
+            return;
+        }
+
+        _kfClient.SendMessage(message);
     }
 
     private void OnKickChatMessage(object sender, KickModels.ChatMessageEventModel? e)
@@ -156,15 +160,11 @@ public class KickBot
         if (e == null) return;
         AnsiConsole.MarkupLine($"[green]Kick[/] <{e.Sender.Username}> {e.Content.EscapeMarkup()} ({e.CreatedAt.LocalDateTime.ToShortTimeString()})");
         AnsiConsole.MarkupLine($"[cyan]BB Code Translation: {e.Content.TranslateKickEmotes().EscapeMarkup()}[/]");
-        if (_gambaSeshPresent && _config.EnableGambaSeshDetect)
-        {
-            return;
-        }
 
         if (e.Sender.Slug == "bossmanjack")
         {
             AnsiConsole.MarkupLine("[green]Message from BossmanJack[/]");
-            _kfClient.SendMessage($"[img]{_config.KickIcon}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
+            _sendChatMessage($"[img]{_config.KickIcon}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
         }
     }
     
