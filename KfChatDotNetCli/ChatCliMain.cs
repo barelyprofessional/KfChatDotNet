@@ -19,7 +19,7 @@ public class ChatCliMain
         _roomId = roomId;
         _client = new ChatClient(new ChatClientConfigModel
         {
-            WsUri = new Uri("wss://kiwifarms.st/chat.ws"),
+            WsUri = new Uri("wss://kiwifarms.st:9443/chat.ws"),
             XfSessionToken = xfSessionToken
         });
 
@@ -30,7 +30,11 @@ public class ChatCliMain
         _client.OnWsReconnect += OnWsReconnected;
         
         _client.StartWsClient().Wait();
-        _client.JoinRoom(_roomId);
+        if (_roomId != int.MaxValue)
+        {
+            _logger.Debug($"Joining room {_roomId}");
+            _client.JoinRoom(_roomId);
+        }
 
         while (true)
         {
@@ -79,6 +83,7 @@ public class ChatCliMain
     private void OnWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
         AnsiConsole.MarkupLine($"[red]Reconnected due to {reconnectionInfo.Type}[/]");
+        if (_roomId == int.MaxValue) return;
         AnsiConsole.MarkupLine($"[green]Rejoining {_roomId}[/]");
         _client.JoinRoom(_roomId);
     }

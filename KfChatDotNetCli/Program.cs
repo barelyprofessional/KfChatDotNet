@@ -14,7 +14,7 @@ namespace KfChatDotNetCli
 
             [Option("debug", Required = false, Default = false, HelpText = "Enable debug logging")]
             public bool Debug { get; set; }
-            [Option('r', "room", Required = true, HelpText = "Room ID to join on start")]
+            [Option('r', "room", Required = false, Default = int.MaxValue, HelpText = "Room ID to join on start")]
             public int RoomId { get; set; }
         }
         static void Main(string[] args)
