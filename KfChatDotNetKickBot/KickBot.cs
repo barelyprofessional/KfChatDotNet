@@ -1,4 +1,5 @@
-﻿using KfChatDotNetWsClient;
+﻿using KfChatDotNetKickBot.Services;
+using KfChatDotNetWsClient;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
@@ -19,6 +20,7 @@ public class KickBot
     private Thread _pingThread;
     private bool _pingEnabled = true;
     private bool _gambaSeshPresent = false;
+    private string _xfSessionToken;
     // Oh no it's an ever expanding list that may never get cleaned up!
     // BUY MORE RAM
     private List<int> _seenMsgIds = new List<int>();
@@ -37,11 +39,12 @@ public class KickBot
 
         _config = JsonConvert.DeserializeObject<Models.ConfigModel>(File.ReadAllText(configPath)) ??
                   throw new InvalidOperationException();
+        RefreshXfToken();
         
         _kfClient = new ChatClient(new ChatClientConfigModel
         {
             WsUri = _config.KfWsEndpoint,
-            XfSessionToken = GetXfToken(),
+            XfSessionToken = _xfSessionToken,
             CookieDomain = _config.KfWsEndpoint.Host,
             Proxy = _config.KfProxy,
             ReconnectTimeout = _config.KfReconnectTimeout
@@ -55,6 +58,7 @@ public class KickBot
         _kfClient.OnUsersJoined += OnUsersJoined;
         _kfClient.OnWsDisconnection += OnKfWsDisconnected;
         _kfClient.OnWsReconnect += OnKfWsReconnected;
+        _kfClient.OnFailedToJoinRoom += OnFailedToJoinRoom;
 
         _kickClient.OnStreamerIsLive += OnStreamerIsLive;
         _kickClient.OnChatMessage += OnKickChatMessage;
@@ -81,24 +85,36 @@ public class KickBot
         }
     }
 
+    private void OnFailedToJoinRoom(object sender, string message)
+    {
+        _logger.Error($"Couldn't join the room. KF returned: {message}");
+        _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
+        RefreshXfToken();
+        _kfClient.UpdateToken(_xfSessionToken);
+        _logger.Info("Retrieved fresh token. Reconnecting.");
+        _kfClient.Disconnect();
+        _kfClient.StartWsClient().Wait();
+        _logger.Info("Client should be reconnecting now");
+    }
+
     private void PingThread()
     {
         while (_pingEnabled)
         {
             Thread.Sleep(TimeSpan.FromSeconds(15));
             _logger.Debug("Pinging KF and Pusher");
-            AnsiConsole.MarkupLine("[yellow]Pinging KF and Pusher[/]");
             _kfClient.SendMessage("/ping");
             _kickClient.SendPusherPing();
             if (_initialStartCooldown) _initialStartCooldown = false;
         }
     }
 
-    private string GetXfToken()
+    private void RefreshXfToken()
     {
-        //return Helpers.GetXfToken("xf_session", _config.KfWsEndpoint.Host, _config.FirefoxCookieContainer).Result ??
-        //       throw new InvalidOperationException();
-        return _config.XfTokenValue;
+        var cookie = KfTokenService.FetchSessionTokenAsync(_config.KfDomain, _config.KfUsername, _config.KfPassword,
+            _config.ChromiumPath, _config.KfProxy).Result;
+        _logger.Debug($"FetchSessionTokenAsync returned {cookie}");
+        _xfSessionToken = cookie;
     }
 
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
@@ -135,6 +151,10 @@ public class KickBot
                 {
                     _sendChatMessage("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
                 }
+                else if (message.MessageRaw.StartsWith("!help"))
+                {
+                    _sendChatMessage("[img]https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png[/img]", true);
+                }
             }
             else
             {
@@ -144,9 +164,9 @@ public class KickBot
         }
     }
 
-    private void _sendChatMessage(string message)
+    private void _sendChatMessage(string message, bool bypassSeshDetect = false)
     {
-        if (_gambaSeshPresent && _config.EnableGambaSeshDetect)
+        if (_gambaSeshPresent && _config.EnableGambaSeshDetect && !bypassSeshDetect)
         {
             AnsiConsole.MarkupLine($"[red]Not sending message '{message.EscapeMarkup()}' as GambaSesh is present[/]");
             return;
@@ -196,32 +216,28 @@ public class KickBot
 
     private void OnKfWsDisconnected(object sender, DisconnectionInfo disconnectionInfo)
     {
-        AnsiConsole.MarkupLine($"[red]Sneedchat disconnected due to {disconnectionInfo.Type}[/]");
-        AnsiConsole.MarkupLine("[yellow]Grabbing fresh token from browser[/]");
-        var token = GetXfToken();
-        AnsiConsole.MarkupLine($"[green]Obtained token = {token.EscapeMarkup()}[/]");
-        _kfClient.UpdateToken(token);
+        _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
-        AnsiConsole.MarkupLine($"[red]Sneedchat reconnected due to {reconnectionInfo.Type}[/]");
-        AnsiConsole.MarkupLine($"[green]Rejoining {_config.KfChatRoomId}[/]");
+        _logger.Error($"Sneedchat reconnected due to {reconnectionInfo.Type}");
+        _logger.Info($"Rejoining {_config.KfChatRoomId}");
         _kfClient.JoinRoom(_config.KfChatRoomId);
     }
     
     private void OnPusherWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
-        AnsiConsole.MarkupLine($"[red]Pusher reconnected due to {reconnectionInfo.Type}[/]");
+        _logger.Error($"Pusher reconnected due to {reconnectionInfo.Type}");
         foreach (var channel in _config.PusherChannels)
         {
-            AnsiConsole.MarkupLine($"[green]Rejoining {channel}[/]");
+            _logger.Info($"Rejoining {channel}");
             _kickClient.SendPusherSubscribe(channel);
         }
     }
 
     private void OnPusherSubscriptionSucceeded(object sender, PusherModels.BasePusherEventModel? e)
     {
-        AnsiConsole.MarkupLine($"[green]Pusher indicates subscription to {e?.Channel.EscapeMarkup()} was successful[/]");
+        _logger.Info($"Pusher indicates subscription to {e?.Channel} was successful");
     }
 }

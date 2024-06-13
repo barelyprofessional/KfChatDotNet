@@ -8,10 +8,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.3" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-      <PackageReference Include="NLog" Version="5.2.8" />
+      <PackageReference Include="NLog" Version="5.3.2" />
+      <PackageReference Include="PuppeteerSharp" Version="18.0.1" />
       <PackageReference Include="Spectre.Console" Version="0.48.0" />
+      <PackageReference Include="System.Text.Json" Version="8.0.3" />
     </ItemGroup>
 
     <ItemGroup>
@@ -29,6 +30,10 @@
       <Content Include="NLog.config">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Commands\" />
     </ItemGroup>
 
 </Project>

@@ -18,11 +18,12 @@ public class Models
         public string? PusherProxy { get; set; }
         public int KfReconnectTimeout { get; set; } = 30;
         public int PusherReconnectTimeout { get; set; } = 30;
-        // Todo: Find a way to extract this from the browser as it's not valid forever
-        public string? XfTokenValue { get; set; }
-        // Because his shitty bot crashed and it's annoying not having notifications
         public bool EnableGambaSeshDetect { get; set; } = true;
         public int GambaSeshUserId { get; set; } = 168162;
         public string KickIcon { get; set; } = "https://i.ibb.co/0cqwscx/kick.png";
+        public string KfDomain { get; set; } = "kiwifarms.st";
+        public required string KfUsername { get; set; }
+        public required string KfPassword { get; set; }
+        public string ChromiumPath { get; set; } = "chromium_install";
     }
 }
