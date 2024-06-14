@@ -40,10 +40,10 @@ public class KfTokenService
         await page.WaitForSelectorAsync("img[alt=\"Kiwi Farms\"]");
         if (await page.QuerySelectorAsync("html[data-template=\"login\"]") == null)
         {
-            logger.Debug("Page template is not login. This is expected if we're already logged in. Retrieving cookies");
+            logger.Debug("Page template is not login. This is expected if we're already logged in. Reloading page to get the freshest cookies then retrieving");
+            await page.ReloadAsync();
             return await GetXfSessionCookie();
         }
-        
         
         var usernameFieldSelector = await page.QuerySelectorAsync("input[autocomplete=\"username\"]");
         var passwordFieldSelector = await page.QuerySelectorAsync("input[autocomplete=\"current-password\"]");

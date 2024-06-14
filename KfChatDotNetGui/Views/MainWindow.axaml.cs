@@ -4,14 +4,12 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
-using Avalonia.Markup.Xaml;
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using KfChatDotNetGui.Models;
 using KfChatDotNetGui.ViewModels;
@@ -19,7 +17,6 @@ using KfChatDotNetWsClient;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
-using Newtonsoft.Json;
 using NLog;
 using Websocket.Client;
 
@@ -31,9 +28,9 @@ namespace KfChatDotNetGui.Views
         // Using an empty config as we can update it later through the UpdateConfig method
         // Having this instance created early is handy for wiring up the events
         private ChatClient _chatClient = new(new ChatClientConfigModel());
-        private SettingsModel _settings;
+        private SettingsModel _settings = null!;
         private int _currentRoom;
-        private ForumIdentityModel _forumIdentity;
+        private ForumIdentityModel? _forumIdentity = null!;
         
         public MainWindow()
         {
@@ -62,7 +59,7 @@ namespace KfChatDotNetGui.Views
             {
                 _logger.Info($"Received delete event for following message IDs: {string.Join(',', messageIds)}");
                 // Gotta make a copy of all the messages (annoyingly) as we'll be deleting stuff and .NET has a very obvious limitation there
-                var messages = (DataContext as MainWindowViewModel).Messages.ToList();
+                var messages = ((DataContext as MainWindowViewModel)!).Messages.ToList();
                 foreach (var message in messages)
                 {
                     foreach (var innerMessage in message.Messages.Where(m => messageIds.Contains(m.MessageId)))
@@ -71,13 +68,13 @@ namespace KfChatDotNetGui.Views
                         if (message.Messages.Count == 1)
                         {
                             _logger.Info("Removing parent message box");
-                            (DataContext as MainWindowViewModel).Messages.Remove(message);
+                            ((DataContext as MainWindowViewModel)!).Messages.Remove(message);
                         }
                         // Go scavenging if there are multiple messages and we don't want to lose the lot
                         else
                         {
-                            (DataContext as MainWindowViewModel)
-                                .Messages[(DataContext as MainWindowViewModel).Messages.IndexOf(message)].Messages
+                            ((DataContext as MainWindowViewModel)!)
+                                .Messages[((DataContext as MainWindowViewModel)!).Messages.IndexOf(message)].Messages
                                 .Remove(innerMessage);
                         }
 
@@ -100,8 +97,8 @@ namespace KfChatDotNetGui.Views
             Dispatcher.UIThread.InvokeAsync(() =>
             {
                 UpdateStatus("Reconnected to SneedChat. Reason was " + reconnectionInfo.Type);
-                (DataContext as MainWindowViewModel).Messages.Clear();
-                (DataContext as MainWindowViewModel).UserList.Clear();
+                ((DataContext as MainWindowViewModel)!).Messages.Clear();
+                ((DataContext as MainWindowViewModel)!).UserList.Clear();
             });
             
             _chatClient.JoinRoom(_currentRoom);
@@ -112,8 +109,8 @@ namespace KfChatDotNetGui.Views
             var context = new IdentitySettingsWindowViewModel();
             if (File.Exists("settings.json"))
             {
-                var settings = JsonConvert.DeserializeObject<SettingsModel>(File.ReadAllText("settings.json"));
-                context.WsUri = settings.WsUri;
+                var settings = JsonSerializer.Deserialize<SettingsModel>(File.ReadAllText("settings.json"));
+                context.WsUri = settings!.WsUri;
                 context.XfSessionToken = settings.XfSessionToken;
                 context.ReconnectTimeout = settings.ReconnectTimeout;
                 context.AntiDdosPow = settings.AntiDdosPow;
@@ -146,13 +143,13 @@ namespace KfChatDotNetGui.Views
             }
             ReloadSettings();
             UpdateStatus("Testing XenForo token validity");
-            ForumIdentityModel forumIdentity;
+            ForumIdentityModel? forumIdentity;
             if (string.IsNullOrEmpty(_settings.Username))
             {
                 try
                 {
-                    forumIdentity = await Helpers.ForumIdentity.GetForumIdentity(_settings.XfSessionToken,
-                        new Uri($"https://{_settings.WsUri.Host}/test-chat"), _settings.AntiDdosPow);
+                    forumIdentity = (await Helpers.ForumIdentity.GetForumIdentity(_settings.XfSessionToken,
+                        new Uri($"https://{_settings.WsUri.Host}/test-chat"), _settings.AntiDdosPow));
                 }
                 catch (Exception ex)
                 {
@@ -184,12 +181,12 @@ namespace KfChatDotNetGui.Views
             
             UpdateStatus("Token works! It belongs to " + forumIdentity.Username);
             _forumIdentity = forumIdentity;
-            (DataContext as MainWindowViewModel).UserId = _forumIdentity.Id;
+            ((DataContext as MainWindowViewModel)!).UserId = _forumIdentity.Id;
             var roomListControl = this.FindControl<ListBox>("RoomList");
             RoomSettingsModel.RoomList initialRoom;
-            if (roomListControl.SelectedItem == null)
+            if (roomListControl!.SelectedItem == null)
             {
-                initialRoom = (DataContext as MainWindowViewModel).RoomList.First();
+                initialRoom = (DataContext as MainWindowViewModel)?.RoomList.First()!;
             }
             else
             {
@@ -205,7 +202,7 @@ namespace KfChatDotNetGui.Views
             });
             
             await _chatClient.StartWsClient();
-            _chatClient.JoinRoom(initialRoom.Id);
+            _chatClient.JoinRoom(initialRoom!.Id);
             _currentRoom = initialRoom.Id;
             UpdateStatus("Connected!");
         }
@@ -216,12 +213,12 @@ namespace KfChatDotNetGui.Views
             {
                 foreach (var user in users)
                 {
-                    if ((DataContext as MainWindowViewModel).UserList.FirstOrDefault(x => x.Id == user.Id) != null)
+                    if (((DataContext as MainWindowViewModel)!).UserList.FirstOrDefault(x => x.Id == user.Id) != null)
                     {
                         _logger.Info($"{user.Username} ({user.Id}) is already in the list but has joined again. New tab? Ignoring!");
                         continue;
                     }
-                    (DataContext as MainWindowViewModel).UserList.Add(new MainWindowViewModel.UserListViewModel
+                    ((DataContext as MainWindowViewModel)!).UserList.Add(new MainWindowViewModel.UserListViewModel
                     {
                         Id = user.Id,
                         Name = user.Username
@@ -237,13 +234,13 @@ namespace KfChatDotNetGui.Views
             {
                 foreach (var id in userIds)
                 {
-                    var row = (DataContext as MainWindowViewModel).UserList.FirstOrDefault(x => x.Id == id);
+                    var row = ((DataContext as MainWindowViewModel)!).UserList.FirstOrDefault(x => x.Id == id);
                     if (row == null)
                     {
                         _logger.Info($"A user ({id}) who isn't in the list has parted, ignoring!");
                         continue;
                     }
-                    (DataContext as MainWindowViewModel).UserList.Remove(row);
+                    ((DataContext as MainWindowViewModel)!).UserList.Remove(row);
                 }
                 UpdateUserTotalStatus();
             });
@@ -253,7 +250,7 @@ namespace KfChatDotNetGui.Views
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                var previousMessage = (DataContext as MainWindowViewModel).Messages.LastOrDefault();
+                var previousMessage = ((DataContext as MainWindowViewModel)!).Messages.LastOrDefault();
                 if (previousMessage == null)
                 {
                     previousMessage = new MainWindowViewModel.MessageViewModel {AuthorId = -1};
@@ -261,7 +258,6 @@ namespace KfChatDotNetGui.Views
                 foreach (var message in messages)
                 {
                     _logger.Info("Received message, data payload next");
-                    _logger.Info(JsonConvert.SerializeObject(message, Formatting.Indented));
                     if (message.RoomId != _currentRoom)
                     {
                         _logger.Info($"Message {message.MessageId} belongs to another room (we're in {_currentRoom}, this one was for {message.RoomId}), ignoring.");
@@ -272,7 +268,7 @@ namespace KfChatDotNetGui.Views
                     {
                         _logger.Info("Received an edit. Going to rewrite message if it already exists, " +
                                      "if it doesn't, nothing will happen as this would occur when loading historically modified messages.");
-                        foreach (var msg in (DataContext as MainWindowViewModel).Messages)
+                        foreach (var msg in ((DataContext as MainWindowViewModel)!).Messages)
                         {
                             foreach (var innerMsg in msg.Messages.Where(m => m.MessageId == message.MessageId))
                             {
@@ -287,7 +283,7 @@ namespace KfChatDotNetGui.Views
                     if (previousMessage.AuthorId == message.Author.Id)
                     {
                         _logger.Info("Found a message from the same author, merging");
-                        var lastMessage = (DataContext as MainWindowViewModel).Messages.Last();
+                        var lastMessage = ((DataContext as MainWindowViewModel)!).Messages.Last();
                         lastMessage.Messages.Add(new MainWindowViewModel.InnerMessageViewModel
                         {
                             Message = WebUtility.HtmlDecode(message.MessageRaw),
@@ -312,11 +308,11 @@ namespace KfChatDotNetGui.Views
                         PostedAt = message.MessageDate.LocalDateTime,
                         AuthorId = message.Author.Id
                     };
-                    (DataContext as MainWindowViewModel).Messages.Add(viewMessage);
+                    ((DataContext as MainWindowViewModel)!).Messages.Add(viewMessage);
                     previousMessage = viewMessage;
                 }
                 var messagesControl = this.FindControl<ListBox>("ChatMessageList");
-                messagesControl.ScrollIntoView((DataContext as MainWindowViewModel).Messages.Last());
+                messagesControl!.ScrollIntoView(((DataContext as MainWindowViewModel)!).Messages.Last());
             });
         }
 
@@ -335,7 +331,7 @@ namespace KfChatDotNetGui.Views
             var context = new RoomSettingsWindowViewModel();
             if (File.Exists("rooms.json"))
             {
-                var settings = JsonConvert.DeserializeObject<RoomSettingsModel>(File.ReadAllText("rooms.json"));
+                var settings = JsonSerializer.Deserialize<RoomSettingsModel>(File.ReadAllText("rooms.json"));
                 context.RoomList.Clear();
                 foreach (var room in settings.Rooms)
                 {
@@ -364,7 +360,7 @@ namespace KfChatDotNetGui.Views
                 _logger.Error("Was asked to reload the settings but settings.json doesn't exist so I won't bother");
                 return;
             }
-            var settings = JsonConvert.DeserializeObject<SettingsModel>(File.ReadAllText("settings.json"));
+            var settings = JsonSerializer.Deserialize<SettingsModel>(File.ReadAllText("settings.json"));
             _settings = settings;
         }
 
@@ -375,7 +371,7 @@ namespace KfChatDotNetGui.Views
                 _logger.Error("Was asked to reload the room list but rooms.json doesn't exist so I won't bother");
                 return;
             }
-            var rooms = JsonConvert.DeserializeObject<RoomSettingsModel>(File.ReadAllText("rooms.json"));
+            var rooms = JsonSerializer.Deserialize<RoomSettingsModel>(File.ReadAllText("rooms.json"));
             (DataContext as MainWindowViewModel)!.RoomList = rooms!.Rooms;
         }
 
@@ -395,8 +391,8 @@ namespace KfChatDotNetGui.Views
                 return;
             }
             UpdateStatus($"Connected! Changing to {room.Name}");
-            (DataContext as MainWindowViewModel).Messages.Clear();
-            (DataContext as MainWindowViewModel).UserList.Clear();
+            ((DataContext as MainWindowViewModel)!).Messages.Clear();
+            (DataContext as MainWindowViewModel)?.UserList.Clear();
             _chatClient.JoinRoom(room.Id);
             _currentRoom = room.Id;
         }
@@ -468,7 +464,7 @@ namespace KfChatDotNetGui.Views
 
         private void OuterMessageRow_OnPointerEnter(object? sender, PointerEventArgs e)
         {
-            var children = (e.Source as ListBox).GetLogicalChildren().Cast<ListBoxItem>();
+            var children = ((e.Source as ListBox)!).GetLogicalChildren().Cast<ListBoxItem>();
             foreach (var child in children)
             {
                 // Bit of a ghetto hack but it ensures that there's only ever one subscriber

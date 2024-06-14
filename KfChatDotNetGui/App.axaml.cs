@@ -1,13 +1,13 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using KfChatDotNetGui.Models;
 using KfChatDotNetGui.ViewModels;
 using KfChatDotNetGui.Views;
-using Newtonsoft.Json;
 using NLog;
 
 namespace KfChatDotNetGui
@@ -27,7 +27,7 @@ namespace KfChatDotNetGui
                 var dataContext = new MainWindowViewModel();
                 if (File.Exists("rooms.json"))
                 {
-                    var rooms = JsonConvert.DeserializeObject<RoomSettingsModel>(File.ReadAllText("rooms.json"));
+                    var rooms = JsonSerializer.Deserialize<RoomSettingsModel>(File.ReadAllText("rooms.json"));
                     dataContext.RoomList = rooms!.Rooms;
 
                 }

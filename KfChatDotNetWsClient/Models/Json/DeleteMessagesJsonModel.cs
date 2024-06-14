@@ -1,9 +1,9 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace KfChatDotNetWsClient.Models.Json;
 
 public class DeleteMessagesJsonModel
 {
-    [JsonProperty("delete")]
+    [JsonPropertyName("delete")]
     public List<int> MessageIdsToDelete { get; set; }
 }

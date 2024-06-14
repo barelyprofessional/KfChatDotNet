@@ -1,32 +1,31 @@
-﻿using KfChatDotNetKickBot.Services;
+﻿using System.Text.Json;
+using KfChatDotNetKickBot.Services;
 using KfChatDotNetWsClient;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
 using KickWsClient.Models;
-using Newtonsoft.Json;
 using NLog;
-using Spectre.Console;
 using Websocket.Client;
 
 namespace KfChatDotNetKickBot;
 
 public class KickBot
 {
-    private ChatClient _kfClient;
-    private KickWsClient.KickWsClient _kickClient;
-    private Logger _logger = LogManager.GetCurrentClassLogger();
-    private Models.ConfigModel _config;
-    private Thread _pingThread;
-    private bool _pingEnabled = true;
-    private bool _gambaSeshPresent = false;
-    private string _xfSessionToken;
+    private readonly ChatClient _kfClient;
+    private readonly KickWsClient.KickWsClient _kickClient;
+    private readonly Logger _logger = LogManager.GetCurrentClassLogger();
+    private readonly Models.ConfigModel _config;
+    private readonly bool _pingEnabled = true;
+    private bool _gambaSeshPresent;
+    private string _xfSessionToken = null!;
     // Oh no it's an ever expanding list that may never get cleaned up!
     // BUY MORE RAM
-    private List<int> _seenMsgIds = new List<int>();
-    // Suppresses the command handler on initial start so it doesn't pick up things already handled on restart
+    private readonly List<int> _seenMsgIds = [];
+    // Suppresses the command handler on initial start, so it doesn't pick up things already handled on restart
     private bool _initialStartCooldown = true;
-
+    private readonly CancellationToken _cancellationToken = new();
+    
     public KickBot()
     {
         _logger.Info("Bot starting!");
@@ -37,9 +36,9 @@ public class KickBot
             Environment.Exit(1);
         }
 
-        _config = JsonConvert.DeserializeObject<Models.ConfigModel>(File.ReadAllText(configPath)) ??
+        _config = JsonSerializer.Deserialize<Models.ConfigModel>(File.ReadAllText(configPath)) ??
                   throw new InvalidOperationException();
-        RefreshXfToken();
+        RefreshXfToken().Wait(_cancellationToken);
         
         _kfClient = new ChatClient(new ChatClientConfigModel
         {
@@ -66,22 +65,22 @@ public class KickBot
         _kickClient.OnPusherSubscriptionSucceeded += OnPusherSubscriptionSucceeded;
         _kickClient.OnStopStreamBroadcast += OnStopStreamBroadcast;
 
-        _kfClient.StartWsClient().Wait();
+        _kfClient.StartWsClient().Wait(_cancellationToken);
         _kfClient.JoinRoom(_config.KfChatRoomId);
 
-        _kickClient.StartWsClient().Wait();
+        _kickClient.StartWsClient().Wait(_cancellationToken);
         foreach (var channel in _config.PusherChannels)
         {
             _kickClient.SendPusherSubscribe(channel);
         }
 
-        _pingThread = new Thread(PingThread);
-        _pingThread.Start();
+        _logger.Debug("Creating ping thread and starting it");
+        var pingThread = new Thread(PingThread);
+        pingThread.Start();
         
         while (true)
         {
-            var input = AnsiConsole.Prompt(new TextPrompt<string>("Enter Message:"));
-            _kfClient.SendMessage(input);
+            Console.ReadLine();
         }
     }
 
@@ -89,11 +88,11 @@ public class KickBot
     {
         _logger.Error($"Couldn't join the room. KF returned: {message}");
         _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
-        RefreshXfToken();
+        RefreshXfToken().Wait(_cancellationToken);
         _kfClient.UpdateToken(_xfSessionToken);
         _logger.Info("Retrieved fresh token. Reconnecting.");
         _kfClient.Disconnect();
-        _kfClient.StartWsClient().Wait();
+        _kfClient.StartWsClient().Wait(_cancellationToken);
         _logger.Info("Client should be reconnecting now");
     }
 
@@ -109,24 +108,22 @@ public class KickBot
         }
     }
 
-    private void RefreshXfToken()
+    private async Task RefreshXfToken()
     {
-        var cookie = KfTokenService.FetchSessionTokenAsync(_config.KfDomain, _config.KfUsername, _config.KfPassword,
-            _config.ChromiumPath, _config.KfProxy).Result;
+        var cookie = await KfTokenService.FetchSessionTokenAsync(_config.KfDomain, _config.KfUsername, _config.KfPassword,
+            _config.ChromiumPath, _config.KfProxy);
         _logger.Debug($"FetchSessionTokenAsync returned {cookie}");
         _xfSessionToken = cookie;
     }
 
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
-        AnsiConsole.MarkupLine("[green]Streamer is live!!![/]");
-        _sendChatMessage($"Bossman Live! {e?.Livestream.SessionTitle} https://kick.com/bossmanjack [i]This action was automated");
+        _sendChatMessage($"Bossman Live! {e?.Livestream.SessionTitle} https://kick.com/bossmanjack");
     }
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
     {
-        AnsiConsole.MarkupLine("[green]Stream stopped!!![/]");
-        _sendChatMessage("The stream is so over. [i]This action was automated");
+        _sendChatMessage("The stream is so over. :lossmanjack:");
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
@@ -134,7 +131,7 @@ public class KickBot
         _logger.Debug($"Received {messages.Count} message(s)");
         foreach (var message in messages)
         {
-            AnsiConsole.MarkupLine($"[yellow]KF[/] <{message.Author.Username}> {message.Message.EscapeMarkup()} ({message.MessageDate.LocalDateTime.ToShortTimeString()})");
+            _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
             if (!_seenMsgIds.Contains(message.MessageId) && !_initialStartCooldown)
             {
                 if (message.MessageRaw.StartsWith("!time"))
@@ -149,16 +146,17 @@ public class KickBot
                 }
                 else if (message.MessageRaw.StartsWith("!insanity"))
                 {
+                    // ReSharper disable once StringLiteralTypo
                     _sendChatMessage("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
                 }
-                else if (message.MessageRaw.StartsWith("!help"))
+                else if (message.MessageRaw.StartsWith("!helpme"))
                 {
                     _sendChatMessage("[img]https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png[/img]", true);
                 }
             }
             else
             {
-                AnsiConsole.MarkupLine($"[blue]_seenMsgIds check => {!_seenMsgIds.Contains(message.MessageId)}, _initialStartCooldown => {_initialStartCooldown}[/]");
+                _logger.Debug($"_seenMsgIds check => {!_seenMsgIds.Contains(message.MessageId)}, _initialStartCooldown => {_initialStartCooldown}");
             }
             _seenMsgIds.Add(message.MessageId);
         }
@@ -168,7 +166,7 @@ public class KickBot
     {
         if (_gambaSeshPresent && _config.EnableGambaSeshDetect && !bypassSeshDetect)
         {
-            AnsiConsole.MarkupLine($"[red]Not sending message '{message.EscapeMarkup()}' as GambaSesh is present[/]");
+            _logger.Info($"Not sending message '{message}' as GambaSesh is present");
             return;
         }
 
@@ -177,15 +175,14 @@ public class KickBot
 
     private void OnKickChatMessage(object sender, KickModels.ChatMessageEventModel? e)
     {
-        if (e == null) return;
-        AnsiConsole.MarkupLine($"[green]Kick[/] <{e.Sender.Username}> {e.Content.EscapeMarkup()} ({e.CreatedAt.LocalDateTime.ToShortTimeString()})");
-        AnsiConsole.MarkupLine($"[cyan]BB Code Translation: {e.Content.TranslateKickEmotes().EscapeMarkup()}[/]");
+        if (e == null) return; 
+        _logger.Info($"Kick ({e.CreatedAt.LocalDateTime.ToLocalTime():HH:mm:ss}) <{e.Sender.Username}> {e.Content}");
+        _logger.Debug($"BB Code Translation: {e.Content.TranslateKickEmotes()}");
 
-        if (e.Sender.Slug == "bossmanjack")
-        {
-            AnsiConsole.MarkupLine("[green]Message from BossmanJack[/]");
-            _sendChatMessage($"[img]{_config.KickIcon}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
-        }
+        if (e.Sender.Slug != "bossmanjack") return;
+        
+        _logger.Debug("Message from BossmanJack");
+        _sendChatMessage($"[img]{_config.KickIcon}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
     }
     
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
@@ -195,9 +192,10 @@ public class KickBot
         {
             if (user.Id == _config.GambaSeshUserId && _config.EnableGambaSeshDetect)
             {
+                _logger.Info("GambaSesh is now present");
                 _gambaSeshPresent = true;
             }
-            AnsiConsole.MarkupLine($"[green]{user.Username.EscapeMarkup()} joined![/]");
+            _logger.Info($"{user.Username} joined!");
         }
     }
 
@@ -205,12 +203,8 @@ public class KickBot
     {
         if (userIds.Contains(_config.GambaSeshUserId) && _config.EnableGambaSeshDetect)
         {
+            _logger.Info("GambaSesh is no longer present");
             _gambaSeshPresent = false;
-        }
-        _logger.Debug($"Received {userIds.Count} user part events");
-        foreach (var id in userIds)
-        {
-            AnsiConsole.MarkupLine($"[red]{id} left the chat...[/]");
         }
     }
 

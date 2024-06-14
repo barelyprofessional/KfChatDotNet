@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -10,7 +11,6 @@ using Avalonia.Threading;
 using KfChatDotNetGui.Helpers;
 using KfChatDotNetGui.Models;
 using KfChatDotNetGui.ViewModels;
-using Newtonsoft.Json;
 using NLog;
 
 namespace KfChatDotNetGui.Views;
@@ -44,7 +44,8 @@ public partial class IdentitySettingsWindow : Window
                 AntiDdosPow = (DataContext as IdentitySettingsWindowViewModel).AntiDdosPow,
                 Username = (DataContext as IdentitySettingsWindowViewModel).Username
             };
-            File.WriteAllText("settings.json", JsonConvert.SerializeObject(settings, Formatting.Indented));
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText("settings.json", JsonSerializer.Serialize(settings, options));
         }
         catch (Exception ex)
         {

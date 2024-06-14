@@ -28,7 +28,6 @@
         <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.10" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
         <PackageReference Include="HtmlAgilityPack" Version="1.11.59" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
         <PackageReference Include="ReactiveUI" Version="19.5.72" />
     </ItemGroup>
     <ItemGroup>

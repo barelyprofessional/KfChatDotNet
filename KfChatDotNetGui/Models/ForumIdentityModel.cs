@@ -1,20 +1,20 @@
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace KfChatDotNetGui.Models;
 
 public class ForumIdentityModel
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public int Id { get; set; }
-    [JsonProperty("username")]
+    [JsonPropertyName("username")]
     public string Username { get; set; }
-    [JsonProperty("avatar_url")]
+    [JsonPropertyName("avatar_url")]
     public Uri AvatarUrl { get; set; }
     // Guessing it'll be the user ID as an int but no idea as this list is empty for me
-    [JsonProperty("ignored_users")]
+    [JsonPropertyName("ignored_users")]
     public List<string> IgnoredUsers { get; set; }
-    [JsonProperty("is_staff")]
+    [JsonPropertyName("is_staff")]
     public bool IsStaff { get; set; }
 }

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -16,7 +17,6 @@ using Avalonia.Threading;
 using HtmlAgilityPack;
 using KfChatDotNetGui.Models;
 using KfChatDotNetGui.ViewModels;
-using Newtonsoft.Json;
 using NLog;
 
 namespace KfChatDotNetGui.Views;
@@ -54,7 +54,9 @@ public partial class RoomSettingsWindow : Window
                     Name = room.Name
                 });
             }
-            File.WriteAllText("rooms.json", JsonConvert.SerializeObject(roomSettings, Formatting.Indented));
+
+            File.WriteAllText("rooms.json",
+                JsonSerializer.Serialize(roomSettings, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch (Exception ex)
         {
@@ -102,7 +104,7 @@ public partial class RoomSettingsWindow : Window
         var kfDomain = "kiwifarms.net";
         if (File.Exists("settings.json"))
         {
-            var settings = JsonConvert.DeserializeObject<SettingsModel>(await File.ReadAllTextAsync("settings.json"));
+            var settings = JsonSerializer.Deserialize<SettingsModel>(await File.ReadAllTextAsync("settings.json"));
             kfDomain = settings.WsUri.Host;
         }
 

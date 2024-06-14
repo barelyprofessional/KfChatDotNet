@@ -2,10 +2,10 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using KfChatDotNetGui.Models;
-using Newtonsoft.Json;
 
 namespace KfChatDotNetGui.Helpers;
 
@@ -36,7 +36,7 @@ public static class ForumIdentity
             }
 
             var accountJs = match.Groups[1].Value;
-            return JsonConvert.DeserializeObject<ForumIdentityModel>(accountJs);
+            return JsonSerializer.Deserialize<ForumIdentityModel>(accountJs);
         }
     }
 }

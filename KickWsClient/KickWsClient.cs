@@ -1,7 +1,8 @@
 ﻿using System.Net;
 using System.Net.WebSockets;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using KickWsClient.Models;
-using Newtonsoft.Json;
 using Websocket.Client;
 using NLog;
 
@@ -114,7 +115,7 @@ public class KickWsClient
     public void SendPusherPacket(string eventName, object data)
     {
         var pkt = new PusherModels.BasePusherRequestModel { Event = eventName, Data = data};
-        var json = JsonConvert.SerializeObject(pkt);
+        var json = JsonSerializer.Serialize(pkt);
         _logger.Debug("Sending message to Pusher");
         _logger.Debug(json);
         _wsClient.Send(json); 
@@ -152,6 +153,10 @@ public class KickWsClient
     private void WsMessageReceived(ResponseMessage message)
     {
         OnWsMessageReceived?.Invoke(this, message);
+        var options = new JsonSerializerOptions
+        {
+            NumberHandling = JsonNumberHandling.AllowReadingFromString
+        };
 
         if (message.Text == null)
         {
@@ -162,7 +167,7 @@ public class KickWsClient
         PusherModels.BasePusherEventModel pusherMsg;
         try
         {
-            pusherMsg = JsonConvert.DeserializeObject<PusherModels.BasePusherEventModel>(message.Text) ??
+            pusherMsg = JsonSerializer.Deserialize<PusherModels.BasePusherEventModel>(message.Text, options) ??
                         throw new InvalidOperationException();
         }
         catch (Exception e)
@@ -182,7 +187,7 @@ public class KickWsClient
             case "pusher:connection_established":
             {
                 var data =
-                    JsonConvert.DeserializeObject<PusherModels.PusherConnectionEstablishedEventModel>(pusherMsg.Data);
+                    JsonSerializer.Deserialize<PusherModels.PusherConnectionEstablishedEventModel>(pusherMsg.Data, options);
                 OnPusherConnectionEstablished?.Invoke(this, data);
                 return;
             }
@@ -194,67 +199,67 @@ public class KickWsClient
                 return;
             case @"App\Events\FollowersUpdated":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.FollowersUpdatedEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.FollowersUpdatedEventModel>(pusherMsg.Data, options);
                 OnFollowersUpdated?.Invoke(this, data);
                 return;
             }
             case @"App\Events\ChatMessageEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.ChatMessageEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.ChatMessageEventModel>(pusherMsg.Data, options);
                 OnChatMessage?.Invoke(this, data);
                 return;
             }
             case @"App\Events\ChannelSubscriptionEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.ChannelSubscriptionEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.ChannelSubscriptionEventModel>(pusherMsg.Data, options);
                 OnChannelSubscription?.Invoke(this, data);
                 return;
             }
             case @"App\Events\SubscriptionEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.SubscriptionEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.SubscriptionEventModel>(pusherMsg.Data, options);
                 OnSubscription?.Invoke(this, data);
                 return;
             }
             case @"App\Events\MessageDeletedEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.MessageDeletedEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.MessageDeletedEventModel>(pusherMsg.Data, options);
                 OnMessageDeleted?.Invoke(this, data);
                 return;
             }
             case @"App\Events\UserBannedEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.UserBannedEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.UserBannedEventModel>(pusherMsg.Data, options);
                 OnUserBanned?.Invoke(this, data);
                 return;
             }
             case @"App\Events\UserUnbannedEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.UserUnbannedEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.UserUnbannedEventModel>(pusherMsg.Data, options);
                 OnUserUnbanned?.Invoke(this, data);
                 return;
             }
             case @"App\Events\LiveStream\UpdatedLiveStreamEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.UpdatedLiveStreamEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.UpdatedLiveStreamEventModel>(pusherMsg.Data, options);
                 OnUpdatedLiveStream?.Invoke(this, data);
                 return;
             }
             case @"App\Events\StopStreamBroadcast":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.StopStreamBroadcastEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.StopStreamBroadcastEventModel>(pusherMsg.Data, options);
                 OnStopStreamBroadcast?.Invoke(this, data);
                 return;
             }
             case @"App\Events\StreamerIsLive":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.StreamerIsLiveEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.StreamerIsLiveEventModel>(pusherMsg.Data, options);
                 OnStreamerIsLive?.Invoke(this, data);
                 return;
             }
             case @"App\Events\PollUpdateEvent":
             {
-                var data = JsonConvert.DeserializeObject<KickModels.PollUpdateEventModel>(pusherMsg.Data);
+                var data = JsonSerializer.Deserialize<KickModels.PollUpdateEventModel>(pusherMsg.Data, options);
                 OnPollUpdate?.Invoke(this, data);
                 return;
             }

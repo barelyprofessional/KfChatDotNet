@@ -1,12 +1,12 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace KfChatDotNetWsClient.Models.Json;
 
 public class EditMessageJsonModel
 {
-    [JsonProperty("id")]
+    [JsonPropertyName("id")]
     public int Id { get; set; }
     
-    [JsonProperty("message")]
+    [JsonPropertyName("message")]
     public string Message { get; set; }
 }

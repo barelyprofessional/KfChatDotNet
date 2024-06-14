@@ -1,9 +1,10 @@
 using System.Net;
 using System.Net.WebSockets;
+using System.Text.Json;
+using System.Xml;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
-using Newtonsoft.Json;
 using NLog;
 using Websocket.Client;
 // It's a fucking lie. You must use conditional access or you WILL get NullReferenceErrors if an event is not in use
@@ -135,7 +136,7 @@ public class ChatClient
         Dictionary<string, object> packetType = new Dictionary<string, object>();
         try
         {
-            packetType = JsonConvert.DeserializeObject<Dictionary<string, object>>(message.Text)!;
+            packetType = JsonSerializer.Deserialize<Dictionary<string, object>>(message.Text)!;
         }
         catch (Exception e)
         {
@@ -198,23 +199,21 @@ public class ChatClient
 
     public void EditMessage(int messageId, string newMessage)
     {
-        // Explicitly set formatting to none as it must be inline (Newtonsoft will do this by default but just wanting to be explicit)
-        var payload = JsonConvert.SerializeObject(new EditMessageJsonModel {Id = messageId, Message = newMessage},
-            Formatting.None);
+        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
         _wsClient.Send($"/edit {payload}");
     }
 
     private void WsDeleteMessagesReceived(ResponseMessage message)
     {
-        var data = JsonConvert.DeserializeObject<DeleteMessagesJsonModel>(message.Text);
+        var data = JsonSerializer.Deserialize<DeleteMessagesJsonModel>(message.Text);
         _logger.Debug($"Received delete packet for messages: {string.Join(',', data.MessageIdsToDelete)}");
         OnDeleteMessages?.Invoke(this, data.MessageIdsToDelete);
     }
 
     private void WsChatMessagesReceived(ResponseMessage message)
     {
-        var data = JsonConvert.DeserializeObject<MessagesJsonModel>(message.Text);
+        var data = JsonSerializer.Deserialize<MessagesJsonModel>(message.Text);
         var messages = new List<MessageModel>();
         foreach (var chatMessage in data.Messages)
         {
@@ -250,14 +249,14 @@ public class ChatClient
         _logger.Debug($"Received {messages.Count} chat messages");
         if (messages.Count == 1)
         {
-            _logger.Debug($"{JsonConvert.SerializeObject(messages[0], Formatting.Indented)}");
+            _logger.Debug($"{JsonSerializer.Serialize(messages[0])}");
         }
         OnMessages?.Invoke(this, messages, data);
     }
 
     private void WsChatUsersJoined(ResponseMessage message)
     {
-        var data = JsonConvert.DeserializeObject<UsersJsonModel>(message.Text);
+        var data = JsonSerializer.Deserialize<UsersJsonModel>(message.Text);
         var users = new List<UserModel>();
         foreach (var user in data.Users.Keys)
         {
@@ -277,7 +276,7 @@ public class ChatClient
     private void WsChatUsersParted(ResponseMessage message)
     {
         // {"user":{"1337":false}}
-        var data = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<string, bool>>>(message.Text);
+        var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, bool>>>(message.Text);
         var usersParted = data!["user"].Select(user => int.Parse(user.Key)).ToList();
         _logger.Debug($"Following users have parted: {string.Join(',', usersParted)}");
         OnUsersParted?.Invoke(this, usersParted);

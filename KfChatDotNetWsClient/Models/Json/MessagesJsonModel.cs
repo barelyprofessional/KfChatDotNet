@@ -1,5 +1,4 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using System.Text.Json.Serialization;
 
 namespace KfChatDotNetWsClient.Models.Json;
 
@@ -28,32 +27,32 @@ public class MessagesJsonModel
 {
     public class AuthorModel
     {
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public int Id { get; set; }
-        [JsonProperty("username")]
+        [JsonPropertyName("username")]
         public string Username { get; set; }
-        [JsonProperty("avatar_url")]
+        [JsonPropertyName("avatar_url")]
         public Uri AvatarUrl { get; set; }
     }
 
     public class MessageModel
     {
-        [JsonProperty("author")]
+        [JsonPropertyName("author")]
         public AuthorModel Author { get; set; }
-        [JsonProperty("message")]
+        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonProperty("message_id")]
+        [JsonPropertyName("message_id")]
         public int MessageId { get; set; }
-        [JsonProperty("message_edit_date")]
+        [JsonPropertyName("message_edit_date")]
         public int MessageEditDate { get; set; }
-        [JsonProperty("message_date")]
+        [JsonPropertyName("message_date")]
         public int MessageDate { get; set; }
-        [JsonProperty("message_raw")]
+        [JsonPropertyName("message_raw")]
         public string MessageRaw { get; set; }
-        [JsonProperty("room_id")]
+        [JsonPropertyName("room_id")]
         public int RoomId { get; set; }
     }
     
-    [JsonProperty("messages")]
+    [JsonPropertyName("messages")]
     public List<MessageModel> Messages { get; set; }
 }

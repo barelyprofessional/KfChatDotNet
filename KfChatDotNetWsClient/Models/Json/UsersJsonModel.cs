@@ -1,5 +1,4 @@
-using Newtonsoft.Json;
-
+using System.Text.Json.Serialization;
 namespace KfChatDotNetWsClient.Models.Json;
 
 // {
@@ -17,16 +16,16 @@ public class UsersJsonModel
 {
     public class UserModel
     {
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public int Id { get; set; }
-        [JsonProperty("username")]
+        [JsonPropertyName("username")]
         public string Username { get; set; }
-        [JsonProperty("avatar_url")]
+        [JsonPropertyName("avatar_url")]
         public Uri AvatarUrl { get; set; }
-        [JsonProperty("last_activity")]
+        [JsonPropertyName("last_activity")]
         public int LastActivity { get; set; }
     }
     
-    [JsonProperty("users")]
+    [JsonPropertyName("users")]
     public Dictionary<string, UserModel> Users { get; set; }
 }
