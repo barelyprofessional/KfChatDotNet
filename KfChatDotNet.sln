@@ -10,6 +10,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KickWsClient", "KickWsClien
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetKickBot", "KfChatDotNetKickBot\KfChatDotNetKickBot.csproj", "{4734E0A4-150E-4915-B905-928BB4BE3FF6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreeXplWsClient", "ThreeXplWsClient\ThreeXplWsClient.csproj", "{3D72D70A-48AD-4EE8-89DC-C78153EEA879}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreeXplCliClient", "ThreeXplCliClient\ThreeXplCliClient.csproj", "{D098E281-5535-4A07-9514-57AF78704B0C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,13 @@ Global
 		{4734E0A4-150E-4915-B905-928BB4BE3FF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4734E0A4-150E-4915-B905-928BB4BE3FF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4734E0A4-150E-4915-B905-928BB4BE3FF6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D098E281-5535-4A07-9514-57AF78704B0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D098E281-5535-4A07-9514-57AF78704B0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D098E281-5535-4A07-9514-57AF78704B0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D098E281-5535-4A07-9514-57AF78704B0C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
