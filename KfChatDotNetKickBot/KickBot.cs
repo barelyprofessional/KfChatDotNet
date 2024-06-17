@@ -25,6 +25,7 @@ public class KickBot
     // Suppresses the command handler on initial start, so it doesn't pick up things already handled on restart
     private bool _initialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
+    private readonly TwitchWs _twitchWs;
     
     public KickBot()
     {
@@ -45,12 +46,12 @@ public class KickBot
             WsUri = _config.KfWsEndpoint,
             XfSessionToken = _xfSessionToken,
             CookieDomain = _config.KfWsEndpoint.Host,
-            Proxy = _config.KfProxy,
+            Proxy = _config.Proxy,
             ReconnectTimeout = _config.KfReconnectTimeout
         });
 
         _kickClient = new KickWsClient.KickWsClient(_config.PusherEndpoint.ToString(),
-            _config.PusherProxy, _config.PusherReconnectTimeout);
+            _config.Proxy, _config.PusherReconnectTimeout);
 
         _kfClient.OnMessages += OnKfChatMessage;
         _kfClient.OnUsersParted += OnUsersParted;
@@ -76,11 +77,34 @@ public class KickBot
         _logger.Debug("Creating ping thread and starting it");
         var pingThread = new Thread(PingThread);
         pingThread.Start();
-        
-        while (true)
+
+        if (_config.BossmanJackTwitchId != null)
         {
-            Console.ReadLine();
+            _logger.Debug("Creating Twitch live stream notification client");
+            _twitchWs = new TwitchWs([_config.BossmanJackTwitchId.Value], _config.Proxy, _cancellationToken);
+            _twitchWs.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
+            _twitchWs.StartWsClient().Wait(_cancellationToken);
         }
+        else
+        {
+            _logger.Debug("Ignoring Twitch client as TwitchChannels is not defined");
+        }
+
+        _logger.Debug("Blocking the main thread");
+        var exitEvent = new ManualResetEvent(false);
+        exitEvent.WaitOne();
+    }
+
+    private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
+    {
+        _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
+        if (isLive)
+        {
+            _sendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack");
+            _sendChatMessage("Ad-free re-stream at https://kick.com/wheelfan courtesy of @Kees H");
+            return;
+        }
+        _sendChatMessage("BossmanJack is no longer live! :lossmanjack:");
     }
 
     private void OnFailedToJoinRoom(object sender, string message)
@@ -110,7 +134,7 @@ public class KickBot
     private async Task RefreshXfToken()
     {
         var cookie = await KfTokenService.FetchSessionTokenAsync(_config.KfDomain, _config.KfUsername, _config.KfPassword,
-            _config.ChromiumPath, _config.KfProxy);
+            _config.ChromiumPath, _config.Proxy);
         _logger.Debug($"FetchSessionTokenAsync returned {cookie}");
         _xfSessionToken = cookie;
     }
@@ -163,6 +187,12 @@ public class KickBot
 
     private void _sendChatMessage(string message, bool bypassSeshDetect = false)
     {
+        if (_config.SuppressChatMessages)
+        {
+            _logger.Info("Not sending message as SuppressChatMessages is enabled");
+            _logger.Info($"Message was: {message}");
+            return;
+        }
         if (_gambaSeshPresent && _config.EnableGambaSeshDetect && !bypassSeshDetect)
         {
             _logger.Info($"Not sending message '{message}' as GambaSesh is present");
