@@ -66,7 +66,6 @@ public class KickBot
         _kickClient.OnStopStreamBroadcast += OnStopStreamBroadcast;
 
         _kfClient.StartWsClient().Wait(_cancellationToken);
-        _kfClient.JoinRoom(_config.KfChatRoomId);
 
         _kickClient.StartWsClient().Wait(_cancellationToken);
         foreach (var channel in _config.PusherChannels)

@@ -103,11 +103,6 @@ public class ChatClient
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
     {
         _logger.Error($"Websocket connection dropped and reconnected. Reconnection type is {reconnectionInfo.Type}");
-        if (reconnectionInfo.Type == ReconnectionType.Initial)
-        {
-            _logger.Error("Not firing the reconnection event as this is the initial event");
-            return;
-        }
         OnWsReconnect?.Invoke(this, reconnectionInfo);
     }
 
