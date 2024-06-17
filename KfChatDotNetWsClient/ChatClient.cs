@@ -43,7 +43,7 @@ public class ChatClient
 
     public async Task StartWsClient()
     {
-        _wsClient = await CreateWsClient();
+        await CreateWsClient();
     }
 
     public void Disconnect()
@@ -51,7 +51,7 @@ public class ChatClient
         _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket").Wait();
     }
 
-    private async Task<WebsocketClient> CreateWsClient()
+    private async Task CreateWsClient()
     {
         var factory = new Func<ClientWebSocket>(() =>
         {
@@ -77,6 +77,7 @@ public class ChatClient
         {
             ReconnectTimeout = TimeSpan.FromSeconds(_config.ReconnectTimeout)
         };
+        _wsClient = client;
 
         client.ReconnectionHappened.Subscribe(WsReconnection);
         client.MessageReceived.Subscribe(WsMessageReceived);
@@ -85,7 +86,6 @@ public class ChatClient
         _logger.Debug("Websocket client has been built, about to start");
         await client.Start();
         _logger.Debug("Websocket client started!");
-        return client;
     }
 
     public bool IsConnected()
