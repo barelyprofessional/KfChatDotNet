@@ -93,7 +93,11 @@ public class TwitchWs
         foreach (var channel in _channels)
         {
             _logger.Info($"Subscribing to {channel}");
-            _wsClient.Send("{\"data\":{\"topics\":[\"video-playback-by-id." + _channels + "\"]},\"nonce\":\"" + Guid.NewGuid() + "\",\"type\":\"LISTEN\"}");
+            var payload = "{\"data\":{\"topics\":[\"video-playback-by-id." + channel + "\"]},\"nonce\":\"" +
+                          Guid.NewGuid() + "\",\"type\":\"LISTEN\"}";
+            _logger.Debug("Sending the following JSON to Twitch");
+            _logger.Debug(payload);
+            _wsClient.Send(payload);
         }
     }
 
