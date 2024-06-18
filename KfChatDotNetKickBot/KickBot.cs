@@ -245,6 +245,8 @@ public class KickBot
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
         _logger.Error($"Sneedchat reconnected due to {reconnectionInfo.Type}");
+        _logger.Info("Resetting GambaSesh presence so it can resync if he crashed while the bot was DC'd");
+        _gambaSeshPresent = false;
         _logger.Info($"Rejoining {_config.KfChatRoomId}");
         _kfClient.JoinRoom(_config.KfChatRoomId);
     }
