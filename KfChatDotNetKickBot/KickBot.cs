@@ -16,7 +16,7 @@ public class KickBot
     private readonly ChatClient _kfClient;
     private readonly KickWsClient.KickWsClient _kickClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    private readonly Models.ConfigModel _config;
+    private readonly ConfigModel _config;
     private readonly bool _pingEnabled = true;
     private bool _gambaSeshPresent;
     private string _xfSessionToken = null!;
@@ -133,7 +133,7 @@ public class KickBot
         }
 
         var payoutColor = "green";
-        if (bet.Payout == "0") payoutColor = "red";
+        if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = "red";
         // There will be a check for live status but ignoring that while we deal with an emergency dice situation
         _sendChatMessage($"🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
