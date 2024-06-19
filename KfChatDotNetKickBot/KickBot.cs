@@ -25,7 +25,7 @@ public class KickBot
     // Suppresses the command handler on initial start, so it doesn't pick up things already handled on restart
     private bool _initialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
-    private readonly TwitchWs _twitchWs;
+    private readonly Twitch _twitch;
     
     public KickBot()
     {
@@ -81,9 +81,9 @@ public class KickBot
         if (_config.BossmanJackTwitchId != null)
         {
             _logger.Debug("Creating Twitch live stream notification client");
-            _twitchWs = new TwitchWs([_config.BossmanJackTwitchId.Value], _config.Proxy, _cancellationToken);
-            _twitchWs.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
-            _twitchWs.StartWsClient().Wait(_cancellationToken);
+            _twitch = new Twitch([_config.BossmanJackTwitchId.Value], _config.Proxy, _cancellationToken);
+            _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
+            _twitch.StartWsClient().Wait(_cancellationToken);
         }
         else
         {

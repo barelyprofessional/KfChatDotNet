@@ -6,7 +6,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class TwitchWs
+public class Twitch
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -18,7 +18,7 @@ public class TwitchWs
     public event OnStreamStateUpdateEventHandler OnStreamStateUpdated;
     private CancellationToken _cancellationToken = CancellationToken.None;
 
-    public TwitchWs(List<int> channels,  string? proxy = null, CancellationToken? cancellationToken = null)
+    public Twitch(List<int> channels,  string? proxy = null, CancellationToken? cancellationToken = null)
     {
         _proxy = proxy;
         _channels = channels;
