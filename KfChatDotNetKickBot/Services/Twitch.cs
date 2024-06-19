@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
 using NLog;
@@ -152,4 +153,50 @@ public class Twitch
             _logger.Error("--- End of JSON Payload ---");
         }
     }
+
+    public async Task<bool> IsStreamLive(string channel)
+    {
+        var clientId = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+        var graphQl = "query {\n  user(login: \"" + channel + "\") {\n    stream {\n      id\n    }\n  }\n}";
+        _logger.Debug($"Built GraphQL query string: {graphQl}");
+        var jsonBody = new Dictionary<string, object>
+        {
+            { "query", graphQl },
+            { "variables", new object() }
+        };
+        _logger.Debug("Created dictionary object for the JSON payload, should serialize to following value:");
+        _logger.Debug(JsonSerializer.Serialize(jsonBody));
+        var handler = new HttpClientHandler {AutomaticDecompression = DecompressionMethods.All};
+        if (_proxy != null)
+        {
+            handler.UseProxy = true;
+            handler.Proxy = new WebProxy(_proxy);
+            _logger.Debug($"Configured to use proxy {_proxy}");
+        }
+
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Add("client-id", clientId);
+        var postBody = JsonContent.Create(jsonBody);
+        var response = await client.PostAsync("https://gql.twitch.tv/gql", postBody, _cancellationToken);
+        //response.EnsureSuccessStatusCode();
+        var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
+        _logger.Debug("Twitch API returned following JSON");
+        _logger.Debug(responseContent.GetRawText);
+        if (responseContent.GetProperty("data").GetProperty("user").ValueKind == JsonValueKind.Null)
+        {
+            _logger.Debug("data.user was null");
+            throw new TwitchUserNotFoundException();
+        }
+
+        if (responseContent.GetProperty("data").GetProperty("user").GetProperty("stream").ValueKind ==
+            JsonValueKind.Null)
+        {
+            _logger.Debug("stream property was null. Means streamer is not live");
+            return false;
+        }
+
+        return true;
+    }
+
+    public class TwitchUserNotFoundException : Exception;
 }
