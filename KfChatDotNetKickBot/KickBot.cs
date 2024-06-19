@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using KfChatDotNetKickBot.Models;
 using KfChatDotNetKickBot.Services;
 using KfChatDotNetWsClient;
 using KfChatDotNetWsClient.Models;
@@ -26,6 +27,9 @@ public class KickBot
     private bool _initialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
     private readonly Twitch _twitch;
+    private readonly Shuffle _shuffle;
+    private bool _isBmjLive = false;
+    private bool _isBmjLiveSynced = false;
     
     public KickBot()
     {
@@ -90,9 +94,48 @@ public class KickBot
             _logger.Debug("Ignoring Twitch client as TwitchChannels is not defined");
         }
 
+        _shuffle = new Shuffle(_config.Proxy, _cancellationToken);
+        _shuffle.OnLatestBetUpdated += ShuffleOnOnLatestBetUpdated;
+        _shuffle.StartWsClient().Wait(_cancellationToken);
+
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
         exitEvent.WaitOne();
+    }
+
+    private void ShuffleOnOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet)
+    {
+        _logger.Debug("Shuffle bet has arrived");
+        if (bet.Username != "TheBossmanJack")
+        {
+            _logger.Debug("Ignoring irrelevant user");
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING");
+        if (_isBmjLive)
+        {
+            _logger.Info("Ignoring as BMJ is live");
+            return;
+        }
+
+        // Only check once because the bot should be tracking the Twitch stream
+        // This is just in case he's already live while the bot starts
+        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
+        if (!_isBmjLiveSynced)
+        {
+            _isBmjLive = _twitch.IsStreamLive("thebossmanjack").Result;
+            _isBmjLiveSynced = true;
+        }
+        if (_isBmjLive)
+        {
+            _logger.Info("Double checked and he is really online");
+            return;
+        }
+
+        var payoutColor = "green";
+        if (bet.Payout == "0") payoutColor = "red";
+        // There will be a check for live status but ignoring that while we deal with an emergency dice situation
+        _sendChatMessage($"🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
 
     private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
@@ -102,9 +145,11 @@ public class KickBot
         {
             _sendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack");
             _sendChatMessage("Ad-free re-stream at https://kick.com/wheelfan courtesy of @Kees H");
+            _isBmjLive = true;
             return;
         }
         _sendChatMessage("BossmanJack is no longer live! :lossmanjack:");
+        _isBmjLive = false;
     }
 
     private void OnFailedToJoinRoom(object sender, string message)
