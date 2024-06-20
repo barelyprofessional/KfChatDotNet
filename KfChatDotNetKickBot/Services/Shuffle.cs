@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
 using KfChatDotNetKickBot.Models;
@@ -173,4 +174,44 @@ public class Shuffle
             _logger.Error("--- End of JSON Payload ---");
         }
     }
+
+    public async Task<ShuffleUserModel> GetShuffleUser(string username)
+    {
+        var graphQl =
+            "query GetUserProfile($username: String!) {\n  user(username: $username) {\n    id\n    username\n    vipLevel\n    createdAt\n    avatar\n    avatarBackground\n    bets\n    usdWagered\n    __typename\n  }\n}";
+        _logger.Debug($"Grabbing details for Shuffle user {username}");
+        var jsonBody = new Dictionary<string, object>
+        {
+            { "operationName", "GetUserProfile" },
+            { "query", graphQl },
+            { "variables", new Dictionary<string, string> { { "username", username } } }
+        };
+        _logger.Debug("Created dictionary object for the JSON payload, should serialize to following value:");
+        _logger.Debug(JsonSerializer.Serialize(jsonBody));
+        var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
+        if (_proxy != null)
+        {
+            handler.UseProxy = false;
+            handler.Proxy = new WebProxy(_proxy);
+            _logger.Debug($"Configured to use proxy {_proxy}");
+        }
+        
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Add("content-type", "application/json");
+        var postBody = JsonContent.Create(jsonBody);
+        var response = await client.PostAsync("https://shuffle.com/graphql", postBody, _cancellationToken);
+        var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
+        _logger.Debug("Shuffle returned following JSON");
+        _logger.Debug(responseContent.GetRawText);
+        var user = responseContent.GetProperty("data").GetProperty("user");
+        if (user.ValueKind == JsonValueKind.Null)
+        {
+            _logger.Debug("data.user was null");
+            throw new ShuffleUserNotFoundException();
+        }
+
+        return user.Deserialize<ShuffleUserModel>() ?? throw new InvalidOperationException();
+    }
+
+    public class ShuffleUserNotFoundException : Exception;
 }
