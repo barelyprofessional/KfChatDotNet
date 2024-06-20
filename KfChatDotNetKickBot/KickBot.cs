@@ -143,8 +143,8 @@ public class KickBot
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
         if (isLive)
         {
-            _sendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack");
-            _sendChatMessage("Ad-free re-stream at https://kick.com/wheelfan courtesy of @Kees H");
+            _sendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack\r\n" +
+                             "Ad-free re-stream at https://kick.com/wheelfan courtesy of @Kees H");
             _isBmjLive = true;
             return;
         }
