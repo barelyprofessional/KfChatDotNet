@@ -27,7 +27,7 @@ public class KickBot
     private bool _initialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
     private readonly Twitch _twitch;
-    private readonly Shuffle _shuffle;
+    private Shuffle _shuffle;
     private bool _isBmjLive = false;
     private bool _isBmjLiveSynced = false;
     
@@ -94,16 +94,30 @@ public class KickBot
             _logger.Debug("Ignoring Twitch client as TwitchChannels is not defined");
         }
 
-        _shuffle = new Shuffle(_config.Proxy, _cancellationToken);
-        _shuffle.OnLatestBetUpdated += ShuffleOnOnLatestBetUpdated;
-        _shuffle.StartWsClient().Wait(_cancellationToken);
+        BuildShuffle();
 
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
         exitEvent.WaitOne();
     }
 
-    private void ShuffleOnOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet)
+    private void BuildShuffle()
+    {
+        _shuffle = new Shuffle(_config.Proxy, _cancellationToken);
+        _shuffle.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
+        _shuffle.OnWsDisconnection += ShuffleOnWsDisconnection;
+        _shuffle.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void ShuffleOnWsDisconnection(object sender, DisconnectionInfo e)
+    {
+        if (e.Type == DisconnectionType.ByServer)
+        {
+            BuildShuffle();
+        }
+    }
+
+    private void ShuffleOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet)
     {
         _logger.Debug("Shuffle bet has arrived");
         if (bet.Username != "TheBossmanJack")

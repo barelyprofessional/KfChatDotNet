@@ -16,7 +16,9 @@ public class Shuffle
     private int _reconnectTimeout = 60;
     private string? _proxy;
     public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet);
+    public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
     public event OnLatestBetUpdatedEventHandler OnLatestBetUpdated;
+    public event OnWsDisconnectionEventHandler OnWsDisconnection;
     private CancellationToken _cancellationToken = CancellationToken.None;
 
     public Shuffle(string? proxy = null, CancellationToken? cancellationToken = null)
@@ -71,7 +73,7 @@ public class Shuffle
     private void SendPing()
     {
         _logger.Debug("Sending ping to Shuffle");
-        _wsClient.Send("{\"type\":\"ping\"}");
+        _wsClient.SendInstant("{\"type\":\"ping\"}").Wait(_cancellationToken);
     }
 
     private async Task PeriodicPing()
@@ -86,7 +88,7 @@ public class Shuffle
             }
             if (!IsConnected())
             {
-                _logger.Debug("Not connected not going to try send a ping actually");
+                _logger.Info("Not connected not going to try send a ping actually");
                 continue;
             }
             SendPing();
@@ -97,6 +99,7 @@ public class Shuffle
     {
         _logger.Error($"Client disconnected from the chat (or never successfully connected). Type is {disconnectionInfo.Type}");
         _logger.Error(disconnectionInfo.Exception);
+        OnWsDisconnection?.Invoke(this, disconnectionInfo);
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
