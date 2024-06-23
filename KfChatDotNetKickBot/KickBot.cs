@@ -214,6 +214,11 @@ public class KickBot
         foreach (var message in messages)
         {
             _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
+            if (_config.EnableGambaSeshDetect && !_initialStartCooldown && message.Author.Id == _config.GambaSeshUserId && !_gambaSeshPresent)
+            {
+                _logger.Info("Received a GambaSesh message after cooldown and while thinking he's not here. Setting the presence flag to avoid spamming chat");
+                _gambaSeshPresent = true;
+            }
             if (!_seenMsgIds.Contains(message.MessageId) && !_initialStartCooldown)
             {
                 if (message.MessageRaw.StartsWith("!time"))
