@@ -30,6 +30,7 @@ public class KickBot
     private Shuffle _shuffle;
     private bool _isBmjLive = false;
     private bool _isBmjLiveSynced = false;
+    private Dictionary<string, int> _userIdMapping = new();
     
     public KickBot()
     {
@@ -240,6 +241,22 @@ public class KickBot
                 {
                     _sendChatMessage("[img]https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png[/img]", true);
                 }
+                else if (message.MessageRaw.StartsWith("!whois"))
+                {
+                    var lookup = message.MessageRaw.Replace("!whois ", string.Empty).TrimStart('@').TrimEnd(' ').TrimEnd(',');
+                    if (_userIdMapping.ContainsKey(lookup))
+                    {
+                        _sendChatMessage($"{lookup}'s ID is {_userIdMapping[lookup]}", true);
+                    }
+                    else
+                    {
+                        _sendChatMessage("Don't know they who they are.", true);
+                    }
+                }
+                else if (message.MessageRaw == "!sent")
+                {
+                    _sendChatMessage("[img]https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png[/img]", true);
+                }
             }
             else
             {
@@ -289,6 +306,10 @@ public class KickBot
                 _gambaSeshPresent = true;
             }
             _logger.Info($"{user.Username} joined!");
+            if (!_userIdMapping.ContainsKey(user.Username))
+            {
+                _userIdMapping.Add(user.Username, user.Id);
+            }
         }
     }
 
