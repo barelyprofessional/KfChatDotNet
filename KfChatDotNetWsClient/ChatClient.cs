@@ -51,6 +51,11 @@ public class ChatClient
         _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket").Wait();
     }
 
+    public async Task Reconnect()
+    {
+        await _wsClient.Reconnect();
+    }
+
     private async Task CreateWsClient()
     {
         var factory = new Func<ClientWebSocket>(() =>

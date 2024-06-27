@@ -31,6 +31,7 @@ public class KickBot
     private bool _isBmjLive = false;
     private bool _isBmjLiveSynced = false;
     private Dictionary<string, int> _userIdMapping = new();
+    private DateTime _lastKfEvent = DateTime.Now;
     
     public KickBot()
     {
@@ -189,6 +190,13 @@ public class KickBot
             _kfClient.SendMessage("/ping");
             _kickClient.SendPusherPing();
             if (_initialStartCooldown) _initialStartCooldown = false;
+            var inactivityTime = DateTime.Now - _lastKfEvent;
+            _logger.Debug($"Last KF event was {inactivityTime:g} ago");
+            if (inactivityTime.TotalMinutes > 10)
+            {
+                _logger.Error("Forcing reconnection as bot is completely dead");
+                _kfClient.Reconnect().Wait(_cancellationToken);
+            }
         }
     }
 
@@ -212,6 +220,7 @@ public class KickBot
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
     {
+        _lastKfEvent = DateTime.Now;
         _logger.Debug($"Received {messages.Count} message(s)");
         foreach (var message in messages)
         {
@@ -298,6 +307,7 @@ public class KickBot
     
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
     {
+        _lastKfEvent = DateTime.Now;
         _logger.Debug($"Received {users.Count} user join events");
         foreach (var user in users)
         {
@@ -316,6 +326,7 @@ public class KickBot
 
     private void OnUsersParted(object sender, List<int> userIds)
     {
+        _lastKfEvent = DateTime.Now;
         if (userIds.Contains(_config.GambaSeshUserId) && _config.EnableGambaSeshDetect)
         {
             _logger.Info("GambaSesh is no longer present");
