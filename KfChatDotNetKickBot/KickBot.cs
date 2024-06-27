@@ -114,6 +114,7 @@ public class KickBot
     {
         if (e.Type == DisconnectionType.ByServer)
         {
+            _shuffle.Dispose();
             BuildShuffle();
         }
     }

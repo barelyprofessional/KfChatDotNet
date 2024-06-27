@@ -8,7 +8,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class Shuffle
+public class Shuffle : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -20,6 +20,7 @@ public class Shuffle
     public event OnLatestBetUpdatedEventHandler OnLatestBetUpdated;
     public event OnWsDisconnectionEventHandler OnWsDisconnection;
     private CancellationToken _cancellationToken = CancellationToken.None;
+    private CancellationTokenSource _pingCts = new();
 
     public Shuffle(string? proxy = null, CancellationToken? cancellationToken = null)
     {
@@ -79,7 +80,7 @@ public class Shuffle
     private async Task PeriodicPing()
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
-        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        while (await timer.WaitForNextTickAsync(_pingCts.Token))
         {
             if (_wsClient == null)
             {
@@ -217,4 +218,11 @@ public class Shuffle
     }
 
     public class ShuffleUserNotFoundException : Exception;
+
+    public void Dispose()
+    {
+        _pingCts.Cancel();
+        _wsClient.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }
