@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using KfChatDotNetKickBot.Models;
 using KfChatDotNetKickBot.Services;
 using KfChatDotNetWsClient;
@@ -253,7 +254,8 @@ public class KickBot
                 }
                 else if (message.MessageRaw.StartsWith("!whois"))
                 {
-                    var lookup = message.MessageRaw.Replace("!whois ", string.Empty).TrimStart('@').TrimEnd(' ').TrimEnd(',');
+                    var lookup = WebUtility.HtmlDecode(message.MessageRaw.Replace("!whois ", string.Empty)
+                        .TrimStart('@').TrimEnd(' ').TrimEnd(','));
                     if (_userIdMapping.ContainsKey(lookup))
                     {
                         _sendChatMessage($"{lookup}'s ID is {_userIdMapping[lookup]}", true);
