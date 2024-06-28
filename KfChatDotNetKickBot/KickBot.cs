@@ -162,7 +162,7 @@ public class KickBot
         if (isLive)
         {
             _sendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack\r\n" +
-                             "Ad-free re-stream at https://kick.com/wheelfan courtesy of @Kees H");
+                             "Ad-free re-stream at https://bossmanjack.tv courtesy of @Kees H");
             _isBmjLive = true;
             return;
         }
