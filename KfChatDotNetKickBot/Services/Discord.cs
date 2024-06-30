@@ -162,6 +162,12 @@ public class DiscordService : IDisposable
                 return;
             }
 
+            if (packet.OpCode == 11)
+            {
+                _logger.Debug("Received heartbeat ack from Discord");
+                return;
+            }
+
             if (packet.OpCode != 0)
             {
                 _logger.Info($"Op code {packet.OpCode} was unhandled. JSON follows");
