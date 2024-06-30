@@ -211,7 +211,8 @@ public class KickBot
 
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
-        _sendChatMessage($"Bossman Live! {e?.Livestream.SessionTitle} https://kick.com/bossmanjack");
+        if (e == null) return;
+        _sendChatMessage($"Dirt Devils LFG! @Juhlonduss is live! {e.Livestream.SessionTitle} https://kick.com/dirtdevil-enjoyer", true);
     }
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
