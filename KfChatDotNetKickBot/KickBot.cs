@@ -29,6 +29,8 @@ public class KickBot
     private readonly CancellationToken _cancellationToken = new();
     private readonly Twitch _twitch;
     private Shuffle _shuffle;
+    private DiscordService _discord;
+    private string? _lastDiscordStatus;
     private bool _isBmjLive = false;
     private bool _isBmjLiveSynced = false;
     private Dictionary<string, int> _userIdMapping = new();
@@ -98,6 +100,7 @@ public class KickBot
         }
 
         BuildShuffle();
+        BuildDiscord();
 
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
@@ -110,6 +113,72 @@ public class KickBot
         _shuffle.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
         _shuffle.OnWsDisconnection += ShuffleOnWsDisconnection;
         _shuffle.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void BuildDiscord()
+    {
+        _logger.Debug("Building Discord");
+        if (_config.DiscordToken == null)
+        {
+            _logger.Info("Not building Discord as the token is not configured");
+            return;
+        }
+        _discord = new DiscordService(_config.DiscordToken, _config.Proxy);
+        _discord.OnInvalidCredentials += DiscordOnInvalidCredentials;
+        _discord.OnWsDisconnection += DiscordOnWsDisconnection;
+        _discord.OnMessageReceived += DiscordOnMessageReceived;
+        _discord.OnPresenceUpdated += DiscordOnPresenceUpdated;
+        _discord.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void DiscordOnPresenceUpdated(object sender, DiscordPresenceUpdateModel presence)
+    {
+        if (presence.User.Id != _config.DiscordBmjId)
+        {
+            return;
+        }
+        if (_lastDiscordStatus == presence.Status)
+        {
+            _logger.Debug("Ignoring status update as it's the same as the last one");
+            return;
+        }
+        _lastDiscordStatus = presence.Status;
+        var clientStatus = presence.ClientStatus.Keys.Aggregate(string.Empty, (current, device) => current + $"{device} is {presence.ClientStatus[device]}; ");
+        _sendChatMessage($"[img]https://i.postimg.cc/cLmQrp89/discord16.png[/img] BossmanJack has updated his Discord presence: {clientStatus}");
+    }
+
+    private void DiscordOnMessageReceived(object sender, DiscordMessageModel message)
+    {
+        if (message.Author.Id != _config.DiscordBmjId)
+        {
+            return;
+        }
+        
+        var result = $"[img]https://i.postimg.cc/cLmQrp89/discord16.png[/img] BossmanJack: {message.Content}";
+        foreach (var attachment in message.Attachments ?? [])
+        {
+            result += $"[br]Attachment: {attachment.GetProperty("filename").GetString()} {attachment.GetProperty("url").GetString()}";
+        }
+        _sendChatMessage(result);
+    }
+
+    private void DiscordOnWsDisconnection(object sender, DisconnectionInfo e)
+    {
+        _logger.Error($"Discord dropped, reason {e.Type}");
+        // This is raised when the Websocket client is disposed
+        // Attempting to dispose it again while it is being disposed causes a loop and probably eventually a stack overflow
+        if (e.Type == DisconnectionType.Exit)
+        {
+            return;
+        }
+        _discord.Dispose();
+        BuildDiscord();
+    }
+
+    private void DiscordOnInvalidCredentials(object sender, DiscordPacketReadModel packet)
+    {
+        _logger.Error("Credentials failed to validate. Killing service.");
+        _discord.Dispose();
     }
 
     private void ShuffleOnWsDisconnection(object sender, DisconnectionInfo e)

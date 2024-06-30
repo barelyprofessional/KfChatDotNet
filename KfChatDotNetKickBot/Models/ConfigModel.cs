@@ -23,4 +23,6 @@ public class ConfigModel
     public int? BossmanJackTwitchId { get; set; } = null;
     // Used for testing
     public bool SuppressChatMessages { get; set; } = false;
+    public string? DiscordToken { get; set; } = null;
+    public string? DiscordBmjId { get; set; } = "554123642246529046";
 }
