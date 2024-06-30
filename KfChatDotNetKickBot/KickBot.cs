@@ -109,6 +109,7 @@ public class KickBot
 
     private void BuildShuffle()
     {
+        _logger.Debug("Building Shuffle");
         _shuffle = new Shuffle(_config.Proxy, _cancellationToken);
         _shuffle.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
         _shuffle.OnWsDisconnection += ShuffleOnWsDisconnection;
@@ -195,7 +196,6 @@ public class KickBot
         _logger.Debug("Shuffle bet has arrived");
         if (bet.Username != "TheBossmanJack")
         {
-            _logger.Debug("Ignoring irrelevant user");
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING");
@@ -286,7 +286,7 @@ public class KickBot
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
     {
-        _sendChatMessage("The stream is so over. :lossmanjack:");
+        _sendChatMessage("Dirt Devils felted. Stream is over. :lossmanjack:", true);
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
