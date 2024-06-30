@@ -125,7 +125,7 @@ public class ThreeXplWsClient
     private void WsDisconnection(DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Client disconnected from the chat (or never successfully connected). Type is {disconnectionInfo.Type}");
-        _logger.Error(disconnectionInfo.Exception);
+        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
         OnWsDisconnection?.Invoke(this, disconnectionInfo, _connectionId);
     }
 

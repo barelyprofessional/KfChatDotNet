@@ -409,6 +409,7 @@ public class KickBot
     private void OnKfWsDisconnected(object sender, DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
+        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
