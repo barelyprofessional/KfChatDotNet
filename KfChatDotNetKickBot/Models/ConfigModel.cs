@@ -21,6 +21,7 @@ public class ConfigModel
     public required string KfPassword { get; set; }
     public string ChromiumPath { get; set; } = "chromium_install";
     public int? BossmanJackTwitchId { get; set; } = null;
+    public string? BossmanJackTwitchUsername { get; set; } = "thebossmanjack";
     // Used for testing
     public bool SuppressChatMessages { get; set; } = false;
     public string? DiscordToken { get; set; } = null;

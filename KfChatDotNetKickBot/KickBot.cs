@@ -30,6 +30,7 @@ public class KickBot
     private readonly Twitch _twitch;
     private Shuffle _shuffle;
     private DiscordService _discord;
+    private TwitchChat _twitchChat;
     private string? _lastDiscordStatus;
     private bool _isBmjLive = false;
     private bool _isBmjLiveSynced = false;
@@ -101,6 +102,7 @@ public class KickBot
 
         BuildShuffle();
         BuildDiscord();
+        BuildTwitchChat();
 
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
@@ -124,12 +126,45 @@ public class KickBot
             _logger.Info("Not building Discord as the token is not configured");
             return;
         }
-        _discord = new DiscordService(_config.DiscordToken, _config.Proxy);
+        _discord = new DiscordService(_config.DiscordToken, _config.Proxy, _cancellationToken);
         _discord.OnInvalidCredentials += DiscordOnInvalidCredentials;
         _discord.OnWsDisconnection += DiscordOnWsDisconnection;
         _discord.OnMessageReceived += DiscordOnMessageReceived;
         _discord.OnPresenceUpdated += DiscordOnPresenceUpdated;
         _discord.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void BuildTwitchChat()
+    {
+        _logger.Debug("Building Twitch Chat");
+        if (_config.BossmanJackTwitchUsername == null)
+        {
+            _logger.Info("Not building Twitch Chat client as BMJ's username is not configured");
+            return;
+        }
+
+        _twitchChat = new TwitchChat($"#{_config.BossmanJackTwitchUsername}", _config.Proxy, _cancellationToken);
+        _twitchChat.OnMessageReceived += TwitchChatOnMessageReceived;
+        _twitchChat.OnWsDisconnection += TwitchChatOnWsDisconnection;
+        _twitchChat.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void TwitchChatOnWsDisconnection(object sender, DisconnectionInfo e)
+    {
+        if (e.Type == DisconnectionType.ByServer)
+        {
+            _twitchChat.Dispose();
+            BuildTwitchChat();
+        }
+    }
+
+    private void TwitchChatOnMessageReceived(object sender, string nick, string target, string message)
+    {
+        if (nick != _config.BossmanJackTwitchUsername)
+        {
+            return;
+        }
+        _sendChatMessage($"[img]https://i.postimg.cc/QMFVV2Xk/twitch16.png[/img] {nick}: {message}", true);
     }
 
     private void DiscordOnPresenceUpdated(object sender, DiscordPresenceUpdateModel presence)
