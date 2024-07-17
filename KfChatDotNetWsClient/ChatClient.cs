@@ -101,7 +101,8 @@ public class ChatClient
     private void WsDisconnection(DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Client disconnected from the chat (or never successfully connected). Type is {disconnectionInfo.Type}");
-        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
+        _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
+        _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
     }
 

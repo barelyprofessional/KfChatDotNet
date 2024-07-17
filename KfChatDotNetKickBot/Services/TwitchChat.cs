@@ -7,7 +7,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class TwitchChat : IDisposable
+public class TwitchChat
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -76,8 +76,14 @@ public class TwitchChat : IDisposable
     private void WsDisconnection(DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Client disconnected from Discord (or never successfully connected). Type is {disconnectionInfo.Type}");
-        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
+        _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
+        _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
+        if (disconnectionInfo.Type == DisconnectionType.ByServer)
+        {
+            _logger.Info("Forcing reconnection as the type was ByServer");
+            _wsClient.Reconnect().Wait(_cancellationToken);
+        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -168,12 +174,5 @@ public class TwitchChat : IDisposable
             _logger.Error(message.Text);
             _logger.Error("--- End of IRC Message ---");
         }
-    }
-
-    public void Dispose()
-    {
-        _logger.Info("Disposing Twitch Chat");
-        _wsClient.Dispose();
-        GC.SuppressFinalize(this);
     }
 }

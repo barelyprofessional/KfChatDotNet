@@ -8,7 +8,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class Shuffle : IDisposable
+public class Shuffle
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -99,8 +99,14 @@ public class Shuffle : IDisposable
     private void WsDisconnection(DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Client disconnected from Shuffle (or never successfully connected). Type is {disconnectionInfo.Type}");
-        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
+        _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
+        _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
+        if (disconnectionInfo.Type == DisconnectionType.ByServer)
+        {
+            _logger.Info("Forcing reconnection as the type was ByServer");
+            _wsClient.Reconnect().Wait(_cancellationToken);
+        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -120,7 +126,7 @@ public class Shuffle : IDisposable
             _logger.Info("Shuffle sent a null message");
             return;
         }
-        _logger.Debug($"Received event from Shuffle: {message.Text}");
+        _logger.Trace($"Received event from Shuffle: {message.Text}");
 
         try
         {
@@ -135,7 +141,7 @@ public class Shuffle : IDisposable
                 var payload = "{\"id\":\"" + Guid.NewGuid() +
                               "\",\"type\":\"subscribe\",\"payload\":{\"variables\":{},\"extensions\":{},\"operationName\":\"LatestBetUpdated\",\"query\":\"subscription LatestBetUpdated {\\n  latestBetUpdated {\\n    ...BetActivityFields\\n    __typename\\n  }\\n}\\n\\nfragment BetActivityFields on BetActivityPayload {\\n  id\\n  username\\n  vipLevel\\n  currency\\n  amount\\n  payout\\n  multiplier\\n  gameName\\n  gameCategory\\n  gameSlug\\n  __typename\\n}\"}}";
                 _logger.Debug(payload);
-                _wsClient.Send(payload);
+                _wsClient.SendInstant(payload).Wait(_cancellationToken);
                 return;
             }
 
@@ -148,7 +154,6 @@ public class Shuffle : IDisposable
             // GAMBA
             if (packetType == "next")
             {
-                _logger.Debug("Got a bet! Deserializing it");
                 var bet = packet.GetProperty("payload").GetProperty("data").GetProperty("latestBetUpdated")
                     .Deserialize<ShuffleLatestBetModel>();
                 if (bet == null)
@@ -156,7 +161,6 @@ public class Shuffle : IDisposable
                     _logger.Error("Caught a null before invoking bet event");
                     throw new NullReferenceException("Caught a null before invoking bet event");
                 }
-                _logger.Debug("Invoking event");
                 OnLatestBetUpdated?.Invoke(this, bet);
                 return;
             }
@@ -212,11 +216,4 @@ public class Shuffle : IDisposable
     }
 
     public class ShuffleUserNotFoundException : Exception;
-
-    public void Dispose()
-    {
-        _pingCts.Cancel();
-        _wsClient.Dispose();
-        GC.SuppressFinalize(this);
-    }
 }

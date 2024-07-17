@@ -1,5 +1,6 @@
 ﻿namespace KfChatDotNetKickBot.Models;
 
+[Obsolete]
 public class ConfigModel
 {
     public Uri PusherEndpoint { get; set; } =

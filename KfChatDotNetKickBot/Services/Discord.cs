@@ -7,7 +7,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class DiscordService : IDisposable
+public class DiscordService
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -111,8 +111,14 @@ public class DiscordService : IDisposable
     private void WsDisconnection(DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Client disconnected from Discord (or never successfully connected). Type is {disconnectionInfo.Type}");
-        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
+        _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
+        _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
+        if (disconnectionInfo.Type == DisconnectionType.ByServer)
+        {
+            _logger.Info("Forcing reconnection as the type was ByServer");
+            _wsClient.Reconnect().Wait(_cancellationToken);
+        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -144,7 +150,7 @@ public class DiscordService : IDisposable
 
             if (packet.OpCode == 10)
             {
-                _logger.Info("Discord op code 10 (hello) sent. Setting up heartbeat timer and sending init");
+                _logger.Info("Discord op code 10 (hello) received. Setting up heartbeat timer and sending init");
                 _logger.Info("Sending connection_init");
                 var initPayload =
                     "{\"op\":2,\"d\":{\"token\":\"" + _authorization + "\",\"capabilities\":30717,\"properties\":" +
@@ -204,14 +210,6 @@ public class DiscordService : IDisposable
             _logger.Error(message.Text);
             _logger.Error("--- End of JSON Payload ---");
         }
-    }
-
-    public void Dispose()
-    {
-        _logger.Info("Disposing Discord");
-        _wsClient.Dispose();
-        _pingCts.Cancel();
-        GC.SuppressFinalize(this);
     }
 }
 

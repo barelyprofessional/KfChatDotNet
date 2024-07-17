@@ -84,7 +84,13 @@ public class Twitch
     private void WsDisconnection(DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Client disconnected from the chat (or never successfully connected). Type is {disconnectionInfo.Type}");
-        _logger.Error(JsonSerializer.Serialize(disconnectionInfo));
+        _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
+        _logger.Error(disconnectionInfo.Exception);
+        if (disconnectionInfo.Type == DisconnectionType.ByServer)
+        {
+            _logger.Info("Forcing reconnection as the type was ByServer");
+            _wsClient.Reconnect().Wait(_cancellationToken);
+        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
