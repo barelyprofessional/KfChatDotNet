@@ -133,7 +133,7 @@ public class Howlgg
             var packetType = message.Text.Split('/')[0];
             if (packetType == "3")
             {
-                _logger.Debug("Received pong from Howl.gg");
+                _logger.Info("Received pong from Howl.gg");
                 return;
             }
 
