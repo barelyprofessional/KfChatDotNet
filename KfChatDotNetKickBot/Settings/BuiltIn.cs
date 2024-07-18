@@ -312,6 +312,14 @@ public static class BuiltIn
             Description = "Last successfully retrieved forum token (will be refreshed automatically if expired)",
             Default = null,
             IsSecret = true
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KickEnabled,
+            Regex = "true|false",
+            Description = "Whether to enable Kick functionality (Pusher websocket mainly)",
+            Default = "true",
+            IsSecret = false
         }
     ];
     
@@ -342,5 +350,6 @@ public static class BuiltIn
         public static string JuiceCooldown = "Juice.Cooldown";
         public static string JuiceAmount = "Juice.Amount";
         public static string KiwiFarmsToken = "KiwiFarms.Token";
+        public static string KickEnabled = "Kick.Enabled";
     }
 }

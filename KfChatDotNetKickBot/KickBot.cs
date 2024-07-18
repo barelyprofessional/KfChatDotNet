@@ -37,6 +37,7 @@ public class KickBot
     private BotCommands _botCommands;
     private string _bmjTwitchUsername;
     private Howlgg _howlgg;
+    private bool _kickDisabled = true;
     
     public KickBot()
     {
@@ -46,7 +47,7 @@ public class KickBot
             BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain, BuiltIn.Keys.PusherEndpoint,
             BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.PusherChannels,
             BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.DiscordToken, BuiltIn.Keys.KiwiFarmsWsReconnectTimeout,
-            BuiltIn.Keys.KiwiFarmsToken
+            BuiltIn.Keys.KiwiFarmsToken, BuiltIn.Keys.KickEnabled
         ]).Result;
 
         _xfSessionToken = settings[BuiltIn.Keys.KiwiFarmsToken].Value ?? "unset";
@@ -82,14 +83,19 @@ public class KickBot
         _kickClient.OnWsReconnect += OnPusherWsReconnected;
         _kickClient.OnPusherSubscriptionSucceeded += OnPusherSubscriptionSucceeded;
         _kickClient.OnStopStreamBroadcast += OnStopStreamBroadcast;
-
+        
         KfClient.StartWsClient().Wait(_cancellationToken);
 
-        _kickClient.StartWsClient().Wait(_cancellationToken);
-        var pusherChannels = settings[BuiltIn.Keys.PusherChannels].Value ?? "";
-        foreach (var channel in pusherChannels.Split(','))
+        if (settings[BuiltIn.Keys.KickEnabled].ToBoolean())
         {
-            _kickClient.SendPusherSubscribe(channel);
+            _kickClient.StartWsClient().Wait(_cancellationToken);
+            var pusherChannels = settings[BuiltIn.Keys.PusherChannels].Value ?? "";
+            foreach (var channel in pusherChannels.Split(','))
+            {
+                _kickClient.SendPusherSubscribe(channel);
+            }
+
+            _kickDisabled = false;
         }
 
         _logger.Debug("Creating ping thread and starting it");
@@ -308,7 +314,10 @@ public class KickBot
             Thread.Sleep(TimeSpan.FromSeconds(15));
             _logger.Debug("Pinging KF");
             KfClient.SendMessage("/ping");
-            _kickClient.SendPusherPing();
+            if (!_kickDisabled)
+            {
+                _kickClient.SendPusherPing();
+            }
             if (_initialStartCooldown) _initialStartCooldown = false;
             var inactivityTime = DateTime.Now - _lastKfEvent;
             _logger.Debug($"Last KF event was {inactivityTime:g} ago");
