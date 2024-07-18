@@ -9,7 +9,7 @@ namespace KfChatDotNetKickBot.Commands;
 
 public class JuiceCommand : ICommand
 {
-    public List<Regex> Patterns { get; } = [new Regex("^juiceme$")];
+    public List<Regex> Patterns => [new Regex("^juiceme")];
     public string HelpText => "Get juice!";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
