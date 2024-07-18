@@ -320,6 +320,14 @@ public static class BuiltIn
             Description = "Whether to enable Kick functionality (Pusher websocket mainly)",
             Default = "true",
             IsSecret = false
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.HowlggDivisionAmount,
+            Regex = @"\d+",
+            Description = "How much to divide the Howlgg bets/profit by to get the real value",
+            Default = "1650",
+            IsSecret = false
         }
     ];
     
@@ -351,5 +359,6 @@ public static class BuiltIn
         public static string JuiceAmount = "Juice.Amount";
         public static string KiwiFarmsToken = "KiwiFarms.Token";
         public static string KickEnabled = "Kick.Enabled";
+        public static string HowlggDivisionAmount = "Howlgg.DivisionAmount";
     }
 }

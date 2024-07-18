@@ -131,25 +131,33 @@ public class KickBot
     {
         _logger.Debug("Received bet history from Howl.gg");
         using var db = new ApplicationDbContext();
-        foreach (var bets in data.History.Data)
+        foreach (var bet in data.History.Data)
         {
-            if (db.HowlggBets.Any(b => b.GameId == bets.GameId))
+            // Slot feature buys have an unrealized value that means they show no profit until the feature finishes
+            // The feed will return the correct profit later hence updating the values
+            var existingBet = db.HowlggBets.FirstOrDefault(b => b.BetId == bet.Id);
+            if (existingBet != null)
             {
                 _logger.Trace("Bet already exists in DB");
+                if (existingBet.Bet == bet.Bet && existingBet.Profit == bet.Profit) continue;
+                _logger.Debug("Updating fields");
+                existingBet.Bet = bet.Bet;
+                existingBet.Profit = bet.Profit;
+                db.SaveChanges();
                 continue;
             }
 
             db.HowlggBets.Add(new HowlggBetsDbModel
             {
                 UserId = data.User.Id,
-                BetId = bets.Id,
-                GameId = bets.GameId,
-                Bet = bets.Bet,
-                Profit = bets.Profit,
-                Date = bets.Date,
-                Game = bets.Game
+                BetId = bet.Id,
+                GameId = bet.GameId,
+                Bet = bet.Bet,
+                Profit = bet.Profit,
+                Date = bet.Date,
+                Game = bet.Game
             });
-            _logger.Debug("Added bet to DB");
+            _logger.Info("Added bet to DB");
         }
 
         db.SaveChanges();
