@@ -161,7 +161,16 @@ public class DiscordService
                     "\"since\":0,\"activities\":[],\"afk\":false},\"compress\":false,\"client_state\":{\"guild_versions\":{}}}}";
                 _logger.Debug(initPayload);
                 _wsClient.SendInstant(initPayload).Wait(_cancellationToken);
-                _heartbeatTask?.Dispose();
+                if (_heartbeatTask != null)
+                {
+                    _pingCts.Cancel();
+                    while (!_heartbeatTask.IsCompleted)
+                    {
+                        _logger.Debug("Waiting for heartbeat task to die");
+                        Task.Delay(TimeSpan.FromMilliseconds(100), _cancellationToken).Wait(_cancellationToken);
+                    }
+                    _heartbeatTask.Dispose();
+                }
                 _heartbeatInterval =
                     TimeSpan.FromMilliseconds(packet.Data.GetProperty("heartbeat_interval").GetInt32());
                 _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);

@@ -143,7 +143,17 @@ public class Howlgg
                 // Received on initial connection
                 var packetData = JsonSerializer.Deserialize<JsonElement>(message.Text.TrimStart('0'));
                 _heartbeatInterval = TimeSpan.FromMilliseconds(packetData.GetProperty("pingInterval").GetInt32());
-                _heartbeatTask?.Dispose();
+                if (_heartbeatTask != null)
+                {
+                    _pingCts.Cancel();
+                    while (!_heartbeatTask.IsCompleted)
+                    {
+                        _logger.Debug("Waiting for heartbeat task to die");
+                        Task.Delay(TimeSpan.FromMilliseconds(100), _cancellationToken).Wait(_cancellationToken);
+                    }
+                    _heartbeatTask.Dispose();
+                }
+
                 _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);
                 _logger.Info("Received connection packet from Howl.gg. Setting up heartbeat timer");
                 return;
