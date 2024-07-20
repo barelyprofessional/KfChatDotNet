@@ -8,7 +8,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class Shuffle
+public class Shuffle : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -21,13 +21,14 @@ public class Shuffle
     public event OnWsDisconnectionEventHandler OnWsDisconnection;
     private CancellationToken _cancellationToken = CancellationToken.None;
     private CancellationTokenSource _pingCts = new();
+    private Task _pingTask;
 
     public Shuffle(string? proxy = null, CancellationToken? cancellationToken = null)
     {
         _proxy = proxy;
         if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
         // Moved it up here as I'm concerned about the possibility of reconnections creating multiple ping tasks
-        _ = PeriodicPing();
+        _pingTask = PeriodicPing();
     }
 
     public async Task StartWsClient()
@@ -52,7 +53,8 @@ public class Shuffle
         
         var client = new WebsocketClient(_wsUri, factory)
         {
-            ReconnectTimeout = TimeSpan.FromSeconds(_reconnectTimeout)
+            ReconnectTimeout = TimeSpan.FromSeconds(_reconnectTimeout),
+            IsReconnectionEnabled = false // Watchdog will self-destruct this instead
         };
         
         client.ReconnectionHappened.Subscribe(WsReconnection);
@@ -71,12 +73,6 @@ public class Shuffle
         return _wsClient is { IsRunning: true };
     }
 
-    private void SendPing()
-    {
-        _logger.Debug("Sending ping to Shuffle");
-        _wsClient.SendInstant("{\"type\":\"ping\"}").Wait(_cancellationToken);
-    }
-
     private async Task PeriodicPing()
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
@@ -87,12 +83,8 @@ public class Shuffle
                 _logger.Debug("_wsClient doesn't exist yet, not going to try ping");
                 continue;
             }
-            if (!IsConnected())
-            {
-                _logger.Info("Not connected not going to try send a ping actually");
-                continue;
-            }
-            SendPing();
+            _logger.Debug("Sending ping to Shuffle");
+            _wsClient.Send("{\"type\":\"ping\"}");
         }
     }
     
@@ -102,11 +94,6 @@ public class Shuffle
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
-        if (disconnectionInfo.Type == DisconnectionType.ByServer)
-        {
-            _logger.Info("Forcing reconnection as the type was ByServer");
-            _wsClient.Reconnect().Wait(_cancellationToken);
-        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -116,7 +103,7 @@ public class Shuffle
         var initPayload =
             "{\"type\":\"connection_init\",\"payload\":{\"x-correlation-id\":\"pdvlnd9tej-di27abvq19-1.30.2-1i0nef1m7-g::anon\",\"authorization\":\"\"}}";
         _logger.Debug(initPayload);
-        _wsClient.SendInstant(initPayload).Wait(_cancellationToken);
+        _wsClient.Send(initPayload);
     }
     
     private void WsMessageReceived(ResponseMessage message)
@@ -147,7 +134,7 @@ public class Shuffle
 
             if (packetType == "pong")
             {
-                _logger.Debug("Shuffle pong packet");
+                _logger.Info("Shuffle pong packet");
                 return;
             }
 
@@ -216,4 +203,13 @@ public class Shuffle
     }
 
     public class ShuffleUserNotFoundException : Exception;
+
+    public void Dispose()
+    {
+        _wsClient.Dispose();
+        _pingCts.Cancel();
+        _pingCts.Dispose();
+        _pingTask.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

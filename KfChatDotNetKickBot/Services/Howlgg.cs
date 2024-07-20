@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
 using KfChatDotNetKickBot.Models;
@@ -8,7 +7,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class Howlgg
+public class Howlgg : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -54,7 +53,8 @@ public class Howlgg
         
         var client = new WebsocketClient(_wsUri, factory)
         {
-            ReconnectTimeout = TimeSpan.FromSeconds(_reconnectTimeout)
+            ReconnectTimeout = TimeSpan.FromSeconds(_reconnectTimeout),
+            IsReconnectionEnabled = false
         };
         
         client.ReconnectionHappened.Subscribe(WsReconnection);
@@ -90,12 +90,6 @@ public class Howlgg
                 _logger.Debug("_wsClient doesn't exist yet, not going to try ping");
                 continue;
             }
-            if (!IsConnected())
-            {
-                _logger.Info("Not connected not going to try send a ping actually");
-                continue;
-            }
-            
             _logger.Debug("Sending Howl.gg ping packet");
             await _wsClient.SendInstant("2");
         }
@@ -107,11 +101,6 @@ public class Howlgg
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
-        if (disconnectionInfo.Type == DisconnectionType.ByServer)
-        {
-            _logger.Info("Forcing reconnection as the type was ByServer");
-            _wsClient.Reconnect().Wait(_cancellationToken);
-        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -143,19 +132,9 @@ public class Howlgg
                 // Received on initial connection
                 var packetData = JsonSerializer.Deserialize<JsonElement>(message.Text.TrimStart('0'));
                 _heartbeatInterval = TimeSpan.FromMilliseconds(packetData.GetProperty("pingInterval").GetInt32());
-                if (_heartbeatTask != null)
-                {
-                    _pingCts.Cancel();
-                    while (!_heartbeatTask.IsCompleted)
-                    {
-                        _logger.Debug("Waiting for heartbeat task to die");
-                        Task.Delay(TimeSpan.FromMilliseconds(100), _cancellationToken).Wait(_cancellationToken);
-                    }
-                    _heartbeatTask.Dispose();
-                }
-
-                _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);
                 _logger.Info("Received connection packet from Howl.gg. Setting up heartbeat timer");
+                if (_heartbeatTask != null) return;
+                _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);
                 return;
             }
 
@@ -184,5 +163,14 @@ public class Howlgg
             _logger.Error(message.Text);
             _logger.Error("--- End of Payload ---");
         }
+    }
+
+    public void Dispose()
+    {
+        _wsClient.Dispose();
+        _pingCts.Cancel();
+        _pingCts.Dispose();
+        _heartbeatTask?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

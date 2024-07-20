@@ -7,7 +7,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class TwitchChat
+public class TwitchChat : IDisposable
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -54,7 +54,8 @@ public class TwitchChat
         
         var client = new WebsocketClient(_wsUri, factory)
         {
-            ReconnectTimeout = TimeSpan.FromSeconds(ReconnectTimeout)
+            ReconnectTimeout = TimeSpan.FromSeconds(ReconnectTimeout),
+            IsReconnectionEnabled = false
         };
         
         client.ReconnectionHappened.Subscribe(WsReconnection);
@@ -79,11 +80,6 @@ public class TwitchChat
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
-        if (disconnectionInfo.Type == DisconnectionType.ByServer)
-        {
-            _logger.Info("Forcing reconnection as the type was ByServer");
-            _wsClient.Reconnect().Wait(_cancellationToken);
-        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -150,7 +146,7 @@ public class TwitchChat
             switch (command)
             {
                 case "PING":
-                    _logger.Debug("Received PING, sending PONG");
+                    _logger.Info("Received PING, sending PONG");
                     _wsClient.Send("PONG");
                     return;
                 case "JOIN":
@@ -174,5 +170,11 @@ public class TwitchChat
             _logger.Error(message.Text);
             _logger.Error("--- End of IRC Message ---");
         }
+    }
+
+    public void Dispose()
+    {
+        _wsClient.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

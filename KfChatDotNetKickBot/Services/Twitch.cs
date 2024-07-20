@@ -7,7 +7,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class Twitch
+public class Twitch : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -18,6 +18,8 @@ public class Twitch
     public delegate void OnStreamStateUpdateEventHandler(object sender, int channelId, bool isLive);
     public event OnStreamStateUpdateEventHandler OnStreamStateUpdated;
     private CancellationToken _cancellationToken = CancellationToken.None;
+    private Task? _pingTask = null;
+    private CancellationTokenSource _pingCts = new();
 
     public Twitch(List<int> channels,  string? proxy = null, CancellationToken? cancellationToken = null)
     {
@@ -45,7 +47,8 @@ public class Twitch
         
         var client = new WebsocketClient(_wsUri, factory)
         {
-            ReconnectTimeout = TimeSpan.FromSeconds(_reconnectTimeout)
+            ReconnectTimeout = TimeSpan.FromSeconds(_reconnectTimeout),
+            IsReconnectionEnabled = false
         };
         
         client.ReconnectionHappened.Subscribe(WsReconnection);
@@ -58,7 +61,7 @@ public class Twitch
         await client.Start();
         _logger.Debug("Websocket client started!");
         SendPing();
-        _ = PeriodicPing();
+        _pingTask = PeriodicPing();
     }
     
     public bool IsConnected()
@@ -68,14 +71,14 @@ public class Twitch
 
     private void SendPing()
     {
-        _logger.Debug("Sending ping to Twitch");
+        _logger.Info("Sending ping to Twitch");
         _wsClient.Send("{\"type\":\"PING\"}");
     }
 
     private async Task PeriodicPing()
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
-        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        while (await timer.WaitForNextTickAsync(_pingCts.Token))
         {
             SendPing();
         }
@@ -86,11 +89,6 @@ public class Twitch
         _logger.Error($"Client disconnected from the chat (or never successfully connected). Type is {disconnectionInfo.Type}");
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
-        if (disconnectionInfo.Type == DisconnectionType.ByServer)
-        {
-            _logger.Info("Forcing reconnection as the type was ByServer");
-            _wsClient.Reconnect().Wait(_cancellationToken);
-        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -205,4 +203,13 @@ public class Twitch
     }
 
     public class TwitchUserNotFoundException : Exception;
+
+    public void Dispose()
+    {
+        _wsClient.Dispose();
+        _pingCts.Cancel();
+        _pingCts.Dispose();
+        _pingTask?.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

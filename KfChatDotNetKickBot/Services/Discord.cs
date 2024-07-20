@@ -7,7 +7,7 @@ using Websocket.Client;
 
 namespace KfChatDotNetKickBot.Services;
 
-public class DiscordService
+public class DiscordService : IDisposable
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
@@ -63,7 +63,8 @@ public class DiscordService
         
         var client = new WebsocketClient(_wsUri, factory)
         {
-            ReconnectTimeout = TimeSpan.FromSeconds(ReconnectTimeout)
+            ReconnectTimeout = TimeSpan.FromSeconds(ReconnectTimeout),
+            IsReconnectionEnabled = false
         };
         
         client.ReconnectionHappened.Subscribe(WsReconnection);
@@ -91,12 +92,6 @@ public class DiscordService
                 _logger.Debug("_wsClient doesn't exist yet, not going to try ping");
                 continue;
             }
-            if (!IsConnected())
-            {
-                _logger.Info("Not connected not going to try send a ping actually");
-                continue;
-            }
-
             var heartbeatPacket = JsonSerializer.Serialize(new DiscordPacketWriteModel
             {
                 OpCode = 1,
@@ -114,11 +109,6 @@ public class DiscordService
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
         OnWsDisconnection?.Invoke(this, disconnectionInfo);
-        if (disconnectionInfo.Type == DisconnectionType.ByServer)
-        {
-            _logger.Info("Forcing reconnection as the type was ByServer");
-            _wsClient.Reconnect().Wait(_cancellationToken);
-        }
     }
     
     private void WsReconnection(ReconnectionInfo reconnectionInfo)
@@ -161,25 +151,16 @@ public class DiscordService
                     "\"since\":0,\"activities\":[],\"afk\":false},\"compress\":false,\"client_state\":{\"guild_versions\":{}}}}";
                 _logger.Debug(initPayload);
                 _wsClient.SendInstant(initPayload).Wait(_cancellationToken);
-                if (_heartbeatTask != null)
-                {
-                    _pingCts.Cancel();
-                    while (!_heartbeatTask.IsCompleted)
-                    {
-                        _logger.Debug("Waiting for heartbeat task to die");
-                        Task.Delay(TimeSpan.FromMilliseconds(100), _cancellationToken).Wait(_cancellationToken);
-                    }
-                    _heartbeatTask.Dispose();
-                }
                 _heartbeatInterval =
                     TimeSpan.FromMilliseconds(packet.Data.GetProperty("heartbeat_interval").GetInt32());
+                if (_heartbeatTask != null) return;
                 _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);
                 return;
             }
 
             if (packet.OpCode == 11)
             {
-                _logger.Debug("Received heartbeat ack from Discord");
+                _logger.Info("Received heartbeat ack from Discord");
                 return;
             }
 
@@ -206,8 +187,8 @@ public class DiscordService
                         packet.Data.Deserialize<DiscordMessageModel>() ?? throw new InvalidOperationException());
                     return;
                 default:
-                    _logger.Info($"{packet.DispatchEvent} was unhandled. JSON follows");
-                    _logger.Info(message.Text);
+                    _logger.Debug($"{packet.DispatchEvent} was unhandled. JSON follows");
+                    _logger.Debug(message.Text);
                     break;
             }
         }
@@ -219,6 +200,16 @@ public class DiscordService
             _logger.Error(message.Text);
             _logger.Error("--- End of JSON Payload ---");
         }
+    }
+
+    public void Dispose()
+    {
+        _logger.Info("Disposing of the Discord service");
+        _wsClient.Dispose();
+        _pingCts.Cancel();
+        _pingCts.Dispose();
+        _heartbeatTask?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
 

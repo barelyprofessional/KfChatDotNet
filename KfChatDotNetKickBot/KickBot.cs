@@ -26,7 +26,7 @@ public class KickBot
     // Suppresses the command handler on initial start, so it doesn't pick up things already handled on restart
     private bool _initialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
-    private readonly Twitch _twitch;
+    private Twitch _twitch;
     private Shuffle _shuffle;
     private DiscordService _discord;
     private TwitchChat _twitchChat;
@@ -38,6 +38,8 @@ public class KickBot
     private string _bmjTwitchUsername;
     private Howlgg _howlgg;
     private bool _kickDisabled = true;
+    private bool _twitchDisabled = false;
+    private Task _websocketWatchdog;
     
     public KickBot()
     {
@@ -105,28 +107,100 @@ public class KickBot
         if (settings[BuiltIn.Keys.TwitchBossmanJackId].Value != null)
         {
             _logger.Debug("Creating Twitch live stream notification client");
-            _twitch = new Twitch([Convert.ToInt32(settings[BuiltIn.Keys.TwitchBossmanJackId].Value)], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
-            _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
-            _twitch.StartWsClient().Wait(_cancellationToken);
+            BuildTwitch();
         }
         else
         {
+            _twitchDisabled = true;
             _logger.Debug($"Ignoring Twitch client as {BuiltIn.Keys.TwitchBossmanJackId} is not defined");
         }
 
         BuildShuffle();
         BuildDiscord();
         BuildTwitchChat();
-
-        _howlgg = new Howlgg(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
-        _howlgg.OnHowlggBetHistory += OnHowlggBetHistory;
-        _howlgg.StartWsClient().Wait(_cancellationToken);
+        BuildHowlgg();
+        
+        _logger.Info("Starting websocket watchdog");
+        _websocketWatchdog = WebsocketWatchdog();
 
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
         exitEvent.WaitOne();
     }
 
+    private async Task WebsocketWatchdog()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        {
+            if (_initialStartCooldown) continue;
+            try
+            {
+                if (!_shuffle.IsConnected())
+                {
+                    _logger.Error("Shuffle died, recreating it");
+                    _shuffle.Dispose();
+                    _shuffle = null!;
+                    BuildShuffle();
+                }
+
+                if (!_discord.IsConnected())
+                {
+                    _logger.Error("Discord died, recreating it");
+                    _discord.Dispose();
+                    _discord = null!;
+                    BuildDiscord();
+                }
+
+                if (!_twitchDisabled && !_twitch.IsConnected())
+                {
+                    _logger.Error("Twitch died, recreating it");
+                    _twitch.Dispose();
+                    _twitch = null!;
+                    BuildTwitch();
+                }
+
+                if (!_twitchChat.IsConnected())
+                {
+                    _logger.Error("Twitch chat died, recreating it");
+                    _twitchChat.Dispose();
+                    _twitchChat = null!;
+                    BuildTwitchChat();
+                }
+
+                if (!_howlgg.IsConnected())
+                {
+                    _logger.Error("Howl.gg died, recreating it");
+                    _howlgg.Dispose();
+                    _howlgg = null!;
+                    BuildHowlgg();
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.Error("Watchdog shit itself while trying to do something, exception follows");
+                _logger.Error(e);
+            }
+
+        }
+    }
+
+    public void BuildTwitch()
+    {
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]).Result;
+        _twitch = new Twitch([Convert.ToInt32(settings[BuiltIn.Keys.TwitchBossmanJackId].Value)], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
+        _twitch.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void BuildHowlgg()
+    {
+        var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
+        _howlgg = new Howlgg(proxy, _cancellationToken);
+        _howlgg.OnHowlggBetHistory += OnHowlggBetHistory;
+        _howlgg.StartWsClient().Wait(_cancellationToken);
+    }
+    
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)
     {
         _logger.Debug("Received bet history from Howl.gg");
