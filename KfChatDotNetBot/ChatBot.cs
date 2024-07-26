@@ -120,6 +120,7 @@ public class ChatBot
         BuildDiscord();
         BuildTwitchChat();
         BuildHowlgg();
+        BuildJackpot();
         
         _logger.Info("Starting websocket watchdog");
         _websocketWatchdog = WebsocketWatchdog();
