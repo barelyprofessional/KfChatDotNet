@@ -409,7 +409,7 @@ public class KickBot
                 KfClient.Reconnect().Wait(_cancellationToken);
             }
             _logger.Debug("Polling Bossman's Howl.gg stats");
-            _howlgg.GetUserInfo("951905");
+            _howlgg?.GetUserInfo("951905");
         }
     }
 
