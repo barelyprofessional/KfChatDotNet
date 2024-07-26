@@ -77,7 +77,7 @@ public class Howlgg : IDisposable
     {
         var packet = "42/main,0[\"getUserInfo\",{\"userOrSteamId\":\"" + userId + "\",\"interval\":\"lifetime\"}]";
         _logger.Debug($"Sending packet: {packet}");
-        _wsClient.SendInstant(packet).Wait(_cancellationToken);
+        _wsClient.Send(packet);
     }
 
     private async Task HeartbeatTimer()
@@ -91,7 +91,7 @@ public class Howlgg : IDisposable
                 continue;
             }
             _logger.Debug("Sending Howl.gg ping packet");
-            await _wsClient.SendInstant("2");
+            _wsClient.Send("2");
         }
     }
     
@@ -141,7 +141,7 @@ public class Howlgg : IDisposable
             if (message.Text == "40")
             {
                 _logger.Trace("Ready to subscribe, sending main subscription");
-                _wsClient.SendInstant("40/main,").Wait(_cancellationToken);
+                _wsClient.Send("40/main,");
                 // To indicate successful subscription it echoes back the channel to you
                 return;
             }
