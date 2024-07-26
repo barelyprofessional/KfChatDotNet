@@ -344,6 +344,14 @@ public static class BuiltIn
             Description = "Red color used for showing negative values in chat",
             Default = "#f1323e",
             IsSecret = false
+        },
+        new BuiltInSettingsModel()
+        {
+            Key = Keys.JackpotBmjUsername,
+            Regex = ".+",
+            Description = "Bossman's username on Jackpot",
+            Default = "TheBossmanJack",
+            IsSecret = false
         }
     ];
     
@@ -378,5 +386,6 @@ public static class BuiltIn
         public static string HowlggDivisionAmount = "Howlgg.DivisionAmount";
         public static string KiwiFarmsGreenColor = "KiwiFarms.GreenColor";
         public static string KiwiFarmsRedColor = "KiwiFarms.RedColor";
+        public static string JackpotBmjUsername = "Jackpot.BmjUsername";
     }
 }

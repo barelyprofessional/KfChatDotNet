@@ -40,6 +40,7 @@ public class KickBot
     private bool _kickDisabled = true;
     private bool _twitchDisabled = false;
     private Task _websocketWatchdog;
+    private Jackpot _jackpot;
     
     public KickBot()
     {
@@ -175,6 +176,14 @@ public class KickBot
                     _howlgg = null!;
                     BuildHowlgg();
                 }
+
+                if (!_jackpot.IsConnected())
+                {
+                    _logger.Error("Jackpot died, recreating it");
+                    _jackpot.Dispose();
+                    _jackpot = null!;
+                    BuildJackpot();
+                }
             }
             catch (Exception e)
             {
@@ -183,6 +192,53 @@ public class KickBot
             }
 
         }
+    }
+
+    private void BuildJackpot()
+    {
+        var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
+        _jackpot = new Jackpot(proxy, _cancellationToken);
+        _jackpot.OnJackpotBet += OnJackpotBet;
+        _jackpot.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void OnJackpotBet(object sender, JackpotWsBetPayloadModel bet)
+    {
+        var settings = Helpers
+            .GetMultipleValues([
+                BuiltIn.Keys.JackpotBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Trace("Jackpot bet has arrived");
+        if (bet.User != settings[BuiltIn.Keys.JackpotBmjUsername].Value)
+        {
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING (on Jackpot)");
+        if (IsBmjLive)
+        {
+            _logger.Info("Ignoring as BMJ is live");
+            return;
+        }
+
+        // Only check once because the bot should be tracking the Twitch stream
+        // This is just in case he's already live while the bot starts
+        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
+        if (!_isBmjLiveSynced)
+        {
+            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
+            _isBmjLiveSynced = true;
+        }
+        if (IsBmjLive)
+        {
+            _logger.Info("Double checked and he is really online");
+            return;
+        }
+
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (bet.Payout < bet.Wager) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        // There will be a check for live status but ignoring that while we deal with an emergency dice situation
+        SendChatMessage($"🚨🚨 JACKPOT BETTING 🚨🚨 {bet.User} just bet {bet.Wager} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", false);
     }
 
     public void BuildTwitch()
@@ -363,7 +419,7 @@ public class KickBot
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         // There will be a check for live status but ignoring that while we deal with an emergency dice situation
-        SendChatMessage($"🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
+        SendChatMessage($"🚨🚨 Shufflebros! 🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
 
     private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
