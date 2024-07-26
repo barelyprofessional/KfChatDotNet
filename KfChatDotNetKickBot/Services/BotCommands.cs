@@ -1,4 +1,5 @@
-﻿using KfChatDotNetKickBot.Commands;
+﻿using Humanizer;
+using KfChatDotNetKickBot.Commands;
 using KfChatDotNetWsClient.Models.Events;
 using NLog;
 
@@ -58,7 +59,7 @@ internal class BotCommands
                 if (user == null) return;
                 if (user.UserRight < command.RequiredRight)
                 {
-                    _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command.", true);
+                    _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
                     break;
                 }
                 var task = Task.Run(() => command.RunCommand(_bot, message, match.Groups, _cancellationToken), _cancellationToken);
