@@ -44,15 +44,18 @@ public class HowlggRecentBetCommand : ICommand
     public UserRight RequiredRight => UserRight.Guest;
     public async Task RunCommand(KickBot botInstance, MessageModel message, GroupCollection arguments, CancellationToken ctx)
     {
-        var division = (await Helpers.GetValue(BuiltIn.Keys.HowlggDivisionAmount)).ToType<float>();
+        var settings = await Helpers.GetMultipleValues([
+            BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor, BuiltIn.Keys.HowlggDivisionAmount
+        ]);
+        var division = settings[BuiltIn.Keys.HowlggDivisionAmount].ToType<float>();
         await using var db = new ApplicationDbContext();
         // EF SQLite doesn't support filtering on dates :(
         var bets = (await db.HowlggBets.ToListAsync(ctx)).OrderByDescending(j => j.Date).Take(3).ToList();
         var output = "Most recent 3 bets on Howl.gg:";
         foreach (var bet in bets)
         {
-            var color = "#3dd179";
-            if (bet.Profit < 0) color = "#f1323e";
+            var color = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+            if (bet.Profit < 0) color = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
             output += $"[br]Bet: {bet.Bet / division:C}; Profit: [color={color}]{bet.Profit / division:C}[/color]; Game: {bet.Game.Humanize()}; {(DateTimeOffset.UtcNow - bet.Date).Humanize(precision: 1)} ago";
         }
         botInstance.SendChatMessage(output, true);

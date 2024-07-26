@@ -328,6 +328,22 @@ public static class BuiltIn
             Description = "How much to divide the Howlgg bets/profit by to get the real value",
             Default = "1650",
             IsSecret = false
+        },
+        new BuiltInSettingsModel()
+        {
+            Key = Keys.KiwiFarmsGreenColor,
+            Regex = ".+",
+            Description = "Green color used for showing positive values in chat",
+            Default = "#3dd179",
+            IsSecret = false
+        },
+        new BuiltInSettingsModel()
+        {
+            Key = Keys.KiwiFarmsRedColor,
+            Regex = ".+",
+            Description = "Red color used for showing negative values in chat",
+            Default = "#f1323e",
+            IsSecret = false
         }
     ];
     
@@ -360,5 +376,7 @@ public static class BuiltIn
         public static string KiwiFarmsToken = "KiwiFarms.Token";
         public static string KickEnabled = "Kick.Enabled";
         public static string HowlggDivisionAmount = "Howlgg.DivisionAmount";
+        public static string KiwiFarmsGreenColor = "KiwiFarms.GreenColor";
+        public static string KiwiFarmsRedColor = "KiwiFarms.RedColor";
     }
 }

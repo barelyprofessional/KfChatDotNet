@@ -330,7 +330,10 @@ public class KickBot
     private void ShuffleOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet)
     {
         var settings = Helpers
-            .GetMultipleValues([BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
+            .GetMultipleValues([
+                BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
         _logger.Trace("Shuffle bet has arrived");
         if (bet.Username != settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
         {
@@ -357,8 +360,8 @@ public class KickBot
             return;
         }
 
-        var payoutColor = "green";
-        if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = "red";
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         // There will be a check for live status but ignoring that while we deal with an emergency dice situation
         SendChatMessage($"🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
