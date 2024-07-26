@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetGui", "KfChatDo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KickWsClient", "KickWsClient\KickWsClient.csproj", "{DECBB95C-2C9F-44C2-AFA3-3741986FBA38}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetKickBot", "KfChatDotNetKickBot\KfChatDotNetKickBot.csproj", "{4734E0A4-150E-4915-B905-928BB4BE3FF6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetBot", "KfChatDotNetBot\KfChatDotNetBot.csproj", "{4734E0A4-150E-4915-B905-928BB4BE3FF6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreeXplWsClient", "ThreeXplWsClient\ThreeXplWsClient.csproj", "{3D72D70A-48AD-4EE8-89DC-C78153EEA879}"
 EndProject
