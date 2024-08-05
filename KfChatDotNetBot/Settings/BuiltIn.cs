@@ -352,6 +352,30 @@ public static class BuiltIn
             Description = "Bossman's username on Jackpot",
             Default = "TheBossmanJack",
             IsSecret = false
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.RainbetBmjPublicId,
+            Regex = ".+",
+            Description = "Bossman's rainbet public ID",
+            Default = "Ir04170wLulcjtePCL7P6lmeOlepRaNp",
+            IsSecret = false
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.FlareSolverrApiUrl,
+            Regex = ".+",
+            Description = "URL for your FlareSolverr service API",
+            Default = "http://localhost:8191/",
+            IsSecret = false
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.FlareSolverrProxy,
+            Regex = ".+",
+            Description = "Proxy in use specifically for FlareSolverr",
+            Default = null,
+            IsSecret = false
         }
     ];
     
@@ -387,5 +411,8 @@ public static class BuiltIn
         public static string KiwiFarmsGreenColor = "KiwiFarms.GreenColor";
         public static string KiwiFarmsRedColor = "KiwiFarms.RedColor";
         public static string JackpotBmjUsername = "Jackpot.BmjUsername";
+        public static string RainbetBmjPublicId = "Rainbet.BmjPublicId";
+        public static string FlareSolverrApiUrl = "FlareSolverr.ApiUrl";
+        public static string FlareSolverrProxy = "FlareSolverr.Proxy";
     }
 }

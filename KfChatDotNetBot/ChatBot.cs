@@ -41,6 +41,7 @@ public class ChatBot
     private bool _twitchDisabled = false;
     private Task _websocketWatchdog;
     private Jackpot _jackpot;
+    private Rainbet _rainbet;
     
     public ChatBot()
     {
@@ -121,6 +122,7 @@ public class ChatBot
         BuildTwitchChat();
         BuildHowlgg();
         BuildJackpot();
+        BuildRainbet();
         
         _logger.Info("Starting websocket watchdog");
         _websocketWatchdog = WebsocketWatchdog();
@@ -185,6 +187,14 @@ public class ChatBot
                     _jackpot = null!;
                     BuildJackpot();
                 }
+
+                // if (!_rainbet.IsConnected())
+                // {
+                //     _logger.Error("Rainbet died, recreating it");
+                //     _rainbet.Dispose();
+                //     _rainbet = null!;
+                //     BuildRainbet();
+                // }
             }
             catch (Exception e)
             {
@@ -193,6 +203,49 @@ public class ChatBot
             }
 
         }
+    }
+    
+    private void BuildRainbet()
+    {
+        _rainbet = new Rainbet(_cancellationToken);
+        _rainbet.OnRainbetBet += OnRainbetBet;
+        _rainbet.StartGameHistoryTimer();
+    }
+
+    private void OnRainbetBet(object sender, List<RainbetBetHistoryModel> bets)
+    {
+        var settings = Helpers
+            .GetMultipleValues([
+                BuiltIn.Keys.RainbetBmjPublicId, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Trace("Rainbet bet has arrived");
+        using var db = new ApplicationDbContext();
+        foreach (var bet in bets.Where(b => b.User.PublicId == settings[BuiltIn.Keys.RainbetBmjPublicId].Value))
+        //foreach (var bet in bets)
+        {
+            if (db.RainbetBets.Any(b => b.BetId == bet.Id))
+            {
+                _logger.Trace($"Ignoring bet {bet.Id} as we've already logged it");
+                continue;
+            }
+
+            db.RainbetBets.Add(new RainbetBetsDbModel
+            {
+                PublicId = bet.User.PublicId,
+                RainbetUserId = bet.User.Id,
+                GameName = bet.Game.Name,
+                Value = bet.Value,
+                Payout = bet.Payout,
+                Multiplier = bet.Multiplier,
+                BetId = bet.Id,
+                UpdatedAt = bet.UpdatedAt,
+                BetSeenAt = DateTimeOffset.UtcNow
+            });
+            _logger.Info("Added a Bossman Rainbet bet to the database");
+        }
+
+        db.SaveChanges();
     }
 
     private void BuildJackpot()

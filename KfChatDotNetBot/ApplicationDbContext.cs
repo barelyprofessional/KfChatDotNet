@@ -14,4 +14,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<JuicerDbModel> Juicers { get; set; }
     public DbSet<SettingDbModel> Settings { get; set; }
     public DbSet<HowlggBetsDbModel> HowlggBets { get; set; }
+    public DbSet<RainbetBetsDbModel> RainbetBets { get; set; }
 }

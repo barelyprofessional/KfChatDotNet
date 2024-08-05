@@ -207,7 +207,16 @@ public class Shuffle : IDisposable
     public void Dispose()
     {
         _wsClient.Dispose();
-        _pingCts.Cancel();
+        // Rare bug but has happened at least once
+        try
+        {
+            _pingCts.Cancel();
+        }
+        catch (ObjectDisposedException e)
+        {
+            _logger.Error("Caught object disposed exception when trying to send a cancellation to the ping task");
+            _logger.Error(e);
+        }
         _pingCts.Dispose();
         _pingTask.Dispose();
         GC.SuppressFinalize(this);
