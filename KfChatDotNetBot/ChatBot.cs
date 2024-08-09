@@ -66,11 +66,11 @@ public class ChatBot
             XfSessionToken = _xfSessionToken,
             CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
             Proxy = settings[BuiltIn.Keys.Proxy].Value,
-            ReconnectTimeout = Convert.ToInt32(settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].Value)
+            ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
         });
 
         _kickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
-            settings[BuiltIn.Keys.Proxy].Value, Convert.ToInt32(settings[BuiltIn.Keys.PusherReconnectTimeout].Value));
+            settings[BuiltIn.Keys.Proxy].Value, settings[BuiltIn.Keys.PusherReconnectTimeout].ToType<int>());
         
         _logger.Debug("Creating bot command instance");
         _botCommands = new BotCommands(this, _cancellationToken);
@@ -93,8 +93,8 @@ public class ChatBot
         if (settings[BuiltIn.Keys.KickEnabled].ToBoolean())
         {
             _kickClient.StartWsClient().Wait(_cancellationToken);
-            var pusherChannels = settings[BuiltIn.Keys.PusherChannels].Value ?? "";
-            foreach (var channel in pusherChannels.Split(','))
+            var pusherChannels = settings[BuiltIn.Keys.PusherChannels].ToList();
+            foreach (var channel in pusherChannels)
             {
                 _kickClient.SendPusherSubscribe(channel);
             }
@@ -290,7 +290,7 @@ public class ChatBot
     public void BuildTwitch()
     {
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]).Result;
-        _twitch = new Twitch([Convert.ToInt32(settings[BuiltIn.Keys.TwitchBossmanJackId].Value)], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _twitch = new Twitch([settings[BuiltIn.Keys.TwitchBossmanJackId].ToType<int>()], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
         _twitch.StartWsClient().Wait(_cancellationToken);
     }
@@ -551,7 +551,7 @@ public class ChatBot
         foreach (var message in messages)
         {
             _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
-            if (settings[BuiltIn.Keys.GambaSeshDetectEnabled].Value == "true" && !_initialStartCooldown && message.Author.Id == Convert.ToInt32(settings[BuiltIn.Keys.GambaSeshUserId].Value) && !GambaSeshPresent)
+            if (settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !_initialStartCooldown && message.Author.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && !GambaSeshPresent)
             {
                 _logger.Info("Received a GambaSesh message after cooldown and while thinking he's not here. Setting the presence flag to avoid spamming chat");
                 GambaSeshPresent = true;
@@ -574,7 +574,7 @@ public class ChatBot
         var settings = Helpers
             .GetMultipleValues([BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
-        if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].Value == "true")
+        if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].ToBoolean())
         {
             _logger.Info("Not sending message as SuppressChatMessages is enabled");
             _logger.Info($"Message was: {message}");
@@ -611,7 +611,7 @@ public class ChatBot
         using var db = new ApplicationDbContext();
         foreach (var user in users)
         {
-            if (user.Id == Convert.ToInt32(settings[BuiltIn.Keys.GambaSeshUserId].Value) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].Value == "true")
+            if (user.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
             {
                 _logger.Info("GambaSesh is now present");
                 GambaSeshPresent = true;
@@ -642,7 +642,7 @@ public class ChatBot
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
         _lastKfEvent = DateTime.Now;
-        if (userIds.Contains(Convert.ToInt32(settings[BuiltIn.Keys.GambaSeshUserId].Value)) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].Value == "true")
+        if (userIds.Contains(settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>()) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
         {
             _logger.Info("GambaSesh is no longer present");
             GambaSeshPresent = false;
@@ -658,7 +658,7 @@ public class ChatBot
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
-        var roomId = Convert.ToInt32(Helpers.GetValue(BuiltIn.Keys.KiwiFarmsRoomId).Result.Value);
+        var roomId = Helpers.GetValue(BuiltIn.Keys.KiwiFarmsRoomId).Result.ToType<int>();
         _logger.Error($"Sneedchat reconnected due to {reconnectionInfo.Type}");
         _logger.Info("Resetting GambaSesh presence so it can resync if he crashed while the bot was DC'd");
         GambaSeshPresent = false;
