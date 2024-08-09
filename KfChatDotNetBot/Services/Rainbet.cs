@@ -108,6 +108,7 @@ public class Rainbet : IDisposable
         if (response.Headers.Contains("cf-mitigated"))
         {
             _logger.Error("Hit a Cloudflare challenge, cookies expired? Marking cookies as null so it'll refresh next time we run");
+            _cookies = null;
             throw new Exception("Cloudflare challenged");
         }
         var bets = await response.Content.ReadFromJsonAsync<List<RainbetBetHistoryModel>>(cancellationToken: _cancellationToken);
