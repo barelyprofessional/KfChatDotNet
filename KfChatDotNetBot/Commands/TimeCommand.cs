@@ -11,7 +11,7 @@ public class TimeCommand : ICommand
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
             TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")), TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").BaseUtcOffset);

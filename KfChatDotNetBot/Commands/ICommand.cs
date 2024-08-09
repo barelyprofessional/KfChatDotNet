@@ -11,5 +11,5 @@ internal interface ICommand
     bool HideFromHelp { get; }
     UserRight RequiredRight { get; }
 
-    Task RunCommand(ChatBot botInstance, MessageModel message, GroupCollection arguments, CancellationToken ctx);
+    Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx);
 }

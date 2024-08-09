@@ -62,7 +62,7 @@ internal class BotCommands
                     _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
                     break;
                 }
-                var task = Task.Run(() => command.RunCommand(_bot, message, match.Groups, _cancellationToken), _cancellationToken);
+                var task = Task.Run(() => command.RunCommand(_bot, message, user, match.Groups, _cancellationToken), _cancellationToken);
                 _commandTasks.Add(task);
             }
         }

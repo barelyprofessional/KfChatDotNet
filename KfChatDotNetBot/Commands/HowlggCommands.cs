@@ -15,7 +15,7 @@ public class HowlggStatsCommand : ICommand
     public string HelpText => "Get betting statistics in the given window";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var window = Convert.ToInt32(arguments["window"].Value);
         var start = DateTimeOffset.UtcNow.AddHours(-window);
@@ -42,7 +42,7 @@ public class HowlggRecentBetCommand : ICommand
     public string HelpText => "Get the most recent 3 bets";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings = await Helpers.GetMultipleValues([
             BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor, BuiltIn.Keys.HowlggDivisionAmount

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Humanizer;
+using Humanizer.Localisation;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -13,11 +14,12 @@ public class JuiceCommand : ICommand
     public string HelpText => "Get juice!";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.KfId == message.Author.Id, cancellationToken: ctx);
-        if (user == null) return;
+        // Have to attach the entity because it is coming from another DB context
+        // https://stackoverflow.com/questions/52718652/ef-core-sqlite-sqlite-error-19-unique-constraint-failed
+        db.Users.Attach(user);
         var juicerSettings = await Helpers.GetMultipleValues([BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown]);
         var cooldown = juicerSettings[BuiltIn.Keys.JuiceCooldown].ToType<int>();
         var amount = juicerSettings[BuiltIn.Keys.JuiceAmount].ToType<int>();
@@ -41,6 +43,6 @@ public class JuiceCommand : ICommand
             return;
         }
 
-        botInstance.SendChatMessage($"You gotta wait {secondsRemaining.Humanize(precision: 2)} for another juicer", true);
+        botInstance.SendChatMessage($"You gotta wait {secondsRemaining.Humanize(precision: 2, minUnit: TimeUnit.Second)} for another juicer", true);
     }
 }
