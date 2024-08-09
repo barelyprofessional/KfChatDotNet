@@ -187,14 +187,6 @@ public class ChatBot
                     _jackpot = null!;
                     BuildJackpot();
                 }
-
-                // if (!_rainbet.IsConnected())
-                // {
-                //     _logger.Error("Rainbet died, recreating it");
-                //     _rainbet.Dispose();
-                //     _rainbet = null!;
-                //     BuildRainbet();
-                // }
             }
             catch (Exception e)
             {
