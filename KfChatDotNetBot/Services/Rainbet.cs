@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using FlareSolverrSharp;
-using FlareSolverrSharp.Exceptions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Settings;
 using NLog;
@@ -17,6 +16,9 @@ public class Rainbet : IDisposable
     private CancellationTokenSource _gameHistoryCts = new();
     private Task? _gameHistoryTask;
     private TimeSpan _gameHistoryInterval = TimeSpan.FromSeconds(60);
+    private IEnumerable<string>? _cookies = null;
+    private string? _userAgent = null;
+    public DateTimeOffset LastSuccessfulRefresh = DateTimeOffset.MinValue;
 
     public Rainbet(CancellationToken? cancellationToken = null)
     {
@@ -36,25 +38,10 @@ public class Rainbet : IDisposable
         {
             try
             {
-                _logger.Info("Retrieving game history from Rainbet");
-                var bets = await GetGameHistory(1000);
+                _logger.Info($"Retrieving game history from Rainbet, last success: {LastSuccessfulRefresh:yyyy-MM-dd HH:mm:ss}");
+                var bets = await GetGameHistory(5000);
                 OnRainbetBet?.Invoke(this, bets);
-            }
-            catch (FlareSolverrException e)
-            {
-                _logger.Error("Caught a FlareSolverrException, probably that retarded cookie bug that has been unfixed for 3+ years");
-                _logger.Error("Trying again immediately as it's pretty rare it happens twice in a row");
-                _logger.Error(e);
-                try
-                {
-                    var bets = await GetGameHistory(1000);
-                    OnRainbetBet?.Invoke(this, bets);
-                }
-                catch (Exception ee)
-                {
-                    _logger.Error("Fuck my life, failed again. We'll just wait until the next tick");
-                    _logger.Error(ee);
-                }
+                LastSuccessfulRefresh = DateTimeOffset.UtcNow;
             }
             catch (Exception e)
             {
@@ -64,13 +51,7 @@ public class Rainbet : IDisposable
         }
     }
 
-    // FlareSolverr C# client does not support POSTing application/json so this method involves
-    // 1. Getting the home page (as you're unlikely to get a CF challenge checkbox. Probably due to some config to limit
-    // friction for degens on VPNs, which is like 99% of the traffic for these shit casinos)
-    // 2. Using the cookies from that request to do the actual POST
-    // Cookies and UA must match or the trannies at Cloudflare will reject your cookies
-    // take = 10 is the default, but it can go higher
-    public async Task<List<RainbetBetHistoryModel>> GetGameHistory(int take = 10)
+    private async Task RefreshCookies()
     {
         var settings =
             await Helpers.GetMultipleValues([BuiltIn.Keys.FlareSolverrApiUrl, BuiltIn.Keys.FlareSolverrProxy]);
@@ -88,12 +69,30 @@ public class Rainbet : IDisposable
             handler.ProxyUrl = flareSolverrProxy.Value;
             _logger.Debug($"Configured clearance handler to use {flareSolverrProxy.Value} for proxying the request");
         }
-        var gameHistoryUrl = "https://sportsbook.rainbet.com/v1/game-history";
         var client = new HttpClient(handler);
-        var jsonBody = new Dictionary<string, int> { {"take", take} };
-        var postData = JsonContent.Create(jsonBody);
         // You get CF checkbox'd if you go directly to sportsbook.rainbet.com but works ok for root
         var getResponse = await client.GetAsync("https://rainbet.com/", _cancellationToken);
+        _cookies = getResponse.Headers.GetValues("Set-Cookie");
+        _userAgent = getResponse.RequestMessage!.Headers.UserAgent.ToString();
+    }
+
+    // FlareSolverr C# client does not support POSTing application/json so this method involves
+    // 1. Getting the home page (as you're unlikely to get a CF challenge checkbox. Probably due to some config to limit
+    // friction for degens on VPNs, which is like 99% of the traffic for these shit casinos)
+    // 2. Using the cookies from that request to do the actual POST
+    // Cookies and UA must match or the trannies at Cloudflare will reject your cookies
+    // take = 10 is the default, but it can go higher
+    public async Task<List<RainbetBetHistoryModel>> GetGameHistory(int take = 10)
+    {
+        if (_cookies == null)
+        {
+            _logger.Info("Retrieving cookies for Rainbet as they have not been retrieved yet");
+            await RefreshCookies();
+        }
+        var flareSolverrProxy = await Helpers.GetValue(BuiltIn.Keys.FlareSolverrProxy);
+        var gameHistoryUrl = "https://sportsbook.rainbet.com/v1/game-history";
+        var jsonBody = new Dictionary<string, int> { {"take", take} };
+        var postData = JsonContent.Create(jsonBody);
         var postClientHandler = new HttpClientHandler();
         if (flareSolverrProxy.Value != null)
         {
@@ -102,10 +101,15 @@ public class Rainbet : IDisposable
             _logger.Debug($"Configured API request to use {flareSolverrProxy.Value}");
         }
         var postClient = new HttpClient(postClientHandler);
-        postClient.DefaultRequestHeaders.Add("Cookie", getResponse.Headers.GetValues("Set-Cookie"));
+        postClient.DefaultRequestHeaders.Add("Cookie", _cookies!);
         postClient.DefaultRequestHeaders.UserAgent.Clear();
-        postClient.DefaultRequestHeaders.UserAgent.ParseAdd(getResponse.RequestMessage.Headers.UserAgent.ToString());
+        postClient.DefaultRequestHeaders.UserAgent.ParseAdd(_userAgent);
         var response = await postClient.PostAsync(gameHistoryUrl, postData, _cancellationToken);
+        if (response.Headers.Contains("cf-mitigated"))
+        {
+            _logger.Error("Hit a Cloudflare challenge, cookies expired? Marking cookies as null so it'll refresh next time we run");
+            throw new Exception("Cloudflare challenged");
+        }
         var bets = await response.Content.ReadFromJsonAsync<List<RainbetBetHistoryModel>>(cancellationToken: _cancellationToken);
         return bets;
     }
