@@ -100,7 +100,7 @@ public static class BuiltIn
             Regex = @".+",
             Description =
                 "Pusher WebSocket endpoint URL",
-            Default = "wss://ws-us2.pusher.com/app/eb1d5f283081a78b932c?protocol=7&client=js&version=7.6.0&flash=false",
+            Default = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false",
             IsSecret = false
         },
         new BuiltInSettingsModel
