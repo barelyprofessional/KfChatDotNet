@@ -592,7 +592,6 @@ public class ChatBot
     private void OnKickChatMessage(object sender, KickModels.ChatMessageEventModel? e)
     {
         if (e == null) return; 
-        _logger.Info($"Kick ({e.CreatedAt.LocalDateTime.ToLocalTime():HH:mm:ss}) <{e.Sender.Username}> {e.Content}");
         _logger.Debug($"BB Code Translation: {e.Content.TranslateKickEmotes()}");
 
         if (e.Sender.Slug != "bossmanjack") return;
