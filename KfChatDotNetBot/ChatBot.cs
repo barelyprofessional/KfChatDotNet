@@ -580,7 +580,7 @@ public class ChatBot
             _logger.Info($"Message was: {message}");
             return;
         }
-        if (GambaSeshPresent && settings[BuiltIn.Keys.GambaSeshDetectEnabled].Value == "true" && !bypassSeshDetect)
+        if (GambaSeshPresent && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !bypassSeshDetect)
         {
             _logger.Info($"Not sending message '{message}' as GambaSesh is present");
             return;
