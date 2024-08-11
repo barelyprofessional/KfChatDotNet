@@ -23,7 +23,7 @@ public class EditTestCommand : ICommand
         var iterations = 3;
         var i = 0;
         var delay = 1000;
-        var reference = botInstance.SendChatMessage($"{msg} {i}");
+        var reference = botInstance.SendChatMessage($"{msg} {i}", true);
         while (botInstance.GetSentMessageStatus(reference).Status == SentMessageTrackerStatus.WaitingForResponse)
         {
             await Task.Delay(100, ctx);
