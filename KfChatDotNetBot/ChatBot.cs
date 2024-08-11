@@ -1,4 +1,6 @@
-﻿using KfChatDotNetBot.Models;
+﻿using System.Net;
+using System.Text.Json;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
@@ -42,6 +44,7 @@ public class ChatBot
     private Task _websocketWatchdog;
     private Jackpot _jackpot;
     private Rainbet _rainbet;
+    private List<SentMessageTrackerModel> _sentMessages = [];
     
     public ChatBot()
     {
@@ -544,13 +547,32 @@ public class ChatBot
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.GambaSeshUserId])
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshDetectEnabled,
+                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername])
             .Result;
         _lastKfEvent = DateTime.Now;
         _logger.Debug($"Received {messages.Count} message(s)");
         foreach (var message in messages)
         {
             _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
+            if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate == null)
+            {
+                // MessageRaw is not actually REAL and RAW. The messages are still HTML encoded
+                var decodedMessage = WebUtility.HtmlDecode(message.MessageRaw);
+                var sentMessage = _sentMessages.FirstOrDefault(sent =>
+                    sent.Message == decodedMessage && sent.Status == SentMessageTrackerStatus.WaitingForResponse);
+                if (sentMessage == null)
+                {
+                    _logger.Info("Received message from Sneedchat that I sent but have no idea about. Bot restart? Ignoring it.");
+                    _logger.Info(JsonSerializer.Serialize(message));
+                }
+                else
+                {
+                    sentMessage.ChatMessageId = message.MessageId;
+                    sentMessage.Delay = DateTimeOffset.UtcNow - sentMessage.SentAt;
+                    sentMessage.Status = SentMessageTrackerStatus.ResponseReceived;
+                }
+            }
             if (settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !_initialStartCooldown && message.Author.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && !GambaSeshPresent)
             {
                 _logger.Info("Received a GambaSesh message after cooldown and while thinking he's not here. Setting the presence flag to avoid spamming chat");
@@ -569,25 +591,52 @@ public class ChatBot
         }
     }
 
-    public void SendChatMessage(string message, bool bypassSeshDetect = false)
+    public string SendChatMessage(string message, bool bypassSeshDetect = false)
     {
         var settings = Helpers
             .GetMultipleValues([BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
+        var reference = Guid.NewGuid().ToString();
+        var messageTracker = new SentMessageTrackerModel
+        {
+            Reference = reference,
+            Message = message,
+            Status = SentMessageTrackerStatus.Unknown,
+        };
         if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].ToBoolean())
         {
             _logger.Info("Not sending message as SuppressChatMessages is enabled");
             _logger.Info($"Message was: {message}");
-            return;
+            messageTracker.Status = SentMessageTrackerStatus.NotSending;
+            _sentMessages.Add(messageTracker);
+            return reference;
         }
         if (GambaSeshPresent && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !bypassSeshDetect)
         {
             _logger.Info($"Not sending message '{message}' as GambaSesh is present");
-            return;
+            messageTracker.Status = SentMessageTrackerStatus.NotSending;
+            _sentMessages.Add(messageTracker);
+            return reference;
+        }
+        messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
+        messageTracker.SentAt = DateTimeOffset.UtcNow;
+        _sentMessages.Add(messageTracker);
+        KfClient.SendMessage(message);
+        return reference;
+    }
+
+    public SentMessageTrackerModel GetSentMessageStatus(string reference)
+    {
+        var message = _sentMessages.FirstOrDefault(m => m.Reference == reference);
+        if (message == null)
+        {
+            throw new SentMessageNotFoundException();
         }
 
-        KfClient.SendMessage(message);
+        return message;
     }
+
+    public class SentMessageNotFoundException : Exception;
 
     private void OnKickChatMessage(object sender, KickModels.ChatMessageEventModel? e)
     {
