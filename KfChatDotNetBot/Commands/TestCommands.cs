@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Net;
+using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
@@ -19,7 +20,7 @@ public class EditTestCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
-        var msg = arguments["msg"].Value;
+        var msg = WebUtility.HtmlDecode(arguments["msg"].Value);
         var iterations = 3;
         var i = 0;
         var delay = 1000;
