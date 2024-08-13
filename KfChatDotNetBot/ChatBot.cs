@@ -563,8 +563,10 @@ public class ChatBot
                     sent.Message == decodedMessage && sent.Status == SentMessageTrackerStatus.WaitingForResponse);
                 if (sentMessage == null)
                 {
-                    _logger.Info("Received message from Sneedchat that I sent but have no idea about. Bot restart? Ignoring it.");
-                    _logger.Info(JsonSerializer.Serialize(message));
+                    _logger.Error("Received message from Sneedchat that I sent but have no idea about. Message Data Follows:");
+                    _logger.Error(JsonSerializer.Serialize(message));
+                    _logger.Error("Last item inserted into the sent messages collection:");
+                    _logger.Error(JsonSerializer.Serialize(_sentMessages.LastOrDefault()));
                 }
                 else
                 {
