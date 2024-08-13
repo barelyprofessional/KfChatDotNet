@@ -391,7 +391,7 @@ public class ChatBot
         }
         // Not caching this value as it won't harm it to have to look this up in even the worst spergout sesh
         var twitchIcon = Helpers.GetValue(BuiltIn.Keys.TwitchIcon).Result.Value;
-        SendChatMessage($"[img]{twitchIcon}[/img] {nick}: {message}", true);
+        SendChatMessage($"[img]{twitchIcon}[/img] {nick}: {message.TrimEnd('\r')}", true);
     }
 
     private void DiscordOnPresenceUpdated(object sender, DiscordPresenceUpdateModel presence)
