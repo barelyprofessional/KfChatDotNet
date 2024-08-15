@@ -57,6 +57,7 @@ internal class BotCommands
                 var user = db.Users.FirstOrDefault(u => u.KfId == message.Author.Id);
                 // This should never happen as brand-new users are created upon join
                 if (user == null) return;
+                if (user.Ignored) return;
                 if (user.UserRight < command.RequiredRight)
                 {
                     _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
