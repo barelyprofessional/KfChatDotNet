@@ -15,4 +15,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<SettingDbModel> Settings { get; set; }
     public DbSet<HowlggBetsDbModel> HowlggBets { get; set; }
     public DbSet<RainbetBetsDbModel> RainbetBets { get; set; }
+    public DbSet<TwitchViewCountDbModel> TwitchViewCounts { get; set; }
 }

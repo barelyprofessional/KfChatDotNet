@@ -2,6 +2,7 @@
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
+using KfChatDotNetBot.Models.DbModels;
 using NLog;
 using Websocket.Client;
 
@@ -132,17 +133,32 @@ public class Twitch : IDisposable
                 return;
             var topicParts = topicString.Split('.');
             var channelId = int.Parse(topicParts[^1]);
-            var twitchMessage = data.GetProperty("message")!.GetString()!;
+            var twitchMessage = JsonSerializer.Deserialize<JsonElement>(data.GetProperty("message").GetString());
 
-            if (twitchMessage.Contains("\"type\":\"stream-up\""))
+            if (twitchMessage.GetProperty("type").GetString() == "stream-up")
             {
                 OnStreamStateUpdated?.Invoke(this, channelId, true);
                 return;
             }
 
-            if (twitchMessage.Contains("\"type\":\"stream-down\""))
+            if (twitchMessage.GetProperty("type").GetString() == "stream-down")
             {
                 OnStreamStateUpdated?.Invoke(this, channelId, false);
+                return;
+            }
+            
+            if (twitchMessage.GetProperty("type").GetString() == "viewcount")
+            {
+                _logger.Info("Updating DB with fresh view count");
+                using var db = new ApplicationDbContext();
+                db.TwitchViewCounts.Add(new TwitchViewCountDbModel
+                {
+                    Topic = topicString,
+                    ServerTime = twitchMessage.GetProperty("server_time").GetDouble(),
+                    Viewers = twitchMessage.GetProperty("viewers").GetInt32(),
+                    Time = DateTimeOffset.UtcNow
+                });
+                db.SaveChanges();
                 return;
             }
             _logger.Info("Message from Twitch was unhandled");
