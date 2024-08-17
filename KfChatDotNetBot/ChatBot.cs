@@ -268,7 +268,6 @@ public class ChatBot
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        return; // Remove when I'm certain this is working properly
         SendChatMessage(
             $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet {bet.Amount:N} {bet.Currency!.ToUpper()} " +
             $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [color={payoutColor}]{bet.Winnings} {bet.Currency.ToUpper()} " +
