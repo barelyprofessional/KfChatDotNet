@@ -82,14 +82,14 @@ public class JuiceStatsCommand : ICommand
         var sum = await db.Juicers.SumAsync(s => s.Amount, cancellationToken: ctx);
         var count = await db.Juicers.CountAsync(ctx);
         var totalUsers = await db.Juicers.Select(j => j.User).Distinct().CountAsync(ctx);
-        var msg = $"Total Juicers: {count:N0}; Total Handed Out: KKK{sum:C}; Total Users Juiced: {totalUsers:N0}; Average Juicers / User: {count / totalUsers:N}[br]Top Leeches: ";
+        var msg = $"Total Juicers: {count:N0}; Total Handed Out: {sum:C0}; Total Users Juiced: {totalUsers:N0}; Average Juicers / User: {count / totalUsers:N0}[br]Top Leeches: ";
         var i = 0;
         foreach (var leech in topLeeches)
         {
             i++;
-            msg += $"{i}. {leech.User} with KKK{leech.Amount:C} juiced; ";
+            msg += $"[b]{i}.[/b] {leech.User} with {leech.Amount:C0} juiced; ";
         }
 
-        botInstance.SendChatMessage(msg, true);
+        botInstance.SendChatMessage(msg.TrimEnd().TrimEnd(';'), true);
     }
 }
