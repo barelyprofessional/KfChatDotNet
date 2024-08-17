@@ -270,8 +270,8 @@ public class ChatBot
         if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         SendChatMessage(
             $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet {bet.Amount:N} {bet.Currency!.ToUpper()} " +
-            $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [color={payoutColor}]{bet.Winnings} {bet.Currency.ToUpper()} " +
-            $"({bet.Winnings / bet.CurrencyPrice:C})[/color] ({bet.Multiplier:N}x) on {bet.GameTitle} 💰💰",
+            $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [color={payoutColor}]{bet.Winnings:N} {bet.Currency.ToUpper()} " +
+            $"({bet.Winnings * bet.CurrencyPrice:C})[/color] ({bet.Multiplier:N}x) on {bet.GameTitle} 💰💰[br][i]Please note this feature is not well tested and may be off by an order of magnitude.",
             true);
     }
 
