@@ -307,8 +307,8 @@ public class Chipsgg : IDisposable
 
                 // Another mysterious thing where winnings are sometimes sent and sometimes not. Presumed to be 0
                 if (winnings == string.Empty) winnings = "0";
-                bet.Winnings = double.Parse(winnings) / double.Parse(1.ToString().PadRight(currencyData.Decimals, '0'));
-                bet.Amount = double.Parse(amount) / double.Parse(1.ToString().PadRight(currencyData.Decimals, '0'));
+                bet.Winnings = double.Parse(winnings) / double.Parse(1.ToString().PadRight(currencyData.Decimals + 1, '0'));
+                bet.Amount = double.Parse(amount) / double.Parse(1.ToString().PadRight(currencyData.Decimals + 1, '0'));
                 bet.CurrencyPrice = currencyData.Price ?? 0;
                 OnChipsggRecentBet?.Invoke(this, bet);
                 return;
