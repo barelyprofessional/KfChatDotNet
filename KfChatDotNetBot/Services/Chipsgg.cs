@@ -20,6 +20,7 @@ public class Chipsgg : IDisposable
     public event OnChipsggRecentBetEventHandler OnChipsggRecentBet;
     private CancellationToken _cancellationToken = CancellationToken.None;
     private Dictionary<string, ChipsggCurrencyModel> _currencies = new();
+    private bool _authenticated = false;
 
     public Chipsgg(string? proxy = null, CancellationToken? cancellationToken = null)
     {
@@ -119,8 +120,9 @@ public class Chipsgg : IDisposable
                 if (firstElement[1].GetInt32() == 1)
                 {
                     var guid = firstElement[2].GetString();
-                    _logger.Debug("Received auth packet, sending back GUID auth with " + guid);
+                    _logger.Info("Received auth packet, sending back GUID auth with " + guid);
                     _wsClient.Send("[\"auth\",2,\"authenticate\",[\"" + guid+ "\"]]");
+                    _authenticated = true;
                     return;
                 }
 
@@ -151,7 +153,13 @@ public class Chipsgg : IDisposable
                     throw new Exception("Caught a null when deserializing the path element of the array");
                 if (path.Count == 0)
                 {
-                    _logger.Debug("Received initial currency payload as the path array was empty");
+                    if (!_authenticated)
+                    {
+                        _logger.Info("Received currency payload without getting the auth response. Retarded inconsistent Chips.gg behavior again, sending a made-up GUID");
+                        var guid = Guid.NewGuid().ToString();
+                        _wsClient.Send("[\"auth\",2,\"authenticate\",[\"" + guid+ "\"]]");
+                    }
+                    _logger.Info("Received initial currency payload as the path array was empty");
                     var currencyData = dataElement[1].Deserialize<Dictionary<string, JsonElement>>();
                     if (currencyData == null) throw new Exception("Caught a null when deserializing currency data");
                     if (!currencyData.TryGetValue("currencies", out var val)) throw new Exception("Currency object didn't contain expected currencies property");
@@ -160,7 +168,11 @@ public class Chipsgg : IDisposable
                     foreach (var currency in currencies.Keys)
                     {
                         // Should never happen but you never know
-                        if (_currencies.ContainsKey(currency)) return;
+                        if (_currencies.ContainsKey(currency))
+                        {
+                            _logger.Info("Ignoring already defined currency");
+                            continue;
+                        };
                         float? price = null;
                         // Where a price is not set, the element is simply missing
                         if (currencies[currency].TryGetProperty("price", out var priceElement))
@@ -190,7 +202,11 @@ public class Chipsgg : IDisposable
                     if (innerDataPath == null || innerDataPath.Count == 0) throw new Exception("innerDataPath was null or contained no elements");
                     if (innerDataPath.Contains("metrics")) continue;
                     // No idea with koth is, so we'll ignore it
-                    if (innerDataPath[0] == "koth") return;
+                    if (innerDataPath[0] == "koth")
+                    {
+                        _logger.Debug("Ignoring packet as it contains koth");
+                        return;
+                    };
                     var currency = innerDataPath[1];
                     if (_currencies.TryGetValue(currency, out var updatedCurrency))
                     {
@@ -207,7 +223,11 @@ public class Chipsgg : IDisposable
                 if (firstElement[1].ValueKind == JsonValueKind.Number && firstElement[1].TryGetInt32(out var type))
                 {
                     // 12 is the replay of recent bets
-                    if (type == 12) return;
+                    if (type == 12)
+                    {
+                        _logger.Info("Ignoring replay of recent bets");
+                        return;
+                    };
                 }
                 // Currency data may not be known until after so hold it here til we're done parsing
                 var amount = string.Empty;
@@ -299,7 +319,11 @@ public class Chipsgg : IDisposable
                 // Just something that randomly happens where incomplete bets are sent
                 // It seems that occasionally a bet is sent through with no proper game title or username
                 // Since the feed in theory can't display these, I'm assuming it's another ghost and not a real bet
-                if (bet.Currency == null || bet.GameTitle == null) return;
+                if (bet.Currency == null || bet.GameTitle == null)
+                {
+                    _logger.Debug("Currency or GameTitle was null, ignoring");
+                    return;
+                };
                 if (!_currencies.TryGetValue(bet.Currency, out var currencyData))
                 {
                     throw new Exception($"Unknown currency {bet.Currency}");
@@ -313,8 +337,8 @@ public class Chipsgg : IDisposable
                 OnChipsggRecentBet?.Invoke(this, bet);
                 return;
             }
-            _logger.Debug("Unhandled event from Chips.gg");
-            _logger.Debug(message.Text);
+            _logger.Info("Unhandled event from Chips.gg");
+            _logger.Info(message.Text);
         }
         catch (Exception e)
         {
