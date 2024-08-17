@@ -47,7 +47,7 @@ public static class Helpers
             return new SettingValue(null, setting, false);
         }
         
-        logger.Debug($"Cache Miss! Returning '{setting.Value}' as {typeof(SettingValue)}");
+        logger.Info($"Cache Miss! Returning '{setting.Value}' for {key}");
         return new SettingValue(setting.Value, setting, false);
     }
 
