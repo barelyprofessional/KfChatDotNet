@@ -16,4 +16,6 @@ public class SettingDbModel
     public string? Default { get; set; } = null;
     // Prevents the value from being revealed to Sneedchat when queried by an admin
     public bool IsSecret { get; set; } = false;
+    // Number of seconds to cache in memory, 0 to not cache
+    public double CacheDuration { get; set; } = 0;
 }

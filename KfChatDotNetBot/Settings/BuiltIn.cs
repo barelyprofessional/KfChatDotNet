@@ -26,7 +26,8 @@ public static class BuiltIn
                     Regex = builtIn.Regex,
                     Description = builtIn.Description,
                     Default = builtIn.Default,
-                    IsSecret = builtIn.IsSecret
+                    IsSecret = builtIn.IsSecret,
+                    CacheDuration = builtIn.CacheDuration.TotalSeconds
                 });
                 continue;
             }
@@ -36,6 +37,7 @@ public static class BuiltIn
             setting.Description = builtIn.Description;
             setting.Default = builtIn.Default;
             setting.IsSecret = builtIn.IsSecret;
+            setting.CacheDuration = builtIn.CacheDuration.TotalSeconds;
         }
         logger.Info("Saving changes to the DB");
         await db.SaveChangesAsync();
@@ -101,7 +103,8 @@ public static class BuiltIn
             Description =
                 "Pusher WebSocket endpoint URL",
             Default = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -110,7 +113,8 @@ public static class BuiltIn
             Description =
                 "Kiwi Farms chat WebSocket endpoint",
             Default = "wss://kiwifarms.st:9443/chat.ws",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -119,7 +123,8 @@ public static class BuiltIn
             Description =
                 "List of Pusher channels to subscribe to",
             Default = null,
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -128,7 +133,8 @@ public static class BuiltIn
             Description =
                 "Kiwi Farms Keno Kasino room ID",
             Default = "15",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -137,7 +143,8 @@ public static class BuiltIn
             Description =
                 "Proxy to use for all outgoing requests. Null to disable",
             Default = null,
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -146,7 +153,8 @@ public static class BuiltIn
             Description =
                 "Kiwi Farms chat reconnect timeout",
             Default = "30",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -155,7 +163,8 @@ public static class BuiltIn
             Description =
                 "Pusher reconnect timeout",
             Default = "30",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -164,7 +173,8 @@ public static class BuiltIn
             Description =
                 "Whether to enable detection for the presence of GambaSesh",
             Default = "true",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromMinutes(5)
         },
         new BuiltInSettingsModel
         {
@@ -173,7 +183,8 @@ public static class BuiltIn
             Description =
                 "GambaSesh's uer ID for the purposes of detection",
             Default = "168162",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -182,7 +193,8 @@ public static class BuiltIn
             Description =
                 "Kick Icon to use for relaying chat messages",
             Default = "https://i.postimg.cc/Qtw4nCPG/kick16.png",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -191,7 +203,8 @@ public static class BuiltIn
             Description =
                 "Domain to use when retrieving a session token",
             Default = "kiwifarms.st",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -200,7 +213,8 @@ public static class BuiltIn
             Description =
                 "Username to use when authenticating with Kiwi Farms",
             Default = null,
-            IsSecret = true
+            IsSecret = true,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -209,7 +223,8 @@ public static class BuiltIn
             Description =
                 "Password to use when authenticating with Kiwi Farms",
             Default = null,
-            IsSecret = true
+            IsSecret = true,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -218,7 +233,8 @@ public static class BuiltIn
             Description =
                 "Path to download the Chromium install used for the token grabber",
             Default = "chromium_install",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -227,7 +243,8 @@ public static class BuiltIn
             Description =
                 "BossmanJack's Twitch channel ID",
             Default = "114122847",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -236,7 +253,8 @@ public static class BuiltIn
             Description =
                 "BossmanJack's Twitch channel username",
             Default = "thebossmanjack",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -245,7 +263,8 @@ public static class BuiltIn
             Description =
                 "Enable to prevent messages from actually being sent to chat.",
             Default = "false",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -254,7 +273,8 @@ public static class BuiltIn
             Description =
                 "Token to use when authenticating with Discord. Set to null to disable.",
             Default = null,
-            IsSecret = true
+            IsSecret = true,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -263,7 +283,8 @@ public static class BuiltIn
             Description =
                 "BossmanJack's Discord user ID",
             Default = "554123642246529046",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -271,7 +292,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "URL for the 16px Twitch icon",
             Default = "https://i.postimg.cc/QMFVV2Xk/twitch16.png",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -279,7 +301,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "URL for the 16px Discord icon",
             Default = "https://i.postimg.cc/cLmQrp89/discord16.png",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -287,7 +310,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Bossman's Shuffle Username",
             Default = "TheBossmanJack",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -295,7 +319,8 @@ public static class BuiltIn
             Regex = @"\d+",
             Description = "Cooldown (in seconds) until you can get juiced again",
             Default = "3600",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromMinutes(5)
         },
         new BuiltInSettingsModel
         {
@@ -303,7 +328,8 @@ public static class BuiltIn
             Regex = @"\d+",
             Description = "Amount of $KKK to juice",
             Default = "50",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromMinutes(5)
         },
         new BuiltInSettingsModel
         {
@@ -311,7 +337,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Last successfully retrieved forum token (will be refreshed automatically if expired)",
             Default = null,
-            IsSecret = true
+            IsSecret = true,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -319,7 +346,8 @@ public static class BuiltIn
             Regex = "true|false",
             Description = "Whether to enable Kick functionality (Pusher websocket mainly)",
             Default = "true",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -327,7 +355,8 @@ public static class BuiltIn
             Regex = @"\d+",
             Description = "How much to divide the Howlgg bets/profit by to get the real value",
             Default = "1650",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel()
         {
@@ -335,7 +364,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Green color used for showing positive values in chat",
             Default = "#3dd179",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel()
         {
@@ -343,7 +373,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Red color used for showing negative values in chat",
             Default = "#f1323e",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel()
         {
@@ -351,7 +382,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Bossman's username on Jackpot",
             Default = "TheBossmanJack",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -359,7 +391,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Bossman's rainbet public ID",
             Default = "Ir04170wLulcjtePCL7P6lmeOlepRaNp",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -367,7 +400,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "URL for your FlareSolverr service API",
             Default = "http://localhost:8191/",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -375,7 +409,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Proxy in use specifically for FlareSolverr",
             Default = null,
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
@@ -383,7 +418,8 @@ public static class BuiltIn
             Regex = ".+",
             Description = "Bossman's Chips.gg username",
             Default = "TheBossmanJack",
-            IsSecret = false
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     

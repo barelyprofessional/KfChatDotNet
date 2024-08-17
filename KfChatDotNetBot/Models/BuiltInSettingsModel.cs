@@ -9,5 +9,5 @@ public class BuiltInSettingsModel
     public required string Description { get; set; }
     public string? Default { get; set; }
     public required bool IsSecret { get; set; }
-
+    public required TimeSpan CacheDuration { get; set; } = TimeSpan.Zero;
 }

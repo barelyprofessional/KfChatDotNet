@@ -1,14 +1,23 @@
 using KfChatDotNetBot.Models.DbModels;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.Caching;
 using NLog;
 
 namespace KfChatDotNetBot.Settings;
 
 public static class Helpers
 {
-    public static async Task<SettingValue> GetValue(string key, bool caseInsensitive = false)
+    public static async Task<SettingValue> GetValue(string key, bool caseInsensitive = false, bool bypassCache = false)
     {
         var logger = LogManager.GetCurrentClassLogger();
+        var cache = MemoryCache.Default;
+        if (!bypassCache && cache.Contains(key))
+        {
+            var cachedSetting = cache.Get(key) as SettingDbModel;
+            var value = cachedSetting.Value;
+            if (cachedSetting.Value == "null") value = null;
+            return new SettingValue(value, cachedSetting, true);
+        }
         await using var db = new ApplicationDbContext();
         logger.Trace($"Retrieving value for {key}");
 
@@ -30,51 +39,27 @@ public static class Helpers
             throw new KeyNotFoundException($"{key} does not exist");
         }
 
+        cache.Set(key, setting, new CacheItemPolicy {AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(setting.CacheDuration)});
+
         if (setting.Value == "null")
         {
             logger.Debug($"{key}'s value is null so returning SettingValue(null)");
-            return new SettingValue(null, null);
+            return new SettingValue(null, setting, false);
         }
         
-        logger.Debug($"Returning '{setting.Value}' as {typeof(SettingValue)}");
-        return new SettingValue(setting.Value, setting);
+        logger.Debug($"Cache Miss! Returning '{setting.Value}' as {typeof(SettingValue)}");
+        return new SettingValue(setting.Value, setting, false);
     }
 
-    public static async Task<Dictionary<string, SettingValue>> GetMultipleValues(string[] keys, bool caseInsensitive = false)
+    public static async Task<Dictionary<string, SettingValue>> GetMultipleValues(string[] keys, bool caseInsensitive = false, bool bypassCache = false)
     {
         var logger = LogManager.GetCurrentClassLogger();
-        await using var db = new ApplicationDbContext();
         logger.Trace($"Getting values for keys {string.Join(", ", keys)}");
 
         Dictionary<string, SettingValue> values = new Dictionary<string, SettingValue>();
         foreach (var key in keys)
         {
-            SettingDbModel? setting;
-            if (caseInsensitive)
-            {
-                // String comparison doesn't work on EF core if I recall correctly
-#pragma warning disable CA1862
-                setting = await db.Settings.FirstOrDefaultAsync(s => s.Key.ToLower() == key.ToLower());
-#pragma warning restore CA1862
-            }
-            else
-            {
-                setting = await db.Settings.FirstOrDefaultAsync(s => s.Key == key);
-            }
-            
-            if (setting == null)
-            {
-                logger.Debug($"{key} does not exist, throwing KeyNotFoundException()");
-                throw new KeyNotFoundException();
-            }
-
-            if (setting.Value == "null")
-            {
-                logger.Debug($"{key}'s value is null so returning SettingValue(null)");
-                values.Add(key, new SettingValue(null, null));
-                continue;
-            }
-            values.Add(key, new SettingValue(setting.Value, setting));
+            values.Add(key, await GetValue(key, caseInsensitive, bypassCache));
         }
 
         return values;
@@ -108,6 +93,8 @@ public static class Helpers
 
         setting.Value = stringValue;
         await db.SaveChangesAsync();
+        var cache = MemoryCache.Default;
+        if (cache.Contains(key)) cache.Remove(key);
     }
 
     public static async Task SetValueAsList<T>(string key, List<T> values, char separator = ',')
@@ -127,6 +114,8 @@ public static class Helpers
 
         setting.Value = joinedValue;
         await db.SaveChangesAsync();
+        var cache = MemoryCache.Default;
+        if (cache.Contains(key)) cache.Remove(key);
     }
 
     public static async Task SetValueAsKeyValuePairs<T>(string key, Dictionary<string, T> data, char delimiter = ',',
@@ -151,6 +140,8 @@ public static class Helpers
 
         setting.Value = value;
         await db.SaveChangesAsync();
+        var cache = MemoryCache.Default;
+        if (cache.Contains(key)) cache.Remove(key);
     }
 
     public static async Task SetValueAsBoolean(string key, bool value)
@@ -169,5 +160,7 @@ public static class Helpers
         setting.Value = value ? "true" : "false";
 
         await db.SaveChangesAsync();
+        var cache = MemoryCache.Default;
+        if (cache.Contains(key)) cache.Remove(key);
     }
 }
