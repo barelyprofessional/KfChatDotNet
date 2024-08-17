@@ -189,6 +189,8 @@ public class Chipsgg : IDisposable
                     var innerDataPath = innerData[0].Deserialize<List<string>>();
                     if (innerDataPath == null || innerDataPath.Count == 0) throw new Exception("innerDataPath was null or contained no elements");
                     if (innerDataPath.Contains("metrics")) continue;
+                    // No idea with koth is, so we'll ignore it
+                    if (innerDataPath[0] == "koth") return;
                     var currency = innerDataPath[1];
                     if (_currencies.TryGetValue(currency, out var updatedCurrency))
                     {
