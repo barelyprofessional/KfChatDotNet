@@ -376,6 +376,14 @@ public static class BuiltIn
             Description = "Proxy in use specifically for FlareSolverr",
             Default = null,
             IsSecret = false
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.ChipsggBmjUsername,
+            Regex = ".+",
+            Description = "Bossman's Chips.gg username",
+            Default = "TheBossmanJack",
+            IsSecret = false
         }
     ];
     
@@ -414,5 +422,6 @@ public static class BuiltIn
         public static string RainbetBmjPublicId = "Rainbet.BmjPublicId";
         public static string FlareSolverrApiUrl = "FlareSolverr.ApiUrl";
         public static string FlareSolverrProxy = "FlareSolverr.Proxy";
+        public static string ChipsggBmjUsername = "Chipsgg.BmjUsername";
     }
 }

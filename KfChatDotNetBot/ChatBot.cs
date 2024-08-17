@@ -44,6 +44,7 @@ public class ChatBot
     private Task _websocketWatchdog;
     private Jackpot _jackpot;
     private Rainbet _rainbet;
+    private Chipsgg _chipsgg;
     private List<SentMessageTrackerModel> _sentMessages = [];
     
     public ChatBot()
@@ -126,6 +127,7 @@ public class ChatBot
         BuildHowlgg();
         BuildJackpot();
         BuildRainbet();
+        BuildChipsgg();
         
         _logger.Info("Starting websocket watchdog");
         _websocketWatchdog = WebsocketWatchdog();
@@ -190,6 +192,14 @@ public class ChatBot
                     _jackpot = null!;
                     BuildJackpot();
                 }
+
+                if (!_chipsgg.IsConnected())
+                {
+                    _logger.Error("Chips died, recreating it");
+                    _chipsgg.Dispose();
+                    _chipsgg = null!;
+                    BuildChipsgg();
+                }
             }
             catch (Exception e)
             {
@@ -205,6 +215,65 @@ public class ChatBot
         _rainbet = new Rainbet(_cancellationToken);
         _rainbet.OnRainbetBet += OnRainbetBet;
         _rainbet.StartGameHistoryTimer();
+    }
+    
+    private void BuildChipsgg()
+    {
+        var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
+        _chipsgg = new Chipsgg(proxy, _cancellationToken);
+        _chipsgg.OnChipsggRecentBet += OnChipsggRecentBet;
+        _chipsgg.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void OnChipsggRecentBet(object sender, ChipsggBetModel bet)
+    {
+        var settings = Helpers
+            .GetMultipleValues([
+                BuiltIn.Keys.ChipsggBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Debug("Chips.gg bet has arrived");
+        if (bet.Username != settings[BuiltIn.Keys.ChipsggBmjUsername].Value)
+        {
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING (on Chips.gg)");
+        using var db = new ApplicationDbContext();
+        db.ChipsggBets.Add(new ChipsggBetDbModel
+        {
+            Created = bet.Created, Updated = bet.Updated, UserId = bet.UserId, Username = bet.Username ?? "Unknown", Win = bet.Win,
+            Winnings = bet.Winnings, GameTitle = bet.GameTitle!, Amount = bet.Amount, Multiplier = bet.Multiplier,
+            Currency = bet.Currency!, CurrencyPrice = bet.CurrencyPrice, BetId = bet.BetId
+        });
+        db.SaveChanges();
+        if (IsBmjLive)
+        {
+            _logger.Info("Ignoring as BMJ is live");
+            return;
+        }
+
+        // Only check once because the bot should be tracking the Twitch stream
+        // This is just in case he's already live while the bot starts
+        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
+        if (!_isBmjLiveSynced)
+        {
+            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
+            _isBmjLiveSynced = true;
+        }
+        if (IsBmjLive)
+        {
+            _logger.Info("Double checked and he is really online");
+            return;
+        }
+
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        return; // Remove when I'm certain this is working properly
+        SendChatMessage(
+            $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet {bet.Amount:N} {bet.Currency!.ToUpper()} " +
+            $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [color={payoutColor}]{bet.Winnings} {bet.Currency.ToUpper()} " +
+            $"({bet.Winnings / bet.CurrencyPrice:C})[/color] ({bet.Multiplier:N}x) on {bet.GameTitle} 💰💰",
+            true);
     }
 
     private void OnRainbetBet(object sender, List<RainbetBetHistoryModel> bets)
@@ -286,7 +355,6 @@ public class ChatBot
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Payout < bet.Wager) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        // There will be a check for live status but ignoring that while we deal with an emergency dice situation
         SendChatMessage($"🚨🚨 JACKPOT BETTING 🚨🚨 {bet.User} just bet {bet.Wager} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", false);
     }
 
@@ -602,7 +670,7 @@ public class ChatBot
         var messageTracker = new SentMessageTrackerModel
         {
             Reference = reference,
-            Message = message,
+            Message = message.TrimEnd(), // Sneedchat trims trailing spaces
             Status = SentMessageTrackerStatus.Unknown,
         };
         if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].ToBoolean())

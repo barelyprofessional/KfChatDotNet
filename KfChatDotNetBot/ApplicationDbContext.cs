@@ -16,4 +16,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<HowlggBetsDbModel> HowlggBets { get; set; }
     public DbSet<RainbetBetsDbModel> RainbetBets { get; set; }
     public DbSet<TwitchViewCountDbModel> TwitchViewCounts { get; set; }
+    public DbSet<ChipsggBetDbModel> ChipsggBets { get; set; }
 }
