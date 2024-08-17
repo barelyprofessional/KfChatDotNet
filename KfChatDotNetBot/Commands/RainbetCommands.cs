@@ -28,7 +28,7 @@ public class RainbetStatsCommand : ICommand
             return;
         }
         var output = $"Rainbet stats for the last {window} hours (as seen on the bet feed):[br]" +
-                     $"Bets: {bets.Count:N0}; Payout: ${bets.Sum(b => b.Payout)}; Wagered: {bets.Sum(b => b.Value):C}";
+                     $"Bets: {bets.Count:N0}; Payout: ${bets.Sum(b => b.Payout):C}; Wagered: {bets.Sum(b => b.Value):C}";
         botInstance.SendChatMessage(output, true);
     }
 }
