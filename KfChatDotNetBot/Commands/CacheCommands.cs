@@ -11,9 +11,9 @@ public class CacheClearCommand : ICommand
         new Regex("^cache clear")
     ];
 
-    public string HelpText => "Clear the cache";
-    public bool HideFromHelp => true;
+    public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
