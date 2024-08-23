@@ -11,10 +11,9 @@ public class WhoisCommand : ICommand
         new Regex("^whois (?<user>.+)")
     ];
 
-    public string HelpText => "Lookup user IDs by username";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Lookup user IDs by username";
     public UserRight RequiredRight => UserRight.Guest;
-
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();

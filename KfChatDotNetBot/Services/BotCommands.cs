@@ -1,5 +1,7 @@
-﻿using Humanizer;
+﻿using System.Text.RegularExpressions;
+using Humanizer;
 using KfChatDotNetBot.Commands;
+using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
 using NLog;
 
@@ -14,7 +16,6 @@ internal class BotCommands
     private char CommandPrefix = '!';
     private IEnumerable<ICommand> Commands;
     private CancellationToken _cancellationToken;
-    private List<Task> _commandTasks = [];
 
     internal BotCommands(ChatBot bot, CancellationToken? ctx = null)
     {
@@ -63,28 +64,29 @@ internal class BotCommands
                     _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
                     break;
                 }
-                var task = Task.Run(() => command.RunCommand(_bot, message, user, match.Groups, _cancellationToken), _cancellationToken);
-                _commandTasks.Add(task);
+                _ = ProcessMessageAsync(command, message, user, match.Groups);
+                break;
             }
         }
-        
-        // Check on the state of the tasks, there's no way to know what error they produce if they failed otherwise
-        List<Task> removals = [];
-        foreach (var task in _commandTasks)
-        {
-            if (!task.IsCompleted) continue;
-            if (task.IsFaulted)
-            {
-                _logger.Error("Command task failed at some point");
-                _logger.Error(task.Exception);
-            }
+    }
 
-            removals.Add(task);
-        }
-        // .NET doesn't support modifying a collection you're iterating over
-        foreach (var removal in removals)
+    private async Task ProcessMessageAsync(ICommand command, MessageModel message, UserDbModel user, GroupCollection arguments)
+    {
+        var task = Task.Run(() => command.RunCommand(_bot, message, user, arguments, _cancellationToken), _cancellationToken);
+        try
         {
-            _commandTasks.Remove(removal);
+            await task.WaitAsync(command.Timeout, _cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught an exception while waiting for the command to complete");
+            _logger.Error(e);
+            return;
+        }
+        if (task.IsFaulted)
+        {
+            _logger.Error("Command task failed");
+            _logger.Error(task.Exception);
         }
     }
 }

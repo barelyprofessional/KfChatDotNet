@@ -7,9 +7,10 @@ namespace KfChatDotNetBot.Commands;
 internal interface ICommand
 {
     List<Regex> Patterns { get; }
-    string HelpText { get; }
-    bool HideFromHelp { get; }
+    // Set to null to disable help for a given command
+    string? HelpText { get; }
     UserRight RequiredRight { get; }
+    TimeSpan Timeout { get; }
 
     Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx);
 }

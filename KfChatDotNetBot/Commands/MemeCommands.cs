@@ -7,10 +7,9 @@ namespace KfChatDotNetBot.Commands;
 public class InsanityCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^insanity")];
-    public string HelpText => "Insanity";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Insanity";
     public UserRight RequiredRight => UserRight.Guest;
-
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
@@ -21,10 +20,9 @@ public class InsanityCommand : ICommand
 public class TwistedCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^twisted")];
-    public string HelpText => "Get it twisted";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Get it twisted";
     public UserRight RequiredRight => UserRight.Guest;
-
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
@@ -35,10 +33,9 @@ public class TwistedCommand : ICommand
 public class HelpMeCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^helpme")];
-    public string HelpText => "Somebody please help me";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Somebody please help me";
     public UserRight RequiredRight => UserRight.Guest;
-
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
@@ -49,10 +46,9 @@ public class HelpMeCommand : ICommand
 public class SentCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^sent$")];
-    public string HelpText => "Sent love";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Sent love";
     public UserRight RequiredRight => UserRight.Guest;
-
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo

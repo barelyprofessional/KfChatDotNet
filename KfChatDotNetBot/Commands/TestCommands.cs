@@ -13,10 +13,10 @@ public class EditTestCommand : ICommand
         new Regex("^test edit (?<msg>.+)")
     ];
 
-    public string HelpText => "Test the editing functionality";
-    public bool HideFromHelp => true;
+    public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Admin;
-    
+    // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
+    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
@@ -48,5 +48,37 @@ public class EditTestCommand : ICommand
         botInstance.KfClient.EditMessage(status.ChatMessageId!.Value, "This message will self destruct in 1 second");
         await Task.Delay(delay, ctx);
         botInstance.KfClient.DeleteMessage(status.ChatMessageId!.Value);
+    }
+}
+
+public class TimeoutTestCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^test timeout$")
+    ];
+
+    public string? HelpText => null;
+    public UserRight RequiredRight => UserRight.Admin;
+    // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
+    public TimeSpan Timeout => TimeSpan.FromSeconds(15);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        await Task.Delay(TimeSpan.FromMinutes(1), ctx);
+    }
+}
+
+public class ExceptionTestCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^test exception$")
+    ];
+
+    public string? HelpText => null;
+    public UserRight RequiredRight => UserRight.Admin;
+    // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
+    public TimeSpan Timeout => TimeSpan.FromSeconds(15);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        throw new Exception("Caused by the test exception command");
     }
 }

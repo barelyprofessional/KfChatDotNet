@@ -12,9 +12,9 @@ public class RainbetStatsCommand : ICommand
     public List<Regex> Patterns => [
         new Regex(@"^rainbet stats (?<window>\d+)$")
     ];
-    public string HelpText => "Get betting statistics in the given window";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Get betting statistics in the given window";
     public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var window = Convert.ToInt32(arguments["window"].Value);
@@ -28,7 +28,7 @@ public class RainbetStatsCommand : ICommand
             return;
         }
         var output = $"Rainbet stats for the last {window} hours (as seen on the bet feed):[br]" +
-                     $"Bets: {bets.Count:N0}; Payout: ${bets.Sum(b => b.Payout):C}; Wagered: {bets.Sum(b => b.Value):C}";
+                     $"Bets: {bets.Count:N0}; Payout: {bets.Sum(b => b.Payout):C}; Wagered: {bets.Sum(b => b.Value):C}";
         botInstance.SendChatMessage(output, true);
     }
 }
@@ -38,9 +38,9 @@ public class RainbetRecentBetCommand : ICommand
     public List<Regex> Patterns => [
         new Regex(@"^rainbet recent$")
     ];
-    public string HelpText => "Get the most recent 3 bets";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Get the most recent 3 bets";
     public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings = await Helpers.GetMultipleValues([

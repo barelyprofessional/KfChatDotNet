@@ -7,10 +7,9 @@ namespace KfChatDotNetBot.Commands;
 public class TimeCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^time")];
-    public string HelpText => "Get current time in BMT";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Get current time in BMT";
     public UserRight RequiredRight => UserRight.Guest;
-
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,

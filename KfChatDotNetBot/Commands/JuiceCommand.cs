@@ -14,6 +14,7 @@ public class JuiceCommand : ICommand
     public string HelpText => "Get juice!";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
@@ -50,12 +51,13 @@ public class JuiceCommand : ICommand
 public class JuiceStatsCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex("^juice stats"),
+        new Regex("^juice stats$"),
         new Regex(@"^juice stats (?<top>\d+)$")
     ];
     public string HelpText => "Get juice stats!";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         int top;
