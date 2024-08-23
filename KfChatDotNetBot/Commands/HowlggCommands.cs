@@ -12,9 +12,9 @@ public class HowlggStatsCommand : ICommand
     public List<Regex> Patterns => [
         new Regex(@"^howl stats (?<window>\d+)$")
     ];
-    public string HelpText => "Get betting statistics in the given window";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Get betting statistics in the given window";
     public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var window = Convert.ToInt32(arguments["window"].Value);
@@ -39,9 +39,9 @@ public class HowlggRecentBetCommand : ICommand
     public List<Regex> Patterns => [
         new Regex(@"^howl recent$")
     ];
-    public string HelpText => "Get the most recent 3 bets";
-    public bool HideFromHelp => false;
+    public string? HelpText => "Get the most recent 3 bets";
     public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings = await Helpers.GetMultipleValues([
