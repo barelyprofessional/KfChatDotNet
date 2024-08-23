@@ -205,7 +205,8 @@ public class Twitch : IDisposable
         if (responseContent.GetProperty("data").GetProperty("user").ValueKind == JsonValueKind.Null)
         {
             _logger.Debug("data.user was null");
-            throw new TwitchUserNotFoundException();
+            //throw new TwitchUserNotFoundException();
+            return false;
         }
 
         if (responseContent.GetProperty("data").GetProperty("user").GetProperty("stream").ValueKind ==
