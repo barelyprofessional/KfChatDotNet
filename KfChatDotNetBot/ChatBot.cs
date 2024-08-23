@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
@@ -46,6 +47,9 @@ public class ChatBot
     private Rainbet _rainbet;
     private Chipsgg _chipsgg;
     private List<SentMessageTrackerModel> _sentMessages = [];
+    // lol
+    internal bool TemporarilyBypassGambaSeshForDiscord = false;
+    internal bool TemporarilySuppressGambaMessages = false;
     
     public ChatBot()
     {
@@ -232,7 +236,7 @@ public class ChatBot
                 BuiltIn.Keys.ChipsggBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
-        _logger.Debug("Chips.gg bet has arrived");
+        _logger.Trace("Chips.gg bet has arrived");
         if (bet.Username != settings[BuiltIn.Keys.ChipsggBmjUsername].Value)
         {
             return;
@@ -249,6 +253,12 @@ public class ChatBot
         if (IsBmjLive)
         {
             _logger.Info("Ignoring as BMJ is live");
+            return;
+        }
+
+        if (TemporarilySuppressGambaMessages)
+        {
+            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
             return;
         }
 
@@ -271,7 +281,7 @@ public class ChatBot
         SendChatMessage(
             $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet {bet.Amount:N} {bet.Currency!.ToUpper()} " +
             $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [color={payoutColor}]{bet.Winnings:N} {bet.Currency.ToUpper()} " +
-            $"({bet.Winnings * bet.CurrencyPrice:C})[/color] ({bet.Multiplier:N}x) on {bet.GameTitle} 💰💰[br][i]Please note this feature is not well tested and may be off by an order of magnitude.",
+            $"({bet.Winnings * bet.CurrencyPrice:C})[/color] ({bet.Multiplier:N}x) on {bet.GameTitle} 💰💰",
             true);
     }
 
@@ -335,6 +345,11 @@ public class ChatBot
         if (IsBmjLive)
         {
             _logger.Info("Ignoring as BMJ is live");
+            return;
+        }
+        if (TemporarilySuppressGambaMessages)
+        {
+            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
             return;
         }
 
@@ -526,7 +541,8 @@ public class ChatBot
         {
             result += $"[br]Attachment: {attachment.GetProperty("filename").GetString()} {attachment.GetProperty("url").GetString()}";
         }
-        SendChatMessage(result);
+        
+        SendChatMessage(result, TemporarilyBypassGambaSeshForDiscord);
     }
 
     private void DiscordOnInvalidCredentials(object sender, DiscordPacketReadModel packet)
@@ -552,7 +568,12 @@ public class ChatBot
             _logger.Info("Ignoring as BMJ is live");
             return;
         }
-
+        if (TemporarilySuppressGambaMessages)
+        {
+            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
+            return;
+        }
+        
         // Only check once because the bot should be tracking the Twitch stream
         // This is just in case he's already live while the bot starts
         // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
@@ -676,6 +697,13 @@ public class ChatBot
                     sentMessage.Delay = DateTimeOffset.UtcNow - sentMessage.SentAt;
                     sentMessage.Status = SentMessageTrackerStatus.ResponseReceived;
                 }
+            }
+
+            if (message.Author.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && TemporarilyBypassGambaSeshForDiscord &&
+                message.MessageRaw.Contains("discord16"))
+            {
+                _logger.Info("GambaSesh fixed itself, turning off bypass");
+                TemporarilyBypassGambaSeshForDiscord = false;
             }
             if (settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !_initialStartCooldown && message.Author.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && !GambaSeshPresent)
             {
