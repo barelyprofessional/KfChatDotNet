@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.ComponentModel;
+using System.Net;
 using System.Net.WebSockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -23,10 +24,15 @@ public class DiscordService : IDisposable
     public delegate void PresenceUpdateEventHandler(object sender, DiscordPresenceUpdateModel presence);
     public delegate void WsDisconnectionEventHandler(object sender, DisconnectionInfo e);
     public delegate void InvalidCredentialsEventHandler(object sender, DiscordPacketReadModel packet);
+    public delegate void ChannelCreatedEventHandler(object sender, DiscordChannelCreationModel channel);
+    public delegate void ChannelDeletedEventHandler(object sender, DiscordChannelDeletionModel channel);
+
     public event MessageReceivedEventHandler OnMessageReceived;
     public event PresenceUpdateEventHandler OnPresenceUpdated;
     public event WsDisconnectionEventHandler OnWsDisconnection;
     public event InvalidCredentialsEventHandler OnInvalidCredentials;
+    public event ChannelCreatedEventHandler OnChannelCreated;
+    public event ChannelDeletedEventHandler OnChannelDeleted;
 
     private readonly CancellationToken _cancellationToken = CancellationToken.None;
     private readonly CancellationTokenSource _pingCts = new();
@@ -186,6 +192,16 @@ public class DiscordService : IDisposable
                     OnMessageReceived?.Invoke(this,
                         packet.Data.Deserialize<DiscordMessageModel>() ?? throw new InvalidOperationException());
                     return;
+                case "CHANNEL_CREATE":
+                    OnChannelCreated?.Invoke(this,
+                        packet.Data.Deserialize<DiscordChannelCreationModel>() ??
+                        throw new InvalidOperationException());
+                    return;
+                case "CHANNEL_DELETE":
+                    OnChannelDeleted?.Invoke(this,
+                        packet.Data.Deserialize<DiscordChannelDeletionModel>() ??
+                        throw new InvalidOperationException());
+                    return;
                 default:
                     _logger.Debug($"{packet.DispatchEvent} was unhandled. JSON follows");
                     _logger.Debug(message.Text);
@@ -248,10 +264,51 @@ public class DiscordUserModel
 
 public class DiscordMessageModel
 {
+    [JsonPropertyName("type")]
+    public required DiscordMessageType Type { get; set; }
     [JsonPropertyName("content")]
     public string? Content { get; set; }
     [JsonPropertyName("author")]
     public required DiscordUserModel Author { get; set; }
     [JsonPropertyName("attachments")]
     public JsonElement[]? Attachments { get; set; }
+}
+
+public class DiscordChannelCreationModel
+{
+    [JsonPropertyName("type")]
+    public required DiscordChannelType Type { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+    [JsonPropertyName("guild_id")]
+    public required string GuildId { get; set; }
+}
+
+public class DiscordChannelDeletionModel
+{
+    [JsonPropertyName("type")]
+    public required DiscordChannelType Type { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
+
+// https://discord.com/developers/docs/resources/channel#channel-object-channel-types
+// Ignored the ones nobody cares about
+public enum DiscordChannelType
+{
+    [Description("Text")]
+    GuildText = 0,
+    [Description("Voice")]
+    GuildVoice = 2,
+    [Description("Stage")]
+    GuildStageVoice = 13
+}
+
+public enum DiscordMessageType
+{
+    Default = 0,
+    [Description("Stage start")]
+    StageStart = 27,
+    [Description("Stage end")]
+    StageEnd = 28
 }

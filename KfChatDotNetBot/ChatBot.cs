@@ -430,7 +430,29 @@ public class ChatBot
         _discord.OnInvalidCredentials += DiscordOnInvalidCredentials;
         _discord.OnMessageReceived += DiscordOnMessageReceived;
         _discord.OnPresenceUpdated += DiscordOnPresenceUpdated;
+        _discord.OnChannelCreated += DiscordOnChannelCreated;
+        _discord.OnChannelDeleted += DiscordOnChannelDeleted;
         _discord.StartWsClient().Wait(_cancellationToken);
+    }
+
+    private void DiscordOnChannelDeleted(object sender, DiscordChannelDeletionModel channel)
+    {
+        _logger.Info($"Received channel deletion event of type {channel.Type} with name {channel.Name}");
+        if (channel.Type != DiscordChannelType.GuildText && channel.Type != DiscordChannelType.GuildVoice &&
+            channel.Type != DiscordChannelType.GuildStageVoice) return;
+        var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
+        var channelName = channel.Name ?? "Unknown name";
+        SendChatMessage($"[img]{discordIcon.Value}[/img] Discord {channel.Type.Humanize()} channel {channelName} was deleted", true);
+    }
+
+    private void DiscordOnChannelCreated(object sender, DiscordChannelCreationModel channel)
+    {
+        _logger.Info($"Received channel creation event of type {channel.Type} with name {channel.Name}");
+        if (channel.Type != DiscordChannelType.GuildText && channel.Type != DiscordChannelType.GuildVoice &&
+            channel.Type != DiscordChannelType.GuildStageVoice) return;
+        var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
+        var channelName = channel.Name ?? "Unknown name";
+        SendChatMessage($"[img]{discordIcon.Value}[/img] New Discord {channel.Type.Humanize()} channel created: {channelName}", true);
     }
 
     private void BuildTwitchChat()
@@ -483,6 +505,19 @@ public class ChatBot
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
         if (message.Author.Id != settings[BuiltIn.Keys.DiscordBmjId].Value)
         {
+            return;
+        }
+
+        if (message.Type == DiscordMessageType.StageStart)
+        {
+            SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] BossmanJack just started a stage called {message.Content} 🚨🚨",
+                true);
+            return;
+        }
+        if (message.Type == DiscordMessageType.StageEnd)
+        {
+            SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] BossmanJack just ended a stage called {message.Content} :lossmanjack:",
+                true);
             return;
         }
         
