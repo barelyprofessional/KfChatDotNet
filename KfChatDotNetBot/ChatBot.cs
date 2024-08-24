@@ -36,7 +36,7 @@ public class ChatBot
     private string? _lastDiscordStatus;
     internal bool IsBmjLive = false;
     private bool _isBmjLiveSynced = false;
-    private DateTime _lastKfEvent = DateTime.Now;
+    private DateTime _lastKfEvent = DateTime.UtcNow;
     private BotCommands _botCommands;
     private string _bmjTwitchUsername;
     private Howlgg _howlgg;
@@ -636,6 +636,7 @@ public class ChatBot
             _logger.Debug($"Last KF event was {inactivityTime:g} ago");
             if (inactivityTime.TotalMinutes > 10)
             {
+                _lastKfEvent = DateTime.UtcNow;
                 _logger.Error("Forcing reconnection as bot is completely dead");
                 KfClient.Reconnect().Wait(_cancellationToken);
             }
@@ -673,7 +674,7 @@ public class ChatBot
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshDetectEnabled,
                 BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername])
             .Result;
-        _lastKfEvent = DateTime.Now;
+        _lastKfEvent = DateTime.UtcNow;
         _logger.Debug($"Received {messages.Count} message(s)");
         foreach (var message in messages)
         {
@@ -786,7 +787,7 @@ public class ChatBot
     {
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
-        _lastKfEvent = DateTime.Now;
+        _lastKfEvent = DateTime.UtcNow;
         _logger.Debug($"Received {users.Count} user join events");
         using var db = new ApplicationDbContext();
         foreach (var user in users)
@@ -821,7 +822,7 @@ public class ChatBot
     {
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
-        _lastKfEvent = DateTime.Now;
+        _lastKfEvent = DateTime.UtcNow;
         if (userIds.Contains(settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>()) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
         {
             _logger.Info("GambaSesh is no longer present");
