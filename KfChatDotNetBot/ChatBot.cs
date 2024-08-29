@@ -457,7 +457,7 @@ public class ChatBot
             channel.Type != DiscordChannelType.GuildStageVoice) return;
         var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
-        SendChatMessage($"[img]{discordIcon.Value}[/img] Discord {channel.Type.Humanize()} channel {channelName} was deleted", true);
+        SendChatMessage($"[img]{discordIcon.Value}[/img] Discord {channel.Type.Humanize()} channel '{channelName}' was deleted 🚨🚨", true);
     }
 
     private void DiscordOnChannelCreated(object sender, DiscordChannelCreationModel channel)
@@ -467,7 +467,7 @@ public class ChatBot
             channel.Type != DiscordChannelType.GuildStageVoice) return;
         var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
-        SendChatMessage($"[img]{discordIcon.Value}[/img] New Discord {channel.Type.Humanize()} channel created: {channelName}", true);
+        SendChatMessage($"[img]{discordIcon.Value}[/img] New Discord {channel.Type.Humanize()} channel created: {channelName} 🚨🚨", true);
     }
 
     private void BuildTwitchChat()
@@ -525,7 +525,8 @@ public class ChatBot
 
         if (message.Type == DiscordMessageType.StageStart)
         {
-            SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] BossmanJack just started a stage called {message.Content} 🚨🚨",
+            SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] BossmanJack just started a stage called {message.Content} 🚨🚨" +
+                            $"[br]🚨🚨 BossmanJack is [b]LIVE[/b] on Discord! 🚨🚨",
                 true);
             return;
         }
