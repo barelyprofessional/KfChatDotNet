@@ -420,6 +420,16 @@ public static class BuiltIn
             Default = "TheBossmanJack",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.RestreamUrl,
+            Regex = ".+",
+            Description = "URL for the restream",
+            Default = "No URL set",
+            IsSecret = false,
+            // No cache as it's infrequently accessed and should take effect immediately if a user updates it
+            CacheDuration = TimeSpan.Zero
         }
     ];
     
@@ -459,5 +469,6 @@ public static class BuiltIn
         public static string FlareSolverrApiUrl = "FlareSolverr.ApiUrl";
         public static string FlareSolverrProxy = "FlareSolverr.Proxy";
         public static string ChipsggBmjUsername = "Chipsgg.BmjUsername";
+        public static string RestreamUrl = "RestreamUrl";
     }
 }

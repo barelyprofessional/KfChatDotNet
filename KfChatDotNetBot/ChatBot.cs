@@ -600,8 +600,9 @@ public class ChatBot
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
         if (isLive)
         {
+            var restream = Helpers.GetValue(BuiltIn.Keys.RestreamUrl).Result.Value;
             SendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack\r\n" +
-                             "Ad-free re-stream at https://bossmanjack.tv courtesy of @Kees H");
+                             $"Ad-free re-stream at {restream} courtesy of @Kees H");
             IsBmjLive = true;
             return;
         }
