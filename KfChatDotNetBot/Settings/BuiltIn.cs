@@ -430,6 +430,15 @@ public static class BuiltIn
             IsSecret = false,
             // No cache as it's infrequently accessed and should take effect immediately if a user updates it
             CacheDuration = TimeSpan.Zero
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.HowlggBmjUserId,
+            Regex = @"\d+",
+            Description = "BMJ's user ID on howl.gg",
+            Default = "951905",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -462,6 +471,7 @@ public static class BuiltIn
         public static string KiwiFarmsToken = "KiwiFarms.Token";
         public static string KickEnabled = "Kick.Enabled";
         public static string HowlggDivisionAmount = "Howlgg.DivisionAmount";
+        public static string HowlggBmjUserId = "Howlgg.BmjUserId";
         public static string KiwiFarmsGreenColor = "KiwiFarms.GreenColor";
         public static string KiwiFarmsRedColor = "KiwiFarms.RedColor";
         public static string JackpotBmjUsername = "Jackpot.BmjUsername";
