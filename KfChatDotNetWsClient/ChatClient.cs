@@ -25,6 +25,7 @@ public class ChatClient
     private WebsocketClient _wsClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private ChatClientConfigModel _config;
+    public DateTime LastPacketReceived = DateTime.UtcNow;
 
     public ChatClient(ChatClientConfigModel config)
     {
@@ -49,6 +50,14 @@ public class ChatClient
     public void Disconnect()
     {
         _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket").Wait();
+    }
+
+    // Bot is inconsistent with what methods are async and not but I don't want to change the Disconnect() method to be
+    // async as then it'll fuck up anyone not waiting for it. This is why there's an explicit async method for this but
+    // none for reconnect.
+    public async Task DisconnectAsync()
+    {
+        await _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket");
     }
 
     public async Task Reconnect()
@@ -114,6 +123,7 @@ public class ChatClient
 
     private void WsMessageReceived(ResponseMessage message)
     {
+        LastPacketReceived = DateTime.UtcNow;
         if (message.Text == null)
         {
             _logger.Info("Websocket message was null, ignoring packet");
