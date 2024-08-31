@@ -15,7 +15,7 @@ public class TempEnableDiscordRelayingCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        botInstance.TemporarilyBypassGambaSeshForDiscord = true;
+        botInstance.BotServices.TemporarilyBypassGambaSeshForDiscord = true;
         botInstance.SendChatMessage("Enjoy Discord messages, stalker child", true);
     }
 }
@@ -31,7 +31,7 @@ public class TempSuppressGambaMessages : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        botInstance.TemporarilySuppressGambaMessages = true;
+        botInstance.BotServices.TemporarilySuppressGambaMessages = true;
         botInstance.SendChatMessage("No more gamba notifs", true);
     }
 }
@@ -47,7 +47,7 @@ public class EnableGambaMessages : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        botInstance.TemporarilySuppressGambaMessages = false;
+        botInstance.BotServices.TemporarilySuppressGambaMessages = false;
         botInstance.SendChatMessage("Gamba notifs back on the menu", true);
     }
 }
