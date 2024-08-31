@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <PackageReference Include="FlareSolverrSharp" Version="3.0.7" />
+      <PackageReference Include="HtmlAgilityPack" Version="1.11.64" />
       <PackageReference Include="Humanizer.Core" Version="2.14.1" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.8">

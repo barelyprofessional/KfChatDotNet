@@ -46,6 +46,13 @@ public class ChatBot
         {
             RefreshXfToken().Wait(_cancellationToken);
         }
+
+        // var kiwiflare = new KiwiFlare(settings[BuiltIn.Keys.KiwiFarmsDomain].Value,
+        //     settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        // var challenge = kiwiflare.GetChallenge().Result;
+        // var solution = kiwiflare.SolveChallenge(challenge).Result;
+        // var token = kiwiflare.SubmitAnswer(solution).Result;
+        // var test = kiwiflare.CheckAuth(token).Result;
         
         KfClient = new ChatClient(new ChatClientConfigModel
         {
@@ -55,7 +62,6 @@ public class ChatBot
             Proxy = settings[BuiltIn.Keys.Proxy].Value,
             ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
         });
-
   
         _logger.Debug("Creating bot command instance");
         _botCommands = new BotCommands(this, _cancellationToken);
