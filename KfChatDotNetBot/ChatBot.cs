@@ -17,7 +17,6 @@ public class ChatBot
 {
     internal readonly ChatClient KfClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    private string _xfSessionToken;
     // Oh no it's an ever expanding list that may never get cleaned up!
     // BUY MORE RAM
     private readonly List<int> _seenMsgIds = [];
@@ -29,35 +28,27 @@ public class ChatBot
     internal bool GambaSeshPresent;
     internal readonly BotServices BotServices;
     private Task _kfChatPing;
+    private KfTokenService _kfTokenService;
     
     public ChatBot()
     {
         _logger.Info("Bot starting!");
 
         var settings = Helpers.GetMultipleValues([
-            BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain, BuiltIn.Keys.PusherEndpoint,
-            BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.PusherChannels,
-            BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.DiscordToken, BuiltIn.Keys.KiwiFarmsWsReconnectTimeout,
-            BuiltIn.Keys.KiwiFarmsToken, BuiltIn.Keys.KickEnabled
-        ]).Result;
+            BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
+            BuiltIn.Keys.Proxy, BuiltIn.Keys.KiwiFarmsWsReconnectTimeout]).Result;
 
-        _xfSessionToken = settings[BuiltIn.Keys.KiwiFarmsToken].Value ?? "unset";
-        if (_xfSessionToken == "unset")
+        _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
+            settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        if (_kfTokenService.GetXfSessionCookie() == null)
         {
             RefreshXfToken().Wait(_cancellationToken);
         }
-
-        // var kiwiflare = new KiwiFlare(settings[BuiltIn.Keys.KiwiFarmsDomain].Value,
-        //     settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
-        // var challenge = kiwiflare.GetChallenge().Result;
-        // var solution = kiwiflare.SolveChallenge(challenge).Result;
-        // var token = kiwiflare.SubmitAnswer(solution).Result;
-        // var test = kiwiflare.CheckAuth(token).Result;
         
         KfClient = new ChatClient(new ChatClientConfigModel
         {
             WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
-            XfSessionToken = _xfSessionToken,
+            XfSessionToken = _kfTokenService.GetXfSessionCookie(),
             CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
             Proxy = settings[BuiltIn.Keys.Proxy].Value,
             ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
@@ -92,7 +83,9 @@ public class ChatBot
         _logger.Error($"Couldn't join the room. KF returned: {message}");
         _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
         RefreshXfToken().Wait(_cancellationToken);
-        KfClient.UpdateToken(_xfSessionToken);
+        // Shouldn't be null if we've just refreshed the token
+        // It's only null if a logon has never been attempted since the cookie DB entry was created
+        KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
         _logger.Info("Retrieved fresh token. Reconnecting.");
         KfClient.Disconnect();
         KfClient.StartWsClient().Wait(_cancellationToken);
@@ -122,15 +115,19 @@ public class ChatBot
 
     private async Task RefreshXfToken()
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsDomain,
-        BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword, BuiltIn.Keys.KiwiFarmsChromiumPath,
-        BuiltIn.Keys.Proxy]).Result;
-        var cookie = await KfTokenService.FetchSessionTokenAsync(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
-            settings[BuiltIn.Keys.KiwiFarmsUsername].Value!, settings[BuiltIn.Keys.KiwiFarmsPassword].Value!,
-            settings[BuiltIn.Keys.KiwiFarmsChromiumPath].Value!, settings[BuiltIn.Keys.Proxy].Value);
-        _logger.Debug($"FetchSessionTokenAsync returned {cookie}");
-        _xfSessionToken = cookie;
-        await Helpers.SetValue(BuiltIn.Keys.KiwiFarmsToken, _xfSessionToken);
+        if (await _kfTokenService.IsLoggedIn())
+        {
+            _logger.Info("We were already logged in and should have a fresh cookie for chat now");
+            await _kfTokenService.SaveCookies();
+            return;
+        }
+
+        var settings =
+            await Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
+        await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
+            settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
+        await _kfTokenService.SaveCookies();
+        _logger.Info("Successfully logged in");
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)

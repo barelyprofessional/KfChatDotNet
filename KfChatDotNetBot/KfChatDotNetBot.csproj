@@ -18,7 +18,6 @@
       </PackageReference>
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.8" />
       <PackageReference Include="NLog" Version="5.3.3" />
-      <PackageReference Include="PuppeteerSharp" Version="19.0.1" />
       <PackageReference Include="System.Runtime.Caching" Version="8.0.0" />
       <PackageReference Include="System.Text.Json" Version="8.0.4" />
     </ItemGroup>

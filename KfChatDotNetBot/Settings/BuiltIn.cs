@@ -429,6 +429,16 @@ public static class BuiltIn
             Default = "951905",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiFarmsCookies,
+            Regex = ".+",
+            Description = "Kiwi Farms cookies in key-value pair format",
+            // Empty JSON object as it's a Dictionary<string, string> object
+            Default = "{}",
+            IsSecret = true,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -458,7 +468,6 @@ public static class BuiltIn
         public static string ShuffleBmjUsername = "Shuffle.BmjUsername";
         public static string JuiceCooldown = "Juice.Cooldown";
         public static string JuiceAmount = "Juice.Amount";
-        public static string KiwiFarmsToken = "KiwiFarms.Token";
         public static string KickEnabled = "Kick.Enabled";
         public static string HowlggDivisionAmount = "Howlgg.DivisionAmount";
         public static string HowlggBmjUserId = "Howlgg.BmjUserId";
@@ -470,5 +479,6 @@ public static class BuiltIn
         public static string FlareSolverrProxy = "FlareSolverr.Proxy";
         public static string ChipsggBmjUsername = "Chipsgg.BmjUsername";
         public static string RestreamUrl = "RestreamUrl";
+        public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
     }
 }
