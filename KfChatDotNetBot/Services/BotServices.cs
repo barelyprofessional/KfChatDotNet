@@ -38,7 +38,7 @@ public class BotServices
     private bool _isBmjLiveSynced = false;
     
     // lol
-    internal bool TemporarilyBypassGambaSeshForDiscord = false;
+    internal bool TemporarilyBypassGambaSeshForDiscord = true;
     internal bool TemporarilySuppressGambaMessages = false;
 
     public BotServices(ChatBot botInstance, CancellationToken ctx)
