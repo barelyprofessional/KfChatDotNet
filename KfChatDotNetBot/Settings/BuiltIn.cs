@@ -333,15 +333,6 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.KiwiFarmsToken,
-            Regex = ".+",
-            Description = "Last successfully retrieved forum token (will be refreshed automatically if expired)",
-            Default = null,
-            IsSecret = true,
-            CacheDuration = TimeSpan.FromHours(1)
-        },
-        new BuiltInSettingsModel
-        {
             Key = Keys.KickEnabled,
             Regex = "true|false",
             Description = "Whether to enable Kick functionality (Pusher websocket mainly)",
@@ -428,8 +419,7 @@ public static class BuiltIn
             Description = "URL for the restream",
             Default = "No URL set",
             IsSecret = false,
-            // No cache as it's infrequently accessed and should take effect immediately if a user updates it
-            CacheDuration = TimeSpan.Zero
+            CacheDuration = TimeSpan.FromHours(1)
         },
         new BuiltInSettingsModel
         {
