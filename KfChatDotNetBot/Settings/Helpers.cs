@@ -1,6 +1,7 @@
 using KfChatDotNetBot.Models.DbModels;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.Caching;
+using System.Text.Json;
 using NLog;
 
 namespace KfChatDotNetBot.Settings;
@@ -118,17 +119,13 @@ public static class Helpers
         if (cache.Contains(key)) cache.Remove(key);
     }
 
-    public static async Task SetValueAsKeyValuePairs<T>(string key, Dictionary<string, T> data, char delimiter = ',',
-        char separator = '=')
+    public static async Task SetValueAsJsonObject<T>(string key, T data)
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
         logger.Debug($"Building data for {key}");
-        var value = data.Keys.Aggregate(string.Empty,
-            (current, dictKey) => current + $"{dictKey}{separator}{data[dictKey]}{delimiter}");
-
-        // Remove trailing delimiters that would be leftover as it doesn't account for whether it's the last key
-        value = value.TrimEnd(delimiter);
+        var value = JsonSerializer.Serialize(data);
+        
         logger.Debug($"Setting {key} to {value}");
 
         var setting = await db.Settings.FirstOrDefaultAsync(s => s.Key == key);
