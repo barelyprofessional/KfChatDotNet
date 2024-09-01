@@ -68,12 +68,14 @@ public class BotServices
             BuildKick(),
             BuildTwitch()
         ];
-        Task.WaitAll(tasks, _cancellationToken);
-        var faulted = tasks.Where(task => task.IsFaulted);
-        foreach (var task in faulted)
+        try
         {
-            _logger.Error("A task faulted, exception follows");
-            _logger.Error(task.Exception);
+            Task.WaitAll(tasks, _cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("A service failed, exception follows");
+            _logger.Error(e);
         }
 
         BuildRainbet();
@@ -162,7 +164,8 @@ public class BotServices
     private async Task BuildKick()
     {
         var settings = await Helpers.GetMultipleValues([
-            BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.KickEnabled
+            BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.KickEnabled,
+            BuiltIn.Keys.PusherChannels
         ]);
         _kickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
             settings[BuiltIn.Keys.Proxy].Value, settings[BuiltIn.Keys.PusherReconnectTimeout].ToType<int>());
