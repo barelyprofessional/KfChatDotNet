@@ -57,32 +57,43 @@ public class BotServices
             throw new InvalidOperationException("Bot services already initialized");
         }
         _logger.Info("Initializing services");
-        BuildShuffle();
-        BuildDiscord();
-        BuildTwitchChat();
-        BuildHowlgg();
-        BuildJackpot();
+        Task[] tasks =
+        [
+            BuildShuffle(),
+            BuildDiscord(),
+            BuildTwitchChat(),
+            BuildHowlgg(),
+            BuildJackpot(),
+            BuildChipsgg(),
+            BuildKick(),
+            BuildTwitch()
+        ];
+        Task.WaitAll(tasks, _cancellationToken);
+        var faulted = tasks.Where(task => task.IsFaulted);
+        foreach (var task in faulted)
+        {
+            _logger.Error("A task faulted, exception follows");
+            _logger.Error(task.Exception);
+        }
+
         BuildRainbet();
-        BuildChipsgg();
-        BuildKick();
-        BuildTwitch();
         
         _logger.Info("Starting websocket watchdog and Howl.gg user stats timer");
         _websocketWatchdog = WebsocketWatchdog();
         _howlggGetUserTimer = HowlggGetUserTimer();
     }
     
-    private void BuildShuffle()
+    private async Task BuildShuffle()
     {
         _logger.Debug("Building Shuffle");
-        _shuffle = new Shuffle(Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value, _cancellationToken);
+        _shuffle = new Shuffle((await Helpers.GetValue(BuiltIn.Keys.Proxy)).Value, _cancellationToken);
         _shuffle.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
-        _shuffle.StartWsClient().Wait(_cancellationToken);
+        await _shuffle.StartWsClient();
     }
 
-    private void BuildDiscord()
+    private async Task BuildDiscord()
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.DiscordToken, BuiltIn.Keys.Proxy]).Result;
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.DiscordToken, BuiltIn.Keys.Proxy]);
         _logger.Debug("Building Discord");
         if (settings[BuiltIn.Keys.DiscordToken].Value == null)
         {
@@ -95,7 +106,7 @@ public class BotServices
         _discord.OnPresenceUpdated += DiscordOnPresenceUpdated;
         _discord.OnChannelCreated += DiscordOnChannelCreated;
         _discord.OnChannelDeleted += DiscordOnChannelDeleted;
-        _discord.StartWsClient().Wait(_cancellationToken);
+        await _discord.StartWsClient();
     }
     
     private void BuildRainbet()
@@ -106,27 +117,27 @@ public class BotServices
         _logger.Info("Built Rainbet timer");
     }
     
-    private void BuildChipsgg()
+    private async Task BuildChipsgg()
     {
-        var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
-        _chipsgg = new Chipsgg(proxy, _cancellationToken);
+        var proxy = await Helpers.GetValue(BuiltIn.Keys.Proxy);
+        _chipsgg = new Chipsgg(proxy.Value, _cancellationToken);
         _chipsgg.OnChipsggRecentBet += OnChipsggRecentBet;
-        _chipsgg.StartWsClient().Wait(_cancellationToken);
+        await _chipsgg.StartWsClient();
         _logger.Info("Built Chips.gg Websocket connection");
     }
     
-    private void BuildJackpot()
+    private async Task BuildJackpot()
     {
         var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
         _jackpot = new Jackpot(proxy, _cancellationToken);
         _jackpot.OnJackpotBet += OnJackpotBet;
-        _jackpot.StartWsClient().Wait(_cancellationToken);
+        await _jackpot.StartWsClient();
         _logger.Info("Built Jackpot Websocket connection");
     }
     
-    private void BuildTwitch()
+    private async Task BuildTwitch()
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]).Result;
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]);
         if (settings[BuiltIn.Keys.TwitchBossmanJackId].Value == null)
         {
             _twitchDisabled = true;
@@ -135,24 +146,24 @@ public class BotServices
         }
         _twitch = new Twitch([settings[BuiltIn.Keys.TwitchBossmanJackId].ToType<int>()], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
-        _twitch.StartWsClient().Wait(_cancellationToken);
+        await _twitch.StartWsClient();
         _logger.Info("Built Twitch Websocket connection for livestream notifications");
     }
 
-    private void BuildHowlgg()
+    private async Task BuildHowlgg()
     {
-        var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
-        _howlgg = new Howlgg(proxy, _cancellationToken);
+        var proxy = await Helpers.GetValue(BuiltIn.Keys.Proxy);
+        _howlgg = new Howlgg(proxy.Value, _cancellationToken);
         _howlgg.OnHowlggBetHistory += OnHowlggBetHistory;
-        _howlgg.StartWsClient().Wait(_cancellationToken);
+        await _howlgg.StartWsClient();
         _logger.Info("Built Howl.gg Websocket connection");
     }
 
-    private void BuildKick()
+    private async Task BuildKick()
     {
-        var settings = Helpers.GetMultipleValues([
+        var settings = await Helpers.GetMultipleValues([
             BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.KickEnabled
-        ]).Result;
+        ]);
         _kickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
             settings[BuiltIn.Keys.Proxy].Value, settings[BuiltIn.Keys.PusherReconnectTimeout].ToType<int>());
         
@@ -164,13 +175,30 @@ public class BotServices
         
         if (settings[BuiltIn.Keys.KickEnabled].ToBoolean())
         {
-            _kickClient.StartWsClient().Wait(_cancellationToken);
+            await _kickClient.StartWsClient();
             var pusherChannels = settings[BuiltIn.Keys.PusherChannels].ToList();
             foreach (var channel in pusherChannels)
             {
                 _kickClient.SendPusherSubscribe(channel);
             }
         }
+    }
+    
+    private async Task BuildTwitchChat()
+    {
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.Proxy]);
+        _logger.Debug("Building Twitch Chat");
+        if (settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value == null)
+        {
+            _logger.Info("Not building Twitch Chat client as BMJ's username is not configured");
+            return;
+        }
+
+        _bmjTwitchUsername = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!;
+
+        _twitchChat = new TwitchChat($"#{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}", settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _twitchChat.OnMessageReceived += TwitchChatOnMessageReceived;
+        await _twitchChat.StartWsClient();
     }
     
     private async Task WebsocketWatchdog()
@@ -187,7 +215,7 @@ public class BotServices
                     _logger.Error("Shuffle died, recreating it");
                     _shuffle.Dispose();
                     _shuffle = null!;
-                    BuildShuffle();
+                    await BuildShuffle();
                 }
 
                 if (!_discord.IsConnected())
@@ -195,7 +223,7 @@ public class BotServices
                     _logger.Error("Discord died, recreating it");
                     _discord.Dispose();
                     _discord = null!;
-                    BuildDiscord();
+                    await BuildDiscord();
                 }
 
                 if (!_twitchDisabled && !_twitch.IsConnected())
@@ -203,7 +231,7 @@ public class BotServices
                     _logger.Error("Twitch died, recreating it");
                     _twitch.Dispose();
                     _twitch = null!;
-                    BuildTwitch();
+                    await BuildTwitch();
                 }
 
                 if (!_twitchChat.IsConnected())
@@ -211,7 +239,7 @@ public class BotServices
                     _logger.Error("Twitch chat died, recreating it");
                     _twitchChat.Dispose();
                     _twitchChat = null!;
-                    BuildTwitchChat();
+                    await BuildTwitchChat();
                 }
 
                 if (!_howlgg.IsConnected())
@@ -219,7 +247,7 @@ public class BotServices
                     _logger.Error("Howl.gg died, recreating it");
                     _howlgg.Dispose();
                     _howlgg = null!;
-                    BuildHowlgg();
+                    await BuildHowlgg();
                 }
 
                 if (!_jackpot.IsConnected())
@@ -227,7 +255,7 @@ public class BotServices
                     _logger.Error("Jackpot died, recreating it");
                     _jackpot.Dispose();
                     _jackpot = null!;
-                    BuildJackpot();
+                    await BuildJackpot();
                 }
 
                 if (!_chipsgg.IsConnected())
@@ -235,7 +263,7 @@ public class BotServices
                     _logger.Error("Chips died, recreating it");
                     _chipsgg.Dispose();
                     _chipsgg = null!;
-                    BuildChipsgg();
+                    await BuildChipsgg();
                 }
 
                 if (settings[BuiltIn.Keys.KickEnabled].ToBoolean() && !_kickClient.IsConnected())
@@ -243,7 +271,7 @@ public class BotServices
                     _logger.Error("Kick died, recreating it");
                     _kickClient.Dispose();
                     _kickClient = null!;
-                    BuildKick();
+                    await BuildKick();
                 }
             }
             catch (Exception e)
@@ -399,23 +427,6 @@ public class BotServices
         var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
         _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] New Discord {channel.Type.Humanize()} channel created: {channelName} 🚨🚨", true);
-    }
-
-    private void BuildTwitchChat()
-    {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.Proxy]).Result;
-        _logger.Debug("Building Twitch Chat");
-        if (settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value == null)
-        {
-            _logger.Info("Not building Twitch Chat client as BMJ's username is not configured");
-            return;
-        }
-
-        _bmjTwitchUsername = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!;
-
-        _twitchChat = new TwitchChat($"#{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}", settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
-        _twitchChat.OnMessageReceived += TwitchChatOnMessageReceived;
-        _twitchChat.StartWsClient().Wait(_cancellationToken);
     }
     
     private void TwitchChatOnMessageReceived(object sender, string nick, string target, string message)
