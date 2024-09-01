@@ -1,3 +1,4 @@
+using System.Text.Json;
 using NLog;
 
 namespace KfChatDotNetBot.Settings;
@@ -10,15 +11,14 @@ public static class Utils
         return settingValue.Value.Split(separator).ToList();
     }
 
-    public static Dictionary<string, T> ToKeyValuePairs<T>(this SettingValue settingValue, char delimiter = ',',
-        char separator = '=')
+    public static T? JsonDeserialize<T>(this SettingValue settingValue)
     {
         if (settingValue.Value == null)
         {
-            return new Dictionary<string, T>();
+            return default;
         }
-        return settingValue.Value.Split(delimiter).ToDictionary(kv => kv.Split(separator)[0],
-            kv => ValueToType<T>(kv.Split(separator)[1]));
+
+        return JsonSerializer.Deserialize<T>(settingValue.Value) ?? default(T);
     }
 
     public static bool ToBoolean(this SettingValue settingValue)
