@@ -9,20 +9,20 @@ using NLog;
 
 namespace KfChatDotNetBot.Services;
 
+// Shoutout y a t s for making the original Go implementation I adapted for this
+// https://github.com/y-a-t-s/firebird
 public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken? cancellationToken = null)
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    private string? _proxy = proxy;
-    private CancellationToken _ctx = cancellationToken ?? CancellationToken.None;
-    private string _kfDomain = kfDomain;
-    private Random _random = new Random();
+    private readonly CancellationToken _ctx = cancellationToken ?? CancellationToken.None;
+    private readonly Random _random = new();
 
     private HttpClientHandler GetHttpClientHandler()
     {
         var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
-        if (_proxy != null)
+        if (proxy != null)
         {
-            handler.Proxy = new WebProxy(_proxy);
+            handler.Proxy = new WebProxy(proxy);
             handler.UseProxy = true;
         }
 
@@ -32,7 +32,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
     public async Task<KiwiFlareChallengeModel> GetChallenge()
     {
         using var client = new HttpClient(GetHttpClientHandler());
-        var response = await client.GetAsync($"https://{_kfDomain}/", _ctx);
+        var response = await client.GetAsync($"https://{kfDomain}/", _ctx);
         var document = new HtmlDocument();
         document.Load(await response.Content.ReadAsStreamAsync(_ctx));
         var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
@@ -77,25 +77,24 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
 
     private async Task<KiwiFlareChallengeSolutionModel> ChallengeWorker(KiwiFlareChallengeModel challenge)
     {
-        var found = false;
         var nonce = _random.NextInt64();
-        while (!found)
+        while (true)
         {
-            // Incrementing nonce first as then I can just pass TestHash straight into found and reuse the value
             nonce++;
             var input = Encoding.UTF8.GetBytes($"{challenge.Salt}{nonce}");
-            found = TestHash(SHA256.HashData(input), challenge.Difficulty);
+            if (!TestHash(SHA256.HashData(input), challenge.Difficulty)) continue;
+            _logger.Debug($"Hash passed the test, nonce: {nonce}");
+            return new KiwiFlareChallengeSolutionModel
+            {
+                Nonce = nonce,
+                Salt = challenge.Salt
+            };
         }
-
-        return new KiwiFlareChallengeSolutionModel
-        {
-            Nonce = nonce,
-            Salt = challenge.Salt
-        };
     }
 
     public async Task<KiwiFlareChallengeSolutionModel> SolveChallenge(KiwiFlareChallengeModel challenge)
     {
+        var start = DateTime.UtcNow;
         var worker = Task.Run(() => ChallengeWorker(challenge), _ctx);
         try
         {
@@ -115,6 +114,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             throw new Exception("Challenge worker faulted");
         }
 
+        _logger.Debug($"Worker solved the challenge after {(DateTime.UtcNow - start).TotalMilliseconds} ms");
         return worker.Result;
     }
 
@@ -127,7 +127,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             new("b", solution.Nonce.ToString())
         });
 
-        var response = await client.PostAsync($"https://{_kfDomain}/.sssg/api/answer", formData, _ctx);
+        var response = await client.PostAsync($"https://{kfDomain}/.sssg/api/answer", formData, _ctx);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(_ctx);
         if (json.TryGetProperty("error", out var error))
         {
@@ -153,7 +153,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             new("f", authToken),
         });
 
-        var response = await client.PostAsync($"https://{_kfDomain}/.sssg/api/check", formData, _ctx);
+        var response = await client.PostAsync($"https://{kfDomain}/.sssg/api/check", formData, _ctx);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(_ctx);
         if (json.TryGetProperty("error", out var error))
         {
@@ -161,7 +161,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             return false;
         }
 
-        if (json.TryGetProperty("auth", out var auth))
+        if (json.TryGetProperty("auth", out _))
         {
             return true;
         }
