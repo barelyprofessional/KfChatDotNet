@@ -118,6 +118,7 @@ public class ChatBot
         if (await _kfTokenService.IsLoggedIn())
         {
             _logger.Info("We were already logged in and should have a fresh cookie for chat now");
+            KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
             await _kfTokenService.SaveCookies();
             return;
         }
