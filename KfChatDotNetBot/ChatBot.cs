@@ -126,6 +126,7 @@ public class ChatBot
             await Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
         await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
             settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
+        KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
         await _kfTokenService.SaveCookies();
         _logger.Info("Successfully logged in");
     }
