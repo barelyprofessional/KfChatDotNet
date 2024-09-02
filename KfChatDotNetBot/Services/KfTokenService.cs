@@ -77,7 +77,7 @@ public class KfTokenService
         throw new Exception("Failed to solve the challenge");
     }
 
-    public async Task<bool> IsLoggedIn()
+    private async Task<Stream> GetLoginPage()
     {
         _logger.Debug("Checking clearance token is actually valid first");
         await CheckClearanceToken();
@@ -89,8 +89,13 @@ public class KfTokenService
             throw new KiwiFlareChallengedException();
         }
         response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStreamAsync(_ctx);
+    }
+
+    public async Task<bool> IsLoggedIn()
+    {
         var document = new HtmlDocument();
-        document.Load(await response.Content.ReadAsStreamAsync(_ctx));
+        document.Load(await GetLoginPage());
         var html = document.DocumentNode.SelectSingleNode("//html");
         if (html == null) throw new Exception("Caught a null when retrieving html element");
         if (!html.Attributes.Contains("data-logged-in"))
@@ -103,18 +108,8 @@ public class KfTokenService
 
     public async Task PerformLogin(string username, string password)
     {
-        _logger.Debug("Checking clearance token is actually valid first");
-        await CheckClearanceToken();
-        using var client = new HttpClient(GetHttpClientHandler());
-        var response = await client.GetAsync($"https://{_kfDomain}/login", _ctx);
-        if (response.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
-        {
-            _logger.Error("Caught a 203 response when trying to load logon page which means we were KiwiFlare challenged");
-            throw new KiwiFlareChallengedException();
-        }
-        response.EnsureSuccessStatusCode();
         var document = new HtmlDocument();
-        document.Load(await response.Content.ReadAsStreamAsync(_ctx));
+        document.Load(await GetLoginPage());
         var html = document.DocumentNode.SelectSingleNode("//html");
         if (html == null) throw new Exception("Caught a null when retrieving html element");
         // Already logged in
@@ -128,6 +123,7 @@ public class KfTokenService
             new("password", password),
             new("_xfRedirect", $"https://{_kfDomain}/")
         });
+        using var client = new HttpClient(GetHttpClientHandler());
         var postResponse = await client.PostAsync($"https://{_kfDomain}/login/login", formData, _ctx);
         if (postResponse.StatusCode == HttpStatusCode.SeeOther)
         {
@@ -135,7 +131,7 @@ public class KfTokenService
             return;
         }
         postResponse.EnsureSuccessStatusCode();
-        _logger.Error($"Received HTTP response {postResponse.StatusCode}, checking to see if we're logged in");
+        _logger.Info($"Received HTTP response {postResponse.StatusCode}, checking to see if we're logged in");
         var postDocument = new HtmlDocument();
         postDocument.Load(await postResponse.Content.ReadAsStreamAsync(_ctx));
         html = postDocument.DocumentNode.SelectSingleNode("//html");
@@ -158,6 +154,7 @@ public class KfTokenService
 
     public async Task SaveCookies()
     {
+        _logger.Debug("Saving cookies");
         var cookiesToSave = _cookies.GetAllCookies().ToDictionary(cookie => cookie.Name, cookie => cookie.Value);
         await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KiwiFarmsCookies, cookiesToSave);
     }
