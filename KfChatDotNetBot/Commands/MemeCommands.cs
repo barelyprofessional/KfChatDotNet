@@ -55,3 +55,16 @@ public class SentCommand : ICommand
         botInstance.SendChatMessage("[img]https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png[/img]", true);
     }
 }
+
+public class GmKasinoCommand : ICommand
+{
+    public List<Regex> Patterns => [new Regex("^gmkasino")];
+    public string? HelpText => "Good Morning Kasino";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        // ReSharper disable once StringLiteralTypo
+        botInstance.SendChatMessage("[img]https://i.postimg.cc/QMzBRmH7/hiiiii.gif[/img]", true);
+    }
+}
