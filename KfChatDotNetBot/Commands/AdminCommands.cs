@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Humanizer;
 using KfChatDotNetBot.Models.DbModels;
+using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,5 +32,95 @@ public class SetRightCommand : ICommand
         targetUser.UserRight = right;
         await db.SaveChangesAsync(ctx);
         botInstance.SendChatMessage($"@{message.Author.Username}, {targetUser.KfUsername}'s right set to {right.Humanize()}", true);
+    }
+}
+
+public class GmKasinoAddCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin gmkasino add (?<image>.+)$")
+    ];
+
+    public string? HelpText => "Add an image to the gmkasino image list";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
+        if (images == null)
+        {
+            botInstance.SendChatMessage("Images list was null", true);
+            return;
+        }
+        var newImage = arguments["image"].Value;
+        if (images.Contains(newImage))
+        {
+            botInstance.SendChatMessage("Image is already in the list", true);
+            return;
+        }
+
+        images.Add(newImage);
+        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotGmKasinoImageRotation, images);
+        botInstance.SendChatMessage("Updated list of images", true);
+    }
+}
+
+public class GmKasinoRemoveCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin gmkasino remove (?<image>.+)$")
+    ];
+
+    public string? HelpText => "Remove an image in the gmkasino image list";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
+        if (images == null)
+        {
+            botInstance.SendChatMessage("Images list was null", true);
+            return;
+        }
+        var targetImage = arguments["image"].Value;
+        if (!images.Contains(targetImage))
+        {
+            botInstance.SendChatMessage("Image is not in the list", true);
+            return;
+        }
+
+        images.Remove(targetImage);
+        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotGmKasinoImageRotation, images);
+        botInstance.SendChatMessage("Updated list of images", true);
+    }
+}
+
+public class GmKasinoListCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin gmkasino list$")
+    ];
+
+    public string? HelpText => "Dump out the list of images for gmkasino";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
+        if (images == null)
+        {
+            botInstance.SendChatMessage("Images list was null", true);
+            return;
+        }
+
+        var result = "List of images:";
+        var i = 0;
+        foreach (var image in images)
+        {
+            i++;
+            result += $"[br]{i}: {image}";
+        }
+
+        botInstance.SendChatMessage(result, true);
     }
 }

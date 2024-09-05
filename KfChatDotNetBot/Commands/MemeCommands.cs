@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models.DbModels;
+using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 
 namespace KfChatDotNetBot.Commands;
@@ -64,7 +65,10 @@ public class GmKasinoCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        // ReSharper disable once StringLiteralTypo
-        botInstance.SendChatMessage("[img]https://i.postimg.cc/QMzBRmH7/hiiiii.gif[/img]", true);
+        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
+        if (images == null) return;
+        var random = new Random();
+        var image = images[random.Next(images.Count)];
+        botInstance.SendChatMessage($"[img]{image}[/img]", true);
     }
 }

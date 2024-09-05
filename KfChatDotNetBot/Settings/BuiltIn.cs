@@ -439,6 +439,16 @@ public static class BuiltIn
             Default = "{}",
             IsSecret = true,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotGmKasinoImageRotation,
+            Regex = ".+",
+            Description = "Rotation of images for the !gmkasino command",
+            // It's a JSON array
+            Default = "[\"https://i.postimg.cc/QMzBRmH7/hiiiii.gif\"]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -480,5 +490,6 @@ public static class BuiltIn
         public static string ChipsggBmjUsername = "Chipsgg.BmjUsername";
         public static string RestreamUrl = "RestreamUrl";
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
+        public static string BotGmKasinoImageRotation = "Bot.GmKasinoImageRotation";
     }
 }
