@@ -7,21 +7,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KfChatDotNetBot.Commands;
 
-public class SetRightCommand : ICommand
+public class SetRoleCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^admin role set (?<user>\d+) (?<right>\d+)$"),
-        new Regex(@"^admin right set (?<user>\d+) (?<right>\d+)$")
+        new Regex(@"^admin role set (?<user>\d+) (?<role>\d+)$"),
+        new Regex(@"^admin right set (?<user>\d+) (?<role>\d+)$")
     ];
 
-    public string? HelpText => "Set a user's right";
+    public string? HelpText => "Set a user's role";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
         var targetUserId = Convert.ToInt32(arguments["user"].Value);
-        var right = (UserRight)Convert.ToInt32(arguments["right"].Value);
+        var role = (UserRight)Convert.ToInt32(arguments["role"].Value);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == targetUserId, cancellationToken: ctx);
         if (targetUser == null)
         {
@@ -29,9 +29,9 @@ public class SetRightCommand : ICommand
             return;
         }
 
-        targetUser.UserRight = right;
+        targetUser.UserRight = role;
         await db.SaveChangesAsync(ctx);
-        botInstance.SendChatMessage($"@{message.Author.Username}, {targetUser.KfUsername}'s right set to {right.Humanize()}", true);
+        botInstance.SendChatMessage($"@{message.Author.Username}, {targetUser.KfUsername}'s role set to {role.Humanize()}", true);
     }
 }
 
