@@ -154,6 +154,11 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         });
 
         var response = await client.PostAsync($"https://{kfDomain}/.sssg/api/check", formData, _ctx);
+        // KiwiFlare has been turned off
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return true;
+        }
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(_ctx);
         if (json.TryGetProperty("error", out var error))
         {
