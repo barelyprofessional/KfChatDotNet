@@ -17,7 +17,9 @@ public class Twitch : IDisposable
     private string? _proxy;
     private List<int> _channels;
     public delegate void OnStreamStateUpdateEventHandler(object sender, int channelId, bool isLive);
+    public delegate void OnStreamCommercialEventHandler(object sender, int channelId, int length, bool scheduled);
     public event OnStreamStateUpdateEventHandler OnStreamStateUpdated;
+    public event OnStreamCommercialEventHandler OnStreamCommercial;
     private CancellationToken _cancellationToken = CancellationToken.None;
     private Task? _pingTask = null;
     private CancellationTokenSource _pingCts = new();
@@ -159,6 +161,14 @@ public class Twitch : IDisposable
                     Time = DateTimeOffset.UtcNow
                 });
                 db.SaveChanges();
+                return;
+            }
+
+            if (twitchMessage.GetProperty("type").GetString() == "commercial")
+            {
+                _logger.Info("Twitch commercial received");
+                OnStreamCommercial?.Invoke(this, channelId, twitchMessage.GetProperty("length").GetInt32(),
+                    twitchMessage.GetProperty("scheduled").GetBoolean());
                 return;
             }
             _logger.Info("Message from Twitch was unhandled");
