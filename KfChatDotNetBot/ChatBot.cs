@@ -40,10 +40,6 @@ public class ChatBot
 
         _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
             settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
-        if (_kfTokenService.GetXfSessionCookie() == null)
-        {
-            RefreshXfToken().Wait(_cancellationToken);
-        }
         
         KfClient = new ChatClient(new ChatClientConfigModel
         {
@@ -53,6 +49,11 @@ public class ChatBot
             Proxy = settings[BuiltIn.Keys.Proxy].Value,
             ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
         });
+        
+        if (_kfTokenService.GetXfSessionCookie() == null)
+        {
+            RefreshXfToken().Wait(_cancellationToken);
+        }
   
         _logger.Debug("Creating bot command instance");
         _botCommands = new BotCommands(this, _cancellationToken);
@@ -127,7 +128,15 @@ public class ChatBot
             await Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
         await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
             settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
-        KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
+        var newCookie = _kfTokenService.GetXfSessionCookie();
+        _logger.Debug($"GetXfSessionCookie returned => {newCookie}");
+        if (newCookie == null)
+        {
+            // The bot will re-run this method continually in the event of a login issue
+            _logger.Error("Failed to retrieve new session cookie");
+            return;
+        }
+        KfClient.UpdateToken(newCookie);
         await _kfTokenService.SaveCookies();
         _logger.Info("Successfully logged in");
     }
