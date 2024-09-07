@@ -449,6 +449,15 @@ public static class BuiltIn
             Default = "[\"https://i.postimg.cc/QMzBRmH7/hiiiii.gif\"]",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.TwitchShillRestreamOnCommercial,
+            Regex = "(true|false)",
+            Description = "Whether to shill the ad-free restream on commercial",
+            Default = "true",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -491,5 +500,6 @@ public static class BuiltIn
         public static string RestreamUrl = "RestreamUrl";
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
         public static string BotGmKasinoImageRotation = "Bot.GmKasinoImageRotation";
+        public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
     }
 }
