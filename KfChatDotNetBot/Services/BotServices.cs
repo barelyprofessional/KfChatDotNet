@@ -622,9 +622,9 @@ public class BotServices
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage(
-            $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet {bet.Amount:N} {bet.Currency!.ToUpper()} " +
-            $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [color={payoutColor}]{bet.Winnings:N} {bet.Currency.ToUpper()} " +
-            $"({bet.Winnings * bet.CurrencyPrice:C})[/color] ({bet.Multiplier:N}x) on {bet.GameTitle} 💰💰",
+            $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet [plain]{bet.Amount:N} {bet.Currency!.ToUpper()} " +
+            $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [/plain][color={payoutColor}][plain]{bet.Winnings:N} {bet.Currency.ToUpper()} " +
+            $"({bet.Winnings * bet.CurrencyPrice:C})[/plain][/color] [plain]({bet.Multiplier:N}x) on {bet.GameTitle}[/plain] 💰💰",
             true);
     }
     
