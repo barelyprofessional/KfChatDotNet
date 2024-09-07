@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Runtime.Caching;
+using System.Text.RegularExpressions;
 using Humanizer;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
@@ -125,7 +126,7 @@ public class GmKasinoListCommand : ICommand
     }
 }
 
-public class ToggleLiveStatusCommand : ICommand
+public class ToggleLiveStatusAdminCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex(@"^admin toggle livestatus$")
@@ -139,5 +140,26 @@ public class ToggleLiveStatusCommand : ICommand
         botInstance.BotServices.IsBmjLive = !botInstance.BotServices.IsBmjLive;
 
         botInstance.SendChatMessage($"IsBmjLive => {botInstance.BotServices.IsBmjLive}", true);
+    }
+}
+
+public class CacheClearAdminCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^admin cache clear$")
+    ];
+
+    public string? HelpText => null;
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var cacheKeys = MemoryCache.Default.Select(kvp => kvp.Key).ToList();
+        foreach (var cacheKey in cacheKeys)
+        {
+            MemoryCache.Default.Remove(cacheKey);
+        }
+        botInstance.SendChatMessage("Cache wiped", true);
     }
 }
