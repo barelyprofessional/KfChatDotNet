@@ -124,3 +124,20 @@ public class GmKasinoListCommand : ICommand
         botInstance.SendChatMessage(result, true);
     }
 }
+
+public class ToggleLiveStatusCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin toggle livestatus$")
+    ];
+
+    public string? HelpText => "Toggle Bossman's live status so off screen gamba can be relayed";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        botInstance.BotServices.IsBmjLive = !botInstance.BotServices.IsBmjLive;
+
+        botInstance.SendChatMessage($"IsBmjLive => {botInstance.BotServices.IsBmjLive}", true);
+    }
+}
