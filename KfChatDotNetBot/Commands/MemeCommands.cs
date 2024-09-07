@@ -68,7 +68,7 @@ public class GmKasinoCommand : ICommand
         var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
         if (images == null) return;
         var random = new Random();
-        var image = images[random.Next(images.Count)];
+        var image = images[random.Next(images.Count + 1)];
         botInstance.SendChatMessage($"[img]{image}[/img]", true);
     }
 }
