@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.Json;
 using HtmlAgilityPack;
 using KfChatDotNetBot.Settings;
 using NLog;
@@ -148,7 +149,10 @@ public class KfTokenService
 
     public string? GetXfSessionCookie()
     {
+        _logger.Debug("JSON serialization of all the cookies");
+        _logger.Debug(JsonSerializer.Serialize(_cookies.GetAllCookies()));
         var cookie = _cookies.GetAllCookies()["xf_session"];
+        _logger.Debug($"xf_session => {cookie?.Value}");
         return cookie?.Value;
     }
 
