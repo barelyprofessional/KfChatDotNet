@@ -125,11 +125,14 @@ public class ChatBot
 
     private async Task RefreshXfToken()
     {
+        string? newCookie;
         if (await _kfTokenService.IsLoggedIn())
         {
             _logger.Info("We were already logged in and should have a fresh cookie for chat now");
-            KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
+            newCookie = _kfTokenService.GetXfSessionCookie();
+            KfClient.UpdateToken(newCookie!);
             await _kfTokenService.SaveCookies();
+            _logger.Info($"New token: {newCookie}");
             return;
         }
 
@@ -137,7 +140,7 @@ public class ChatBot
             await Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
         await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
             settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
-        var newCookie = _kfTokenService.GetXfSessionCookie();
+        newCookie = _kfTokenService.GetXfSessionCookie();
         _logger.Debug($"GetXfSessionCookie returned => {newCookie}");
         if (newCookie == null)
         {
@@ -148,6 +151,7 @@ public class ChatBot
         KfClient.UpdateToken(newCookie);
         await _kfTokenService.SaveCookies();
         _logger.Info("Successfully logged in");
+        _logger.Info($"New token: {newCookie}");
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
