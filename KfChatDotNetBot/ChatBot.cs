@@ -95,15 +95,24 @@ public class ChatBot
 
     private async Task KfPingTask()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
+        var interval = (await Helpers.GetValue(BuiltIn.Keys.KiwiFarmsPingInterval)).ToType<int>();
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             _logger.Debug("Pinging KF");
-            KfClient.SendMessage("/ping");
+            if (KfClient.IsConnected())
+            {
+                KfClient.SendMessage("/ping");
+            }
+            else
+            {
+                _logger.Info("Not pinging the connection as we're currently disconnected");
+            }
             if (InitialStartCooldown) InitialStartCooldown = false;
             var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
             _logger.Debug($"Last KF event was {inactivityTime:g} ago");
-            if (inactivityTime.TotalMinutes > 10)
+            var inactivityTimeout = (await Helpers.GetValue(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
+            if (inactivityTime.TotalSeconds > inactivityTimeout)
             {
                 // Yeah, super dodgy
                 KfClient.LastPacketReceived = DateTime.UtcNow;

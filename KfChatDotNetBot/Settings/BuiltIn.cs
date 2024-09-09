@@ -458,6 +458,27 @@ public static class BuiltIn
             Default = "true",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiFarmsInactivityTimeout,
+            Regex = @"\d+",
+            // You would think the WS library would trip up with the "NoMessageReceived" exception, but there's some bug
+            // where it'll occasionally fail to reconnect properly and sit there dead forever, hence the watchdog timer
+            Description = "Length of time the client can go without receiving ANY packets from Sneedchat before forcing a reconnect.",
+            Default = "300",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiFarmsPingInterval,
+            Regex = @"\d+",
+            Description = "Interval in seconds to ping Sneedchat using the non-existent /ping command. " +
+                          "Note this affects how often the bot will check inactivity of the connection.",
+            Default = "10",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -501,5 +522,7 @@ public static class BuiltIn
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
         public static string BotGmKasinoImageRotation = "Bot.GmKasinoImageRotation";
         public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
+        public static string KiwiFarmsInactivityTimeout = "KiwiFarms.InactivityTimeout";
+        public static string KiwiFarmsPingInterval = "KiwiFarms.PingInterval";
     }
 }
