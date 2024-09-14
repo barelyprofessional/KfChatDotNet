@@ -29,6 +29,7 @@ public class ChatBot
     internal readonly BotServices BotServices;
     private Task _kfChatPing;
     private KfTokenService _kfTokenService;
+    private int _joinFailures = 0;
     
     public ChatBot()
     {
@@ -81,9 +82,16 @@ public class ChatBot
 
     private void OnFailedToJoinRoom(object sender, string message)
     {
-        _logger.Error($"Couldn't join the room. KF returned: {message}");
+        _joinFailures++;
+        _logger.Error($"Couldn't join the room, attempt {_joinFailures}. KF returned: {message}");
         _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
+        if (_joinFailures > 3)
+        {
+            _logger.Error("Seems we're in a rejoin loop. Wiping out cookies entirely in hopes it'll make this piece of shit work");
+            _kfTokenService.WipeCookies();
+        }
         RefreshXfToken().Wait(_cancellationToken);
+        _kfTokenService.SaveCookies().Wait(_cancellationToken);
         // Shouldn't be null if we've just refreshed the token
         // It's only null if a logon has never been attempted since the cookie DB entry was created
         KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
@@ -125,14 +133,10 @@ public class ChatBot
 
     private async Task RefreshXfToken()
     {
-        string? newCookie;
         if (await _kfTokenService.IsLoggedIn())
         {
             _logger.Info("We were already logged in and should have a fresh cookie for chat now");
-            newCookie = _kfTokenService.GetXfSessionCookie();
-            KfClient.UpdateToken(newCookie!);
-            await _kfTokenService.SaveCookies();
-            _logger.Info($"New token: {newCookie}");
+            // Only seems to happen if the bot thinks it's already logged in
             return;
         }
 
@@ -140,22 +144,13 @@ public class ChatBot
             await Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
         await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
             settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
-        newCookie = _kfTokenService.GetXfSessionCookie();
-        _logger.Debug($"GetXfSessionCookie returned => {newCookie}");
-        if (newCookie == null)
-        {
-            // The bot will re-run this method continually in the event of a login issue
-            _logger.Error("Failed to retrieve new session cookie");
-            return;
-        }
-        KfClient.UpdateToken(newCookie);
-        await _kfTokenService.SaveCookies();
         _logger.Info("Successfully logged in");
-        _logger.Info($"New token: {newCookie}");
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
     {
+        // Reset value to 0 as we've now successfully joined
+        if (_joinFailures > 0) _joinFailures = 0;
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshDetectEnabled,
                 BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername])
             .Result;

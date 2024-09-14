@@ -162,6 +162,12 @@ public class KfTokenService
         var cookiesToSave = _cookies.GetAllCookies().ToDictionary(cookie => cookie.Name, cookie => cookie.Value);
         await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KiwiFarmsCookies, cookiesToSave);
     }
+
+    public void WipeCookies()
+    {
+        _logger.Info("Wiping out cookies");
+        _cookies = new CookieContainer();
+    }
     
     public class KiwiFlareChallengedException : Exception;
     public class KiwiFarmsLogonFailedException : Exception;
