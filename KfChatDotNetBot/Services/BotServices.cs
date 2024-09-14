@@ -322,7 +322,7 @@ public class BotServices
                 GameName = bet.Game.Name,
                 Value = bet.Value,
                 Payout = bet.Payout,
-                Multiplier = bet.Multiplier,
+                Multiplier = bet.Multiplier ?? 0,
                 BetId = bet.Id,
                 UpdatedAt = bet.UpdatedAt,
                 BetSeenAt = DateTimeOffset.UtcNow
@@ -576,11 +576,11 @@ public class BotServices
     {
         var settings = Helpers
             .GetMultipleValues([
-                BuiltIn.Keys.ChipsggBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.ChipsggBmjUserIds, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Chips.gg bet has arrived");
-        if (bet.Username != settings[BuiltIn.Keys.ChipsggBmjUsername].Value)
+        if (!settings[BuiltIn.Keys.ChipsggBmjUserIds].ToList().Contains(bet.UserId))
         {
             return;
         }
@@ -622,7 +622,7 @@ public class BotServices
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage(
-            $"🚨🚨 CHIPS BROS 🚨🚨 {bet.Username} just bet [plain]{bet.Amount:N} {bet.Currency!.ToUpper()} " +
+            $"🚨🚨 CHIPS BROS 🚨🚨 Bossman just bet [plain]{bet.Amount:N} {bet.Currency!.ToUpper()} " +
             $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [/plain][color={payoutColor}][plain]{bet.Winnings:N} {bet.Currency.ToUpper()} " +
             $"({bet.Winnings * bet.CurrencyPrice:C})[/plain][/color] [plain]({bet.Multiplier:N}x) on {bet.GameTitle}[/plain] 💰💰",
             true);

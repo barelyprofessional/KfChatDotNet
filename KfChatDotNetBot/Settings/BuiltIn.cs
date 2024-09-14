@@ -405,10 +405,11 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.ChipsggBmjUsername,
+            Key = Keys.ChipsggBmjUserIds,
             Regex = ".+",
             Description = "Bossman's Chips.gg username",
-            Default = "TheBossmanJack",
+            //Default = "[\"TheBossmanJack\", \"Yabuddy757\"]",
+            Default = "[\"1af247cd-67e0-4029-8a93-b8d19c275072\", \"e97ebf3e-d5a8-4583-ab35-5095a05f282e\"]",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
         },
@@ -544,7 +545,7 @@ public static class BuiltIn
         public static string RainbetBmjPublicId = "Rainbet.BmjPublicId";
         public static string FlareSolverrApiUrl = "FlareSolverr.ApiUrl";
         public static string FlareSolverrProxy = "FlareSolverr.Proxy";
-        public static string ChipsggBmjUsername = "Chipsgg.BmjUsername";
+        public static string ChipsggBmjUserIds = "Chipsgg.BmjUserIds";
         public static string RestreamUrl = "RestreamUrl";
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
         public static string BotGmKasinoImageRotation = "Bot.GmKasinoImageRotation";
