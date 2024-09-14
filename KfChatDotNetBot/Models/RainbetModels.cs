@@ -11,7 +11,7 @@ public class RainbetBetHistoryModel
     [JsonPropertyName("payout")]
     public required float Payout { get; set; }
     [JsonPropertyName("multiplier")]
-    public required float Multiplier { get; set; }
+    public float? Multiplier { get; set; }
     [JsonPropertyName("updated_at")]
     public required DateTimeOffset UpdatedAt { get; set; }
     [JsonPropertyName("user")]
