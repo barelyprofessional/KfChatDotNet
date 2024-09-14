@@ -76,7 +76,10 @@ public class GmKasinoCommand : ICommand
 
 public class CrackedCommand : ICommand
 {
-    public List<Regex> Patterns => [new Regex("^cracked (?<msg>.+)")];
+    public List<Regex> Patterns => [
+        new Regex("^cracked (?<msg>.+)"),
+        new Regex("^crackhead (?<msg>.+)")
+    ];
     public string? HelpText => "Crackhead Zalgo text";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
