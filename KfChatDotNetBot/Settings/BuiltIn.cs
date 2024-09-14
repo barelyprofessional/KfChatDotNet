@@ -507,6 +507,15 @@ public static class BuiltIn
             Default = "2",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.WinmanjackImgUrl,
+            Regex = ".+",
+            Description = "URL for the winmanjack image",
+            Default = "https://kiwifarms.st/attachments/winmanjack_bgr-png.6414050/",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -555,5 +564,6 @@ public static class BuiltIn
         public static string JuiceLoserDivision = "Juice.LoserDivision";
         public static string CrackedZalgoFuckUpMode = "Cracked.ZalgoFuckUpMode";
         public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
+        public static string WinmanjackImgUrl = "Winmanjack.ImgUrl";
     }
 }

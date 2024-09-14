@@ -94,3 +94,18 @@ public class CrackedCommand : ICommand
         botInstance.SendChatMessage(zalgo.ToString(), true);
     }
 }
+
+public class WinmanjackCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^winmanjack")
+    ];
+    public string? HelpText => "winmanjack.jpg";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var image = await Helpers.GetValue(BuiltIn.Keys.WinmanjackImgUrl);
+        botInstance.SendChatMessage($"[img]{image.Value}[/img]", true);
+    }
+}
