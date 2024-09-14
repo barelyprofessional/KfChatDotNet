@@ -13,7 +13,7 @@ public class JuiceCommand : ICommand
     public List<Regex> Patterns => [new Regex("^juiceme")];
     public string HelpText => "Get juice!";
     public bool HideFromHelp => false;
-    public UserRight RequiredRight => UserRight.Guest;
+    public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
@@ -21,9 +21,10 @@ public class JuiceCommand : ICommand
         // Have to attach the entity because it is coming from another DB context
         // https://stackoverflow.com/questions/52718652/ef-core-sqlite-sqlite-error-19-unique-constraint-failed
         db.Users.Attach(user);
-        var juicerSettings = await Helpers.GetMultipleValues([BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown]);
+        var juicerSettings = await Helpers.GetMultipleValues([BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown, BuiltIn.Keys.JuiceLoserDivision]);
         var cooldown = juicerSettings[BuiltIn.Keys.JuiceCooldown].ToType<int>();
         var amount = juicerSettings[BuiltIn.Keys.JuiceAmount].ToType<int>();
+        if (user.UserRight == UserRight.Loser) amount /= juicerSettings[BuiltIn.Keys.JuiceLoserDivision].ToType<int>();
         var lastJuicer = (await db.Juicers.Where(j => j.User == user).ToListAsync(ctx)).OrderByDescending(j => j.JuicedAt).Take(1).ToList();
         if (lastJuicer.Count == 0)
         {

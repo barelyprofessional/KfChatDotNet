@@ -479,6 +479,16 @@ public static class BuiltIn
             Default = "10",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.JuiceLoserDivision,
+            Regex = @"\d+",
+            Description = "Amount to divide the juice by if the user's rack is Loser",
+            Default = "5",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
         new BuiltInSettingsModel
         {
             Key = Keys.CrackedZalgoFuckUpMode,
@@ -541,6 +551,7 @@ public static class BuiltIn
         public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
         public static string KiwiFarmsInactivityTimeout = "KiwiFarms.InactivityTimeout";
         public static string KiwiFarmsPingInterval = "KiwiFarms.PingInterval";
+        public static string JuiceLoserDivision = "Juice.LoserDivision";
         public static string CrackedZalgoFuckUpMode = "Cracked.ZalgoFuckUpMode";
         public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
     }
