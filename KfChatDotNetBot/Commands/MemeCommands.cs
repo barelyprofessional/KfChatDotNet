@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
+using Zalgo;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -70,5 +71,23 @@ public class GmKasinoCommand : ICommand
         var random = new Random();
         var image = images[random.Next(images.Count)];
         botInstance.SendChatMessage($"[img]{image}[/img]", true);
+    }
+}
+
+public class CrackedCommand : ICommand
+{
+    public List<Regex> Patterns => [new Regex("^cracked (?<msg>.+)")];
+    public string? HelpText => "Crackhead Zalgo text";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var msg = arguments["msg"].Value.TrimStart('/');
+        var settings = await Helpers.GetMultipleValues([
+            BuiltIn.Keys.CrackedZalgoFuckUpMode, BuiltIn.Keys.CrackedZalgoFuckUpPosition
+        ]);
+        var zalgo = new ZalgoString(msg, (FuckUpMode)settings[BuiltIn.Keys.CrackedZalgoFuckUpMode].ToType<int>(),
+            (FuckUpPosition)settings[BuiltIn.Keys.CrackedZalgoFuckUpPosition].ToType<int>());
+        botInstance.SendChatMessage(zalgo.ToString(), true);
     }
 }

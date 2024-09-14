@@ -479,6 +479,23 @@ public static class BuiltIn
             Default = "10",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CrackedZalgoFuckUpMode,
+            Regex = @"\d+",
+            Description = "FuckUpMode. 0 = Min, 1 = Normal, 2 = Max",
+            Default = "1",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CrackedZalgoFuckUpPosition,
+            Regex = @"\d+",
+            Description = "FuckUpPosition: 1 = Up, 2 = Middle, 3 = UpAndMiddle, 4 = Bot (Bottom), 5 = UpAndBot, 6 = MiddleAndBot, 7 = All",
+            Default = "2",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -524,5 +541,7 @@ public static class BuiltIn
         public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
         public static string KiwiFarmsInactivityTimeout = "KiwiFarms.InactivityTimeout";
         public static string KiwiFarmsPingInterval = "KiwiFarms.PingInterval";
+        public static string CrackedZalgoFuckUpMode = "Cracked.ZalgoFuckUpMode";
+        public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
     }
 }
