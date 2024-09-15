@@ -33,6 +33,7 @@ public class EditTestCommand : ICommand
         if (reference.Status == SentMessageTrackerStatus.NotSending ||
             reference.Status == SentMessageTrackerStatus.Unknown ||
             reference.Status == SentMessageTrackerStatus.ChatDisconnected ||
+            reference.Status == SentMessageTrackerStatus.Lost ||
             reference.ChatMessageId == null)
         {
             logger.Error("Either message refused to send due to bot settings or something fucked up getting the message ID");
