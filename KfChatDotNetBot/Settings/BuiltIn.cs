@@ -516,6 +516,15 @@ public static class BuiltIn
             Default = "https://kiwifarms.st/attachments/winmanjack_bgr-png.6414050/",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotDisconnectReplayLimit,
+            Regex = @"\d+",
+            Description = "Limit of messages which could not be sent while bot was disconnected to replay on connect",
+            Default = "10",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -565,5 +574,6 @@ public static class BuiltIn
         public static string CrackedZalgoFuckUpMode = "Cracked.ZalgoFuckUpMode";
         public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
         public static string WinmanjackImgUrl = "Winmanjack.ImgUrl";
+        public static string BotDisconnectReplayLimit = "Bot.DisconnectReplayLimit";
     }
 }

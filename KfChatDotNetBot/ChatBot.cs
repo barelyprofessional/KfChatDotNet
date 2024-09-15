@@ -152,8 +152,22 @@ public class ChatBot
         // Reset value to 0 as we've now successfully joined
         if (_joinFailures > 0) _joinFailures = 0;
         var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshDetectEnabled,
-                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername])
+                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit])
             .Result;
+        // Send messages if there are any to replay (Assuming we DC'd, and it's now the message flood)
+        foreach (var replayMsg in _sentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected)
+                     .TakeLast(settings[BuiltIn.Keys.BotDisconnectReplayLimit].ToType<int>()))
+        {
+            // Bypass the helpful method we have for sending messages so we don't create new sent message items for them
+            // The validation of whether to send based on GambaSesh's presence etc. has already been performed for msgs here
+            KfClient.SendMessage(replayMsg.Message);
+            replayMsg.Status = SentMessageTrackerStatus.WaitingForResponse;
+            replayMsg.SentAt = DateTimeOffset.UtcNow;
+        }
+        foreach(var lostMsg in _sentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected))
+        {
+            lostMsg.Status = SentMessageTrackerStatus.Lost;
+        }
         _logger.Debug($"Received {messages.Count} message(s)");
         foreach (var message in messages)
         {
@@ -203,7 +217,7 @@ public class ChatBot
         }
     }
 
-    public string SendChatMessage(string message, bool bypassSeshDetect = false)
+    public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false)
     {
         var settings = Helpers
             .GetMultipleValues([BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled])
@@ -221,20 +235,28 @@ public class ChatBot
             _logger.Info($"Message was: {message}");
             messageTracker.Status = SentMessageTrackerStatus.NotSending;
             _sentMessages.Add(messageTracker);
-            return reference;
+            return messageTracker;
         }
         if (GambaSeshPresent && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !bypassSeshDetect)
         {
             _logger.Info($"Not sending message '{message}' as GambaSesh is present");
             messageTracker.Status = SentMessageTrackerStatus.NotSending;
             _sentMessages.Add(messageTracker);
-            return reference;
+            return messageTracker;
+        }
+
+        if (!KfClient.IsConnected())
+        {
+            _logger.Info($"Not sending message '{message}' as Sneedchat is not connected");
+            messageTracker.Status = SentMessageTrackerStatus.ChatDisconnected;
+            _sentMessages.Add(messageTracker);
+            return messageTracker;
         }
         messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
         messageTracker.SentAt = DateTimeOffset.UtcNow;
         _sentMessages.Add(messageTracker);
         KfClient.SendMessage(message);
-        return reference;
+        return messageTracker;
     }
 
     public SentMessageTrackerModel GetSentMessageStatus(string reference)

@@ -25,14 +25,15 @@ public class EditTestCommand : ICommand
         var i = 0;
         var delay = 1000;
         var reference = botInstance.SendChatMessage($"{msg} {i}", true);
-        while (botInstance.GetSentMessageStatus(reference).Status == SentMessageTrackerStatus.WaitingForResponse)
+        while (reference.Status == SentMessageTrackerStatus.WaitingForResponse)
         {
             await Task.Delay(100, ctx);
         }
-        
-        var status = botInstance.GetSentMessageStatus(reference);
-        if (status.Status == SentMessageTrackerStatus.NotSending || status.Status == SentMessageTrackerStatus.Unknown ||
-            status.ChatMessageId == null)
+
+        if (reference.Status == SentMessageTrackerStatus.NotSending ||
+            reference.Status == SentMessageTrackerStatus.Unknown ||
+            reference.Status == SentMessageTrackerStatus.ChatDisconnected ||
+            reference.ChatMessageId == null)
         {
             logger.Error("Either message refused to send due to bot settings or something fucked up getting the message ID");
             return;
@@ -41,13 +42,13 @@ public class EditTestCommand : ICommand
         {
             i++;
             await Task.Delay(delay, ctx);
-            botInstance.KfClient.EditMessage(status.ChatMessageId!.Value, $"{msg} {i}");
+            botInstance.KfClient.EditMessage(reference.ChatMessageId!.Value, $"{msg} {i}");
         }
 
         await Task.Delay(delay, ctx);
-        botInstance.KfClient.EditMessage(status.ChatMessageId!.Value, "This message will self destruct in 1 second");
+        botInstance.KfClient.EditMessage(reference.ChatMessageId!.Value, "This message will self destruct in 1 second");
         await Task.Delay(delay, ctx);
-        botInstance.KfClient.DeleteMessage(status.ChatMessageId!.Value);
+        botInstance.KfClient.DeleteMessage(reference.ChatMessageId!.Value);
     }
 }
 
