@@ -116,7 +116,6 @@ public class ChatBot
             {
                 _logger.Info("Not pinging the connection as we're currently disconnected");
             }
-            if (InitialStartCooldown) InitialStartCooldown = false;
             var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
             _logger.Debug($"Last KF event was {inactivityTime:g} ago");
             var inactivityTimeout = (await Helpers.GetValue(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
@@ -211,10 +210,12 @@ public class ChatBot
             }
             else
             {
-                _logger.Debug($"_seenMsgIds check => {!_seenMsgIds.Contains(message.MessageId)}, _initialStartCooldown => {InitialStartCooldown}");
+                _logger.Debug($"_seenMsgIds check => {!_seenMsgIds.Contains(message.MessageId)}, InitialStartCooldown => {InitialStartCooldown}");
             }
             _seenMsgIds.Add(message.MessageId);
         }
+        
+        if (InitialStartCooldown) InitialStartCooldown = false;
     }
 
     public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false)
