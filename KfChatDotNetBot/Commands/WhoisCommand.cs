@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
+using Raffinert.FuzzySharp;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -19,11 +20,15 @@ public class WhoisCommand : ICommand
         await using var db = new ApplicationDbContext();
         var query = arguments["user"].Value.TrimStart('@').TrimEnd(',').TrimEnd();
         var queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == query, cancellationToken: ctx);
-        if (queryUser == null)
+        if (queryUser != null)
         {
-            botInstance.SendChatMessage($"Requested user '{query}' does not exist. (Note this is case-sensitive)", true);
+            botInstance.SendChatMessage($"@{message.Author.Username}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
             return;
         }
-        botInstance.SendChatMessage($"@{message.Author.Username}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
+
+        var users = await db.Users.Select(u => u.KfUsername).Distinct().ToListAsync(ctx);
+        var result = Process.ExtractOne(query, users);
+        queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == result.Value, cancellationToken: ctx);
+        botInstance.SendChatMessage($"@{message.Author.Username}, my guess is you're looking for {queryUser!.KfUsername} whose ID is {queryUser.KfId}", true);
     }
 }
