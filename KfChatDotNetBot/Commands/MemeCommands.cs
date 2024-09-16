@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
+using NLog;
 using Zalgo;
 
 namespace KfChatDotNetBot.Commands;
@@ -15,7 +16,7 @@ public class InsanityCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
-        botInstance.SendChatMessage("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
+        await botInstance.SendChatMessageAsync("definition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEFdefinition of insanity = doing the same thing over and over and over excecting a different result, and heres my dumbass trying to get rich every day and losing everythign i fucking touch every fucking time FUCK this bullshit FUCK MY LIEF");
     }
 }
 
@@ -28,7 +29,7 @@ public class TwistedCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
-        botInstance.SendChatMessage("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯");
+        await botInstance.SendChatMessageAsync("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯");
     }
 }
 
@@ -41,7 +42,7 @@ public class HelpMeCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
-        botInstance.SendChatMessage("[img]https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png[/img]", true);
+        await botInstance.SendChatMessageAsync("[img]https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png[/img]", true);
     }
 }
 
@@ -54,7 +55,7 @@ public class SentCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
-        botInstance.SendChatMessage("[img]https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png[/img]", true);
+        await botInstance.SendChatMessageAsync("[img]https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png[/img]", true);
     }
 }
 
@@ -70,7 +71,7 @@ public class GmKasinoCommand : ICommand
         if (images == null) return;
         var random = new Random();
         var image = images[random.Next(images.Count)];
-        botInstance.SendChatMessage($"[img]{image}[/img]", true);
+        await botInstance.SendChatMessageAsync($"[img]{image}[/img]", true);
     }
 }
 
@@ -85,13 +86,15 @@ public class CrackedCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         var msg = arguments["msg"].Value.TrimStart('/');
         var settings = await Helpers.GetMultipleValues([
             BuiltIn.Keys.CrackedZalgoFuckUpMode, BuiltIn.Keys.CrackedZalgoFuckUpPosition
         ]);
         var zalgo = new ZalgoString(msg, (FuckUpMode)settings[BuiltIn.Keys.CrackedZalgoFuckUpMode].ToType<int>(),
             (FuckUpPosition)settings[BuiltIn.Keys.CrackedZalgoFuckUpPosition].ToType<int>());
-        botInstance.SendChatMessage(zalgo.ToString(), true);
+        logger.Info($"Zalgo length: {zalgo.ToString().Length}");
+        await botInstance.SendChatMessageAsync(zalgo.ToString(), true, ChatBot.LengthLimitBehavior.TruncateExactly);
     }
 }
 
@@ -106,6 +109,6 @@ public class WinmanjackCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var image = await Helpers.GetValue(BuiltIn.Keys.WinmanjackImgUrl);
-        botInstance.SendChatMessage($"[img]{image.Value}[/img]", true);
+        await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
     }
 }

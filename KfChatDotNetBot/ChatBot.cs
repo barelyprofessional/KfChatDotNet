@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
@@ -181,8 +182,8 @@ public class ChatBot
                 {
                     _logger.Error("Received message from Sneedchat that I sent but have no idea about. Message Data Follows:");
                     _logger.Error(JsonSerializer.Serialize(message));
-                    _logger.Error("Last item inserted into the sent messages collection:");
-                    _logger.Error(JsonSerializer.Serialize(_sentMessages.LastOrDefault()));
+                    _logger.Error("Last item inserted into the sent messages collection waiting for response:");
+                    _logger.Error(JsonSerializer.Serialize(_sentMessages.LastOrDefault(msg => msg.Status == SentMessageTrackerStatus.WaitingForResponse)));
                 }
                 else
                 {
@@ -218,11 +219,12 @@ public class ChatBot
         if (InitialStartCooldown) InitialStartCooldown = false;
     }
 
-    public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false)
+    public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 500)
     {
-        var settings = Helpers
-            .GetMultipleValues([BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled])
-            .Result;
+        var settings = await Helpers
+            .GetMultipleValues([
+                BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled
+            ]);
         var reference = Guid.NewGuid().ToString();
         var messageTracker = new SentMessageTrackerModel
         {
@@ -253,11 +255,55 @@ public class ChatBot
             _sentMessages.Add(messageTracker);
             return messageTracker;
         }
+        
+        if (messageTracker.Message.Length > lengthLimit && lengthLimitBehavior != LengthLimitBehavior.DoNothing)
+        {
+            if (lengthLimitBehavior == LengthLimitBehavior.RefuseToSend)
+            {
+                _logger.Info("Refusing to send message as it exceeds the length limit and LengthLimitBehavior is RefuseToSend");
+                messageTracker.Status = SentMessageTrackerStatus.NotSending;
+                _sentMessages.Add(messageTracker);
+                return messageTracker;
+            }
+            if (lengthLimitBehavior == LengthLimitBehavior.TruncateNicely)
+            {
+                messageTracker.Message = messageTracker.Message.Truncate(lengthLimit);
+            }
+
+            if (lengthLimitBehavior == LengthLimitBehavior.TruncateExactly)
+            {
+                // ReSharper disable once ReplaceSubstringWithRangeIndexer
+                // The range indexer is a fucking piece of shit that does not work.
+                // TrimEnd in case you end up truncating on a space (happened during testing) as Sneedchat will trim it
+                messageTracker.Message = messageTracker.Message.Substring(0, lengthLimit).TrimEnd();
+            }
+        }
+        
         messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
         messageTracker.SentAt = DateTimeOffset.UtcNow;
         _sentMessages.Add(messageTracker);
-        KfClient.SendMessage(message);
+        await KfClient.SendMessageInstantAsync(messageTracker.Message);
         return messageTracker;
+    }
+
+    public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false,
+        LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 500)
+    {
+        return SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior, lengthLimit).Result;
+    }
+
+    // If you feed this long ass messages they will be eaten, don't be retarded.
+    public async Task<List<SentMessageTrackerModel>> SendChatMessagesAsync(List<string> messages,
+        bool bypassSeshDetect = false)
+    {
+        List<SentMessageTrackerModel> sentMessages = [];
+
+        foreach (var message in messages)
+        {
+            sentMessages.Add(await SendChatMessageAsync(message, bypassSeshDetect, LengthLimitBehavior.RefuseToSend));
+        }
+
+        return sentMessages;
     }
 
     public SentMessageTrackerModel GetSentMessageStatus(string reference)
@@ -333,5 +379,17 @@ public class ChatBot
         GambaSeshPresent = false;
         _logger.Info($"Rejoining {roomId}");
         KfClient.JoinRoom(roomId);
+    }
+
+    public enum LengthLimitBehavior
+    {
+        // Append …
+        TruncateNicely,
+        // Truncate regardless of whether it's mid-word and don't add a ...
+        TruncateExactly,
+        // Set status to NotSending
+        RefuseToSend,
+        // Try to send the message anyway, even though Sneedchat will just silently eat it
+        DoNothing
     }
 }

@@ -22,13 +22,13 @@ public class WhoisCommand : ICommand
         var queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == query, cancellationToken: ctx);
         if (queryUser != null)
         {
-            botInstance.SendChatMessage($"@{message.Author.Username}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
+            await botInstance.SendChatMessageAsync($"@{message.Author.Username}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
             return;
         }
 
         var users = await db.Users.Select(u => u.KfUsername).Distinct().ToListAsync(ctx);
         var result = Process.ExtractOne(query, users);
         queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == result.Value, cancellationToken: ctx);
-        botInstance.SendChatMessage($"@{message.Author.Username}, my guess is you're looking for {queryUser!.KfUsername} whose ID is {queryUser.KfId}", true);
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, my guess is you're looking for {queryUser!.KfUsername} whose ID is {queryUser.KfId}", true);
     }
 }

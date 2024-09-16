@@ -24,12 +24,12 @@ public class RainbetStatsCommand : ICommand
         var bets = (await db.RainbetBets.ToListAsync(ctx)).Where(b => b.UpdatedAt.UtcDateTime > start).ToList();
         if (bets.Count == 0)
         {
-            botInstance.SendChatMessage("No bets captured during this window", true);
+            await botInstance.SendChatMessageAsync("No bets captured during this window", true);
             return;
         }
         var output = $"Rainbet stats for the last {window} hours (as seen on the bet feed):[br]" +
                      $"Bets: {bets.Count:N0}; Payout: {bets.Sum(b => b.Payout):C}; Wagered: {bets.Sum(b => b.Value):C}";
-        botInstance.SendChatMessage(output, true);
+        await botInstance.SendChatMessageAsync(output, true);
     }
 }
 
@@ -56,6 +56,6 @@ public class RainbetRecentBetCommand : ICommand
             if (bet.Payout < bet.Value) color = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
             output += $"[br]Value: {bet.Value:C}; Payout: [color={color}]{bet.Payout:C}[/color]; Multi: {bet.Multiplier:N2}x; Game: {bet.GameName}; {(DateTimeOffset.UtcNow - bet.UpdatedAt).Humanize(precision: 1)} ago";
         }
-        botInstance.SendChatMessage(output, true);
+        await botInstance.SendChatMessageAsync(output, true);
     }
 }

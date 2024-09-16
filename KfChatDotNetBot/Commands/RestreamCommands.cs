@@ -19,7 +19,7 @@ public class GetRestreamCommand : ICommand
         CancellationToken ctx)
     {
         var url = await Helpers.GetValue(BuiltIn.Keys.RestreamUrl);
-        botInstance.SendChatMessage($"@{message.Author.Username}, restream URL: {url.Value}", true);
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: {url.Value}", true);
     }
 
 }
@@ -38,7 +38,7 @@ public class SetRestreamCommand : ICommand
         CancellationToken ctx)
     {
         await Helpers.SetValue(BuiltIn.Keys.RestreamUrl, arguments["url"].Value);
-        botInstance.SendChatMessage($"@{message.Author.Username}, updated URL", true);
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated URL", true);
     }
 
 }

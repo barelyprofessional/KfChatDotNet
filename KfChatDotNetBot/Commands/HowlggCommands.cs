@@ -25,12 +25,12 @@ public class HowlggStatsCommand : ICommand
         var bets = (await db.HowlggBets.ToListAsync(ctx)).Where(b => b.Date.UtcDateTime > start).ToList();
         if (bets.Count == 0)
         {
-            botInstance.SendChatMessage("No bets captured during this window", true);
+            await botInstance.SendChatMessageAsync("No bets captured during this window", true);
             return;
         }
         var output = $"Howl.gg stats for the last {window} hours:[br]" +
                      $"Bets: {bets.Count:N0}; Profit: {bets.Sum(b => b.Profit) / division:C}; Wagered: {bets.Sum(b => b.Bet) / division:C}";
-        botInstance.SendChatMessage(output, true);
+        await botInstance.SendChatMessageAsync(output, true);
     }
 }
 
@@ -58,6 +58,6 @@ public class HowlggRecentBetCommand : ICommand
             if (bet.Profit < 0) color = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
             output += $"[br]Bet: {bet.Bet / division:C}; Profit: [color={color}]{bet.Profit / division:C}[/color]; Game: {bet.Game.Humanize()}; {(DateTimeOffset.UtcNow - bet.Date).Humanize(precision: 1)} ago";
         }
-        botInstance.SendChatMessage(output, true);
+        await botInstance.SendChatMessageAsync(output, true);
     }
 }

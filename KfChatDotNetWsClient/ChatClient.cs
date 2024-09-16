@@ -202,6 +202,12 @@ public class ChatClient
         _wsClient.Send(message);
     }
 
+    public async Task SendMessageInstantAsync(string message)
+    {
+        _logger.Debug($"Sending '{message}', bypassing the queue");
+        await _wsClient.SendInstant(message);
+    }
+
     public void DeleteMessage(int messageId)
     {
         _logger.Debug($"Deleting {messageId}");

@@ -26,13 +26,13 @@ public class SetRoleCommand : ICommand
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == targetUserId, cancellationToken: ctx);
         if (targetUser == null)
         {
-            botInstance.SendChatMessage($"User '{targetUserId}' does not exist", true);
+            await botInstance.SendChatMessageAsync($"User '{targetUserId}' does not exist", true);
             return;
         }
 
         targetUser.UserRight = role;
         await db.SaveChangesAsync(ctx);
-        botInstance.SendChatMessage($"@{message.Author.Username}, {targetUser.KfUsername}'s role set to {role.Humanize()}", true);
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, {targetUser.KfUsername}'s role set to {role.Humanize()}", true);
     }
 }
 
@@ -50,19 +50,19 @@ public class GmKasinoAddCommand : ICommand
         var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
         if (images == null)
         {
-            botInstance.SendChatMessage("Images list was null", true);
+            await botInstance.SendChatMessageAsync("Images list was null", true);
             return;
         }
         var newImage = arguments["image"].Value;
         if (images.Contains(newImage))
         {
-            botInstance.SendChatMessage("Image is already in the list", true);
+            await botInstance.SendChatMessageAsync("Image is already in the list", true);
             return;
         }
 
         images.Add(newImage);
         await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotGmKasinoImageRotation, images);
-        botInstance.SendChatMessage("Updated list of images", true);
+        await botInstance.SendChatMessageAsync("Updated list of images", true);
     }
 }
 
@@ -80,19 +80,19 @@ public class GmKasinoRemoveCommand : ICommand
         var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
         if (images == null)
         {
-            botInstance.SendChatMessage("Images list was null", true);
+            await botInstance.SendChatMessageAsync("Images list was null", true);
             return;
         }
         var targetImage = arguments["image"].Value;
         if (!images.Contains(targetImage))
         {
-            botInstance.SendChatMessage("Image is not in the list", true);
+            await botInstance.SendChatMessageAsync("Image is not in the list", true);
             return;
         }
 
         images.Remove(targetImage);
         await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotGmKasinoImageRotation, images);
-        botInstance.SendChatMessage("Updated list of images", true);
+        await botInstance.SendChatMessageAsync("Updated list of images", true);
     }
 }
 
@@ -110,7 +110,7 @@ public class GmKasinoListCommand : ICommand
         var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
         if (images == null)
         {
-            botInstance.SendChatMessage("Images list was null", true);
+            await botInstance.SendChatMessageAsync("Images list was null", true);
             return;
         }
 
@@ -122,7 +122,7 @@ public class GmKasinoListCommand : ICommand
             result += $"[br]{i}: {image}";
         }
 
-        botInstance.SendChatMessage(result, true);
+        await botInstance.SendChatMessageAsync(result, true);
     }
 }
 
@@ -139,7 +139,7 @@ public class ToggleLiveStatusAdminCommand : ICommand
     {
         botInstance.BotServices.IsBmjLive = !botInstance.BotServices.IsBmjLive;
 
-        botInstance.SendChatMessage($"IsBmjLive => {botInstance.BotServices.IsBmjLive}", true);
+        await botInstance.SendChatMessageAsync($"IsBmjLive => {botInstance.BotServices.IsBmjLive}", true);
     }
 }
 
@@ -160,6 +160,6 @@ public class CacheClearAdminCommand : ICommand
         {
             MemoryCache.Default.Remove(cacheKey);
         }
-        botInstance.SendChatMessage("Cache wiped", true);
+        await botInstance.SendChatMessageAsync("Cache wiped", true);
     }
 }

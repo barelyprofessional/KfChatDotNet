@@ -28,7 +28,7 @@ public class JuiceCommand : ICommand
         var lastJuicer = (await db.Juicers.Where(j => j.User == user).ToListAsync(ctx)).OrderByDescending(j => j.JuicedAt).Take(1).ToList();
         if (lastJuicer.Count == 0)
         {
-            botInstance.SendChatMessage($"!juice {message.Author.Id} {amount}", true);
+            await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
             await db.Juicers.AddAsync(new JuicerDbModel
                 { Amount = amount, User = user, JuicedAt = DateTimeOffset.UtcNow }, ctx);
             await db.SaveChangesAsync(ctx);
@@ -38,14 +38,14 @@ public class JuiceCommand : ICommand
         var secondsRemaining = lastJuicer[0].JuicedAt.AddSeconds(cooldown) - DateTimeOffset.UtcNow;
         if (secondsRemaining.TotalSeconds <= 0)
         {
-            botInstance.SendChatMessage($"!juice {message.Author.Id} {amount}", true);
+            await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
             await db.Juicers.AddAsync(new JuicerDbModel
                 { Amount = amount, User = user, JuicedAt = DateTimeOffset.UtcNow }, ctx);
             await db.SaveChangesAsync(ctx);
             return;
         }
 
-        botInstance.SendChatMessage($"You gotta wait {secondsRemaining.Humanize(precision: 2, minUnit: TimeUnit.Second)} for another juicer", true);
+        await botInstance.SendChatMessageAsync($"You gotta wait {secondsRemaining.Humanize(precision: 2, minUnit: TimeUnit.Second)} for another juicer", true);
     }
 }
 
@@ -67,7 +67,7 @@ public class JuiceStatsCommand : ICommand
             top = Convert.ToInt32(argument.Value);
             if (top > 10)
             {
-                botInstance.SendChatMessage($"'{top}' exceeds the limit on the amount of leeches you can return", true);
+                await botInstance.SendChatMessageAsync($"'{top}' exceeds the limit on the amount of leeches you can return", true);
                 return;
             }
         }
@@ -93,6 +93,6 @@ public class JuiceStatsCommand : ICommand
             msg += $"[b]{i}.[/b] {leech.User} with {leech.Amount:C0} juiced; ";
         }
 
-        botInstance.SendChatMessage(msg.TrimEnd().TrimEnd(';'), true);
+        await botInstance.SendChatMessageAsync(msg.TrimEnd().TrimEnd(';'), true);
     }
 }

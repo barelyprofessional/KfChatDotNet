@@ -16,9 +16,9 @@ public enum SentMessageTrackerStatus
 {
     WaitingForResponse,
     ResponseReceived,
-    // If the bot is blocked from sending the message, e.g. due to suppress chat messages being enabled 
+    // If the bot is blocked from sending the message, e.g. due to suppress chat messages being enabled or length limit
     NotSending,
-    // Shouldn't happen normally, it's just set before the bot has made a decision on whether to send or not,
+    // Shouldn't happen normally, it's just set before the bot has made a decision on whether to send or not
     Unknown,
     // Means the chat was disconnected when you attempted to send the message
     ChatDisconnected,
