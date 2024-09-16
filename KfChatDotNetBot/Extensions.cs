@@ -27,4 +27,21 @@ public static class Extensions
 
         return s;
     }
+    
+    public static IEnumerable<string> SplitMessage(this string s, int partLength = 500, int partLimit = 5)
+    {
+        if (s == null)
+            throw new ArgumentNullException(nameof(s));
+        if (partLength <= 0)
+            throw new ArgumentException("Part length has to be positive.", nameof(partLength));
+
+        var parts = 0;
+        for (var i = 0; i < s.Length; i += partLength)
+        {
+            parts++;
+            if (parts > partLimit) break;
+            yield return s.Substring(i, Math.Min(partLength, s.Length - i));
+        }
+    }
+
 }
