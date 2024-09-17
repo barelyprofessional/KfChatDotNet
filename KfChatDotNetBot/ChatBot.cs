@@ -83,10 +83,11 @@ public class ChatBot
 
     private void OnFailedToJoinRoom(object sender, string message)
     {
+        var failureLimit = Helpers.GetValue(BuiltIn.Keys.KiwiFarmsJoinFailLimit).Result.ToType<int>();
         _joinFailures++;
         _logger.Error($"Couldn't join the room, attempt {_joinFailures}. KF returned: {message}");
         _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
-        if (_joinFailures > 3)
+        if (_joinFailures >= failureLimit)
         {
             _logger.Error("Seems we're in a rejoin loop. Wiping out cookies entirely in hopes it'll make this piece of shit work");
             _kfTokenService.WipeCookies();

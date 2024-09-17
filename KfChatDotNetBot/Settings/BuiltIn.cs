@@ -525,6 +525,15 @@ public static class BuiltIn
             Default = "10",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiFarmsJoinFailLimit,
+            Regex = @"\d+",
+            Description = "Limit of times to fail joining the room before wiping cookies",
+            Default = "2",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -575,5 +584,6 @@ public static class BuiltIn
         public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
         public static string WinmanjackImgUrl = "Winmanjack.ImgUrl";
         public static string BotDisconnectReplayLimit = "Bot.DisconnectReplayLimit";
+        public static string KiwiFarmsJoinFailLimit = "KiwiFarms.JoinFailLimit";
     }
 }
