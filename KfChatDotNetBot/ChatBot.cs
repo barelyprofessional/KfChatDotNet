@@ -20,7 +20,7 @@ public class ChatBot
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     // Oh no it's an ever expanding list that may never get cleaned up!
     // BUY MORE RAM
-    private readonly List<int> _seenMsgIds = [];
+    private readonly List<SeenMessageMetadataModel> _seenMessages = [];
     // Suppresses the command handler on initial start, so it doesn't pick up things already handled on restart
     internal bool InitialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
@@ -184,7 +184,19 @@ public class ChatBot
                     _logger.Error("Received message from Sneedchat that I sent but have no idea about. Message Data Follows:");
                     _logger.Error(JsonSerializer.Serialize(message));
                     _logger.Error("Last item inserted into the sent messages collection waiting for response:");
-                    _logger.Error(JsonSerializer.Serialize(_sentMessages.LastOrDefault(msg => msg.Status == SentMessageTrackerStatus.WaitingForResponse)));
+                    var latest =
+                        _sentMessages.LastOrDefault(msg => msg.Status == SentMessageTrackerStatus.WaitingForResponse);
+                    _logger.Error(JsonSerializer.Serialize(latest));
+                    if (latest != null)
+                    {
+                        // Generally when you msg Sneedchat, the next message you get in response is your message echoed
+                        // back to you. So this fallback should be generally correct and will account for the occasional
+                        // mismatch due to messages not being 1:1 with what we thought we sent
+                        _logger.Info("Just going to lazily associate it with the latest message");
+                        latest.ChatMessageId = message.MessageId;
+                        latest.Delay = DateTimeOffset.UtcNow - latest.SentAt;
+                        latest.Status = SentMessageTrackerStatus.ResponseReceived;
+                    }
                 }
                 else
                 {
@@ -205,16 +217,28 @@ public class ChatBot
                 _logger.Info("Received a GambaSesh message after cooldown and while thinking he's not here. Setting the presence flag to avoid spamming chat");
                 GambaSeshPresent = true;
             }
-            if (!_seenMsgIds.Contains(message.MessageId) && !InitialStartCooldown)
+
+            // Basically the bot will ignore the message if it has been seen before and its edit time is the same
+            // So this avoids reprocessing messages on reconnect while being able to handle edits, even if the edit came
+            // during a disconnect / reconnect event
+            if (!_seenMessages.Any(msg =>
+                    msg.MessageId == message.MessageId && msg.LastEdited == message.MessageEditDate) &&
+                !InitialStartCooldown)
             {
                 _logger.Debug("Passing message to command interface");
                 _botCommands.ProcessMessage(message);
             }
+
+            // Update or add the element to keep it in sync
+            var existingMsg = _seenMessages.FirstOrDefault(msg => msg.MessageId == message.MessageId);
+            if (existingMsg != null)
+            {
+                existingMsg.LastEdited = message.MessageEditDate;
+            }
             else
             {
-                _logger.Debug($"_seenMsgIds check => {!_seenMsgIds.Contains(message.MessageId)}, InitialStartCooldown => {InitialStartCooldown}");
+                _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
-            _seenMsgIds.Add(message.MessageId);
         }
         
         if (InitialStartCooldown) InitialStartCooldown = false;
