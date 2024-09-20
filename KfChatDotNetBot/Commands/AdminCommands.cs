@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using Humanizer;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -161,5 +162,79 @@ public class CacheClearAdminCommand : ICommand
             MemoryCache.Default.Remove(cacheKey);
         }
         await botInstance.SendChatMessageAsync("Cache wiped", true);
+    }
+}
+
+public class NewKickChannelCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin kick add (?<forum_id>\d+) (?<channel_id>\d+) (?<slug>\S+)$")
+    ];
+
+    public string? HelpText => "Add a Kick channel to the bot's database";
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var channels = (await Helpers.GetValue(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
+        var channelId = Convert.ToInt32(arguments["channel_id"].Value);
+        if (channels.Any(channel => channel.ChannelId == channelId))
+        {
+            await botInstance.SendChatMessageAsync("Channel is already in the database", true);
+            return;
+        }
+
+        var forumId = Convert.ToInt32(arguments["forum_id"].Value);
+        channels.Add(new KickChannelModel
+        {
+            ChannelId = channelId,
+            ForumId = forumId,
+            ChannelSlug = arguments["slug"].Value
+        });
+        
+        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KickChannels, channels);
+        await botInstance.SendChatMessageAsync("Updated list of channels", true);
+    }
+}
+
+public class RemoveKickChannelCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin kick remove (?<channel_id>\d+)$")
+    ];
+
+    public string? HelpText => "Remove a Kick channel from the bot's database";
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var channels = (await Helpers.GetValue(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
+        var channelId = Convert.ToInt32(arguments["channel_id"].Value);
+        var channel = channels.FirstOrDefault(ch => ch.ChannelId == channelId);
+        if (channel == null)
+        {
+            await botInstance.SendChatMessageAsync("Channel is not in the database", true);
+            return;
+        }
+        channels.Remove(channel);
+        
+        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KickChannels, channels);
+        await botInstance.SendChatMessageAsync("Updated list of channels", true);
+    }
+}
+
+public class ReconnectKickCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin kick reconnect$")
+    ];
+
+    public string? HelpText => "Disconnect from Kick so the watchdog can reconnect it";
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        botInstance.BotServices.KickClient.Disconnect();
+        await botInstance.SendChatMessageAsync("Disconnected from Kick. Client should reconnect shortly.", true);
     }
 }

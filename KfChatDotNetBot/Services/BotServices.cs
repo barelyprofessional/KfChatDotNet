@@ -18,7 +18,7 @@ public class BotServices
     private readonly CancellationToken _cancellationToken;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     
-    private KickWsClient.KickWsClient _kickClient;
+    internal KickWsClient.KickWsClient KickClient;
     private Twitch _twitch;
     private Shuffle _shuffle;
     private DiscordService _discord;
@@ -166,24 +166,30 @@ public class BotServices
     {
         var settings = await Helpers.GetMultipleValues([
             BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.KickEnabled,
-            BuiltIn.Keys.PusherChannels
+            BuiltIn.Keys.PusherChannels, BuiltIn.Keys.KickChannels
         ]);
-        _kickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
+        KickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
             settings[BuiltIn.Keys.Proxy].Value, settings[BuiltIn.Keys.PusherReconnectTimeout].ToType<int>());
         
-        _kickClient.OnStreamerIsLive += OnStreamerIsLive;
-        _kickClient.OnChatMessage += OnKickChatMessage;
-        _kickClient.OnWsReconnect += OnPusherWsReconnected;
-        _kickClient.OnPusherSubscriptionSucceeded += OnPusherSubscriptionSucceeded;
-        _kickClient.OnStopStreamBroadcast += OnStopStreamBroadcast;
+        KickClient.OnStreamerIsLive += OnStreamerIsLive;
+        KickClient.OnChatMessage += OnKickChatMessage;
+        KickClient.OnWsReconnect += OnPusherWsReconnected;
+        KickClient.OnPusherSubscriptionSucceeded += OnPusherSubscriptionSucceeded;
+        KickClient.OnStopStreamBroadcast += OnStopStreamBroadcast;
         
         if (settings[BuiltIn.Keys.KickEnabled].ToBoolean())
         {
-            await _kickClient.StartWsClient();
-            var pusherChannels = settings[BuiltIn.Keys.PusherChannels].ToList();
-            foreach (var channel in pusherChannels)
+            await KickClient.StartWsClient();
+            // var pusherChannels = settings[BuiltIn.Keys.PusherChannels].ToList();
+            // foreach (var channel in pusherChannels)
+            // {
+            //     _kickClient.SendPusherSubscribe(channel);
+            // }
+            var kickChannels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
+            if (kickChannels == null) return;
+            foreach (var channel in kickChannels)
             {
-                _kickClient.SendPusherSubscribe(channel);
+                KickClient.SendPusherSubscribe($"channel.{channel.ChannelId}");
             }
         }
     }
@@ -270,11 +276,11 @@ public class BotServices
                     await BuildChipsgg();
                 }
 
-                if (settings[BuiltIn.Keys.KickEnabled].ToBoolean() && !_kickClient.IsConnected())
+                if (settings[BuiltIn.Keys.KickEnabled].ToBoolean() && !KickClient.IsConnected())
                 {
                     _logger.Error("Kick died, recreating it");
-                    _kickClient.Dispose();
-                    _kickClient = null!;
+                    KickClient.Dispose();
+                    KickClient = null!;
                     await BuildKick();
                 }
             }
@@ -631,11 +637,11 @@ public class BotServices
     private void OnPusherWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
         _logger.Error($"Pusher reconnected due to {reconnectionInfo.Type}");
-        var channels = Helpers.GetValue(BuiltIn.Keys.PusherChannels).Result.ToList();
-        foreach (var channel in channels)
+        var kickChannels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        if (kickChannels == null) return;
+        foreach (var channel in kickChannels)
         {
-            _logger.Info($"Rejoining {channel}");
-            _kickClient.SendPusherSubscribe(channel);
+            KickClient.SendPusherSubscribe($"channel.{channel.ChannelId}");
         }
     }
 
@@ -659,11 +665,58 @@ public class BotServices
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
         if (e == null) return;
-        _chatBot.SendChatMessage($"Dirt Devils LFG! @Juhlonduss is live! {e.Livestream.SessionTitle} https://kick.com/dirtdevil-enjoyer", true);
+        var channels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        if (channels == null)
+        {
+            _logger.Error("Caught null when grabbing Kick channels");
+            return;
+        }
+
+        var channel = channels.FirstOrDefault(ch => ch.ChannelId == e.Livestream.ChannelId);
+        if (channel == null)
+        {
+            _logger.Error($"Caught null when grabbing channel data for {e.Livestream.ChannelId}");
+            return;
+        }
+
+        using var db = new ApplicationDbContext();
+        var user = db.Users.FirstOrDefault(u => u.KfId == channel.ForumId);
+        if (user == null)
+        {
+            _logger.Error($"Caught null when retrieving forum user {channel.ForumId}");
+            return;
+        }
+
+        _chatBot.SendChatMessage(
+            $"@{user.KfUsername} is live! {e.Livestream.SessionTitle} https://kick.com/{channel.ChannelSlug}", true);
     }
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
     {
-        _chatBot.SendChatMessage("Dirt Devils felted. Stream is over. :lossmanjack:", true);
+        if (e == null) return;
+        var channels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        if (channels == null)
+        {
+            _logger.Error("Caught null when grabbing Kick channels");
+            return;
+        }
+
+        var channel = channels.FirstOrDefault(ch => ch.ChannelId == e.Livestream.Channel.Id);
+        if (channel == null)
+        {
+            _logger.Error($"Caught null when grabbing channel data for {e.Livestream.Channel.Id}");
+            return;
+        }
+
+        using var db = new ApplicationDbContext();
+        var user = db.Users.FirstOrDefault(u => u.KfId == channel.ForumId);
+        if (user == null)
+        {
+            _logger.Error($"Caught null when retrieving forum user {channel.ForumId}");
+            return;
+        }
+
+        _chatBot.SendChatMessage(
+            $"@{user.KfUsername} is no longer live! :lossmanjack:", true);
     }
 }

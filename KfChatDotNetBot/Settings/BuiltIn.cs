@@ -534,6 +534,15 @@ public static class BuiltIn
             Default = "2",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KickChannels,
+            Regex = ".+",
+            Description = "Kick channels the bot knows about for notifications",
+            Default = "[]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -585,5 +594,6 @@ public static class BuiltIn
         public static string WinmanjackImgUrl = "Winmanjack.ImgUrl";
         public static string BotDisconnectReplayLimit = "Bot.DisconnectReplayLimit";
         public static string KiwiFarmsJoinFailLimit = "KiwiFarms.JoinFailLimit";
+        public static string KickChannels = "Kick.Channels";
     }
 }
