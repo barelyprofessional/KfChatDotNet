@@ -70,6 +70,10 @@ public class ChatClient
         var factory = new Func<ClientWebSocket>(() =>
         {
             var clientWs = new ClientWebSocket();
+            if (_config.Proxy != null)
+            {
+                clientWs.Options.Proxy = new WebProxy(_config.Proxy);
+            }
             // Guest mode
             if (_config.XfSessionToken == null)
             {
@@ -79,10 +83,6 @@ public class ChatClient
             var cookieContainer = new CookieContainer();
             cookieContainer.Add(new Cookie("xf_session", _config.XfSessionToken, "/", _config.CookieDomain));
             clientWs.Options.Cookies = cookieContainer;
-            if (_config.Proxy != null)
-            {
-                clientWs.Options.Proxy = new WebProxy(_config.Proxy);
-            }
 
             return clientWs;
         });
