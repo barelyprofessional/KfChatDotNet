@@ -13,7 +13,7 @@ namespace KfChatDotNetBot
             logger.Info("Opening up DB to perform a migration (if one is needed)");
             using var db = new ApplicationDbContext();
             db.Database.Migrate();
-            logger.Info("Migration done. Syncing bultin settings keys");
+            logger.Info("Migration done. Syncing builtin settings keys");
             BuiltIn.SyncSettingsWithDb().Wait();
             logger.Info("Migrating settings from config.json (if needed)");
             BuiltIn.MigrateJsonSettingsToDb().Wait();
