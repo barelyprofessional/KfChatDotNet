@@ -327,7 +327,7 @@ public class BotServices
                 RainbetUserId = bet.User.Id,
                 GameName = bet.Game.Name,
                 Value = bet.Value,
-                Payout = bet.Payout,
+                Payout = bet.Payout ?? 0,
                 Multiplier = bet.Multiplier ?? 0,
                 BetId = bet.Id,
                 UpdatedAt = bet.UpdatedAt,

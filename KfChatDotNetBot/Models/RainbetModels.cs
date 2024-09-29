@@ -9,11 +9,11 @@ public class RainbetBetHistoryModel
     [JsonPropertyName("value")]
     public required float Value { get; set; }
     [JsonPropertyName("payout")]
-    public required float Payout { get; set; }
+    public required float? Payout { get; set; }
     [JsonPropertyName("multiplier")]
     public float? Multiplier { get; set; }
     [JsonPropertyName("updated_at")]
-    public required DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     [JsonPropertyName("user")]
     public required RainbetBetHistoryUserModel User { get; set; }
     [JsonPropertyName("game")]
@@ -54,10 +54,11 @@ public class RainbetBetHistoryUserModel
     // Set to null on private profiles
     [JsonPropertyName("username")]
     public string? Username { get; set; }
+
     [JsonPropertyName("wageredAmount")]
-    public required float WageredAmount { get; set; }
+    public float WageredAmount { get; set; } = 0;
     [JsonPropertyName("public_profile")]
-    public required int PublicProfile { get; set; }
+    public int PublicProfile { get; set; } = 0;
     // Null when they have no rank
     [JsonPropertyName("rank")]
     public RainbetBetHistoryUserRankModel? Rank { get; set; }
