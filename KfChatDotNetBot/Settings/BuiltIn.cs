@@ -453,6 +453,16 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
+            Key = Keys.BotGnKasinoImageRotation,
+            Regex = ".+",
+            Description = "Rotation of images for the !gnkasino command",
+            // It's a JSON array
+            Default = "[\"https://kiwifarms.st/attachments/sleepyjack-gif.5342620/\"]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
             Key = Keys.TwitchShillRestreamOnCommercial,
             Regex = "(true|false)",
             Description = "Whether to shill the ad-free restream on commercial",
@@ -543,6 +553,33 @@ public static class BuiltIn
             Default = "[]",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotPraygeImgUrl,
+            Regex = ".+",
+            Description = "Image URL for the prayge command",
+            Default = "https://uploads.kiwifarms.st/data/attachments/5962/5962565-2485292e69a4ccc23505826f88ecdab1.jpg",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotCrackpipeImgUrl,
+            Regex = ".+",
+            Description = "Image URL for the crackpipe command",
+            Default = "https://kiwifarms.st/attachments/crack-smoke-gif.6449901/",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotCleanStartTime,
+            Regex = ".+",
+            Description = "ISO8601 date of Bossman's sobriety",
+            Default = "2024-09-19T13:33:00-04:00",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -585,6 +622,7 @@ public static class BuiltIn
         public static string RestreamUrl = "RestreamUrl";
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
         public static string BotGmKasinoImageRotation = "Bot.GmKasinoImageRotation";
+        public static string BotGnKasinoImageRotation = "Bot.GnKasino.ImageRotation";
         public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
         public static string KiwiFarmsInactivityTimeout = "KiwiFarms.InactivityTimeout";
         public static string KiwiFarmsPingInterval = "KiwiFarms.PingInterval";
@@ -595,5 +633,8 @@ public static class BuiltIn
         public static string BotDisconnectReplayLimit = "Bot.DisconnectReplayLimit";
         public static string KiwiFarmsJoinFailLimit = "KiwiFarms.JoinFailLimit";
         public static string KickChannels = "Kick.Channels";
+        public static string BotPraygeImgUrl = "Bot.Prayge.ImgUrl";
+        public static string BotCrackpipeImgUrl = "Bot.Crackpipe.ImgUrl";
+        public static string BotCleanStartTime = "Bot.Clean.StartTime";
     }
 }

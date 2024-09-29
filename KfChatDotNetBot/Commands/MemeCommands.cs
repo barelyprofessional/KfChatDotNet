@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Humanizer;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -75,6 +76,22 @@ public class GmKasinoCommand : ICommand
     }
 }
 
+public class GnKasinoCommand : ICommand
+{
+    public List<Regex> Patterns => [new Regex("^gnkasino")];
+    public string? HelpText => "Good Night, Kasino";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGnKasinoImageRotation)).JsonDeserialize<List<string>>();
+        if (images == null) return;
+        var random = new Random();
+        var image = images[random.Next(images.Count)];
+        await botInstance.SendChatMessageAsync($"[img]{image}[/img]", true);
+    }
+}
+
 public class CrackedCommand : ICommand
 {
     public List<Regex> Patterns => [
@@ -110,5 +127,56 @@ public class WinmanjackCommand : ICommand
     {
         var image = await Helpers.GetValue(BuiltIn.Keys.WinmanjackImgUrl);
         await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
+    }
+}
+
+public class PraygeCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^prayge")
+    ];
+    public string? HelpText => "prayge.jpg";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var image = await Helpers.GetValue(BuiltIn.Keys.BotPraygeImgUrl);
+        await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
+    }
+}
+
+public class CrackpipeCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^crackpipe")
+    ];
+    public string? HelpText => "crackpipe.gif";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var image = await Helpers.GetValue(BuiltIn.Keys.BotCrackpipeImgUrl);
+        await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
+    }
+}
+
+public class CleanCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^clean")
+    ];
+    public string? HelpText => "How long has Bossman been clean?";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var start = await Helpers.GetValue(BuiltIn.Keys.BotCleanStartTime);
+        if (start.Value == null)
+        {
+            await botInstance.SendChatMessageAsync("Bossman's sobriety start date was null", true);
+            return;
+        }
+        var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
+        await botInstance.SendChatMessageAsync($"Bossman has been clean {timespan.Humanize(precision:5)}", true);
     }
 }
