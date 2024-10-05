@@ -580,6 +580,15 @@ public static class BuiltIn
             Default = "2024-09-19T13:33:00-04:00",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotRehabEndTime,
+            Regex = ".+",
+            Description = "ISO8601 date of Bossman's rehab end",
+            Default = "2024-10-24T09:00:00-04:00",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -636,5 +645,6 @@ public static class BuiltIn
         public static string BotPraygeImgUrl = "Bot.Prayge.ImgUrl";
         public static string BotCrackpipeImgUrl = "Bot.Crackpipe.ImgUrl";
         public static string BotCleanStartTime = "Bot.Clean.StartTime";
+        public static string BotRehabEndTime = "Bot.Rehab.EndTime";
     }
 }

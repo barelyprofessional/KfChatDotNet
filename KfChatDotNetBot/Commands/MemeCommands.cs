@@ -180,3 +180,24 @@ public class CleanCommand : ICommand
         await botInstance.SendChatMessageAsync($"Bossman has been clean {timespan.Humanize(precision:5)}", true);
     }
 }
+
+public class RehbCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^rehab")
+    ];
+    public string? HelpText => "How long until rehab is over?";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var end = await Helpers.GetValue(BuiltIn.Keys.BotRehabEndTime);
+        if (end.Value == null)
+        {
+            await botInstance.SendChatMessageAsync("Bossman's rehab end date was null", true);
+            return;
+        }
+        var timespan = DateTimeOffset.Parse(end.Value) - DateTimeOffset.UtcNow;
+        await botInstance.SendChatMessageAsync($"Bossman's rehab will be over in roughly {timespan.Humanize(precision:3)}", true);
+    }
+}
