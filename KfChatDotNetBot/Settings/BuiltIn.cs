@@ -378,10 +378,10 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.RainbetBmjPublicId,
+            Key = Keys.RainbetBmjPublicIds,
             Regex = ".+",
-            Description = "Bossman's rainbet public ID",
-            Default = "Ir04170wLulcjtePCL7P6lmeOlepRaNp",
+            Description = "Bossman's rainbet public IDs",
+            Default = "[\"Ir04170wLulcjtePCL7P6lmeOlepRaNp\", \"IA9RHFR1NLHL33AVOM9GL2G2CINM9I6P\"]",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
         },
@@ -589,6 +589,24 @@ public static class BuiltIn
             Default = "2024-10-24T09:00:00-04:00",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotPoNextVisit,
+            Regex = ".+",
+            Description = "ISO8601 date of Bossman's next PO visit",
+            Default = "2024-10-18T12:00:00-04:00",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotNextCourtHearing,
+            Regex = ".+",
+            Description = "ISO8601 date of Bossman's next court hearing",
+            Default = "2024-10-29T09:00:00-04:00",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -624,7 +642,7 @@ public static class BuiltIn
         public static string KiwiFarmsGreenColor = "KiwiFarms.GreenColor";
         public static string KiwiFarmsRedColor = "KiwiFarms.RedColor";
         public static string JackpotBmjUsername = "Jackpot.BmjUsername";
-        public static string RainbetBmjPublicId = "Rainbet.BmjPublicId";
+        public static string RainbetBmjPublicIds = "Rainbet.BmjPublicIds";
         public static string FlareSolverrApiUrl = "FlareSolverr.ApiUrl";
         public static string FlareSolverrProxy = "FlareSolverr.Proxy";
         public static string ChipsggBmjUserIds = "Chipsgg.BmjUserIds";
@@ -646,5 +664,7 @@ public static class BuiltIn
         public static string BotCrackpipeImgUrl = "Bot.Crackpipe.ImgUrl";
         public static string BotCleanStartTime = "Bot.Clean.StartTime";
         public static string BotRehabEndTime = "Bot.Rehab.EndTime";
+        public static string BotPoNextVisit = "Bot.Po.NextVisit";
+        public static string BotNextCourtHearing = "Bot.Court.NextHearing";
     }
 }

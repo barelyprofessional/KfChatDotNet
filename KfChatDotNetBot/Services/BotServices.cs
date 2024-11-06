@@ -307,12 +307,13 @@ public class BotServices
     {
         var settings = Helpers
             .GetMultipleValues([
-                BuiltIn.Keys.RainbetBmjPublicId, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.RainbetBmjPublicIds, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Rainbet bet has arrived");
         using var db = new ApplicationDbContext();
-        foreach (var bet in bets.Where(b => b.User.PublicId == settings[BuiltIn.Keys.RainbetBmjPublicId].Value))
+        var ids = settings[BuiltIn.Keys.RainbetBmjPublicIds].JsonDeserialize<List<string>>();
+        foreach (var bet in bets.Where(b => ids.Contains(b.User.PublicId)))
         //foreach (var bet in bets)
         {
             if (db.RainbetBets.Any(b => b.BetId == bet.Id))

@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using Humanizer;
+using Humanizer.Localisation;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -198,6 +200,88 @@ public class RehbCommand : ICommand
             return;
         }
         var timespan = DateTimeOffset.Parse(end.Value) - DateTimeOffset.UtcNow;
-        await botInstance.SendChatMessageAsync($"Bossman's rehab will be over in roughly {timespan.Humanize(precision:3)}", true);
+        await botInstance.SendChatMessageAsync($"Bossman was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
+    }
+}
+
+public class NextPoVisitCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^po "),
+        new Regex("^po$")
+    ];
+    public string? HelpText => "How long until the next PO visit?";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(120);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var time = await Helpers.GetValue(BuiltIn.Keys.BotPoNextVisit);
+        if (time.Value == null)
+        {
+            await botInstance.SendChatMessageAsync("There is no next PO visit :(", true);
+            return;
+        }
+        var timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
+        if (timespan.TotalSeconds < 0)
+        {
+            await botInstance.SendChatMessageAsync("It's over", true);
+            return;
+        }
+        var sent = await botInstance.SendChatMessageAsync($"Bossman's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}", true);
+        while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
+        {
+            await Task.Delay(250, ctx);
+        }
+        var i = 0;
+        while (i < 60)
+        {
+            await Task.Delay(1000, ctx);
+            timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
+            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value,
+                $"Bossman's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}");
+            i++;
+        }
+    }
+}
+
+public class NextCourtHearingCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^court"),
+    ];
+    public string? HelpText => "How long until the next court hearing?";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(120);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var time = await Helpers.GetValue(BuiltIn.Keys.BotNextCourtHearing);
+        if (time.Value == null)
+        {
+            await botInstance.SendChatMessageAsync("There is no next court hearing :(", true);
+            return;
+        }
+        var timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
+        if (timespan.TotalSeconds < 0)
+        {
+            await botInstance.SendChatMessageAsync("It's over", true);
+            return;
+        }
+
+        var sent = await botInstance.SendChatMessageAsync(
+            $"Bossman's next court hearing will be in {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}",
+            true);
+        while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
+        {
+            await Task.Delay(250, ctx);
+        }
+        var i = 0;
+        while (i < 60)
+        {
+            await Task.Delay(1000, ctx);
+            timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
+            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value,
+                $"Bossman's next court hearing will be in {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}");
+            i++;
+        }
     }
 }

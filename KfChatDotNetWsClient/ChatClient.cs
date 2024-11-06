@@ -221,6 +221,13 @@ public class ChatClient
         _wsClient.Send($"/edit {payload}");
     }
 
+    public async Task EditMessageAsync(int messageId, string newMessage)
+    {
+        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
+        _logger.Debug($"Editing {messageId} with '{newMessage}'");
+        await _wsClient.SendInstant($"/edit {payload}");
+    }
+
     private void WsDeleteMessagesReceived(ResponseMessage message)
     {
         var data = JsonSerializer.Deserialize<DeleteMessagesJsonModel>(message.Text);
