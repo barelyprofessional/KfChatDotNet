@@ -328,3 +328,64 @@ public class ReconnectKickCommand : ICommand
         await botInstance.SendChatMessageAsync("Disconnected from Kick. Client should reconnect shortly.", true);
     }
 }
+
+public class AddCourtHearingCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin hearing add (?<case>\S+) (?<date>\S+) (?<description>.+)$")
+    ];
+
+    public string? HelpText => "Add a court hearing to the bot's calendar";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var hearings = (await Helpers.GetValue(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
+        if (hearings == null)
+        {
+            await botInstance.SendChatMessageAsync("Hearings list was null", true);
+            return;
+        }
+        var caseNumber = arguments["case"].Value;
+        if (!DateTimeOffset.TryParse(arguments["date"].Value, out var date))
+        {
+            await botInstance.SendChatMessageAsync("Failed to parse date", true);
+            return;
+        }
+
+        hearings.Add(new CourtHearingModel {CaseNumber = caseNumber, Description = arguments["description"].Value, Time = date});
+        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotCourtCalendar, hearings);
+        await botInstance.SendChatMessageAsync("Updated list of hearings", true);
+    }
+}
+
+public class RemoveCourtHearingCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin hearing remove (?<index>\d+)$")
+    ];
+
+    public string? HelpText => "Remove a hearing from the bot's calendar";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var hearings = (await Helpers.GetValue(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
+        if (hearings == null)
+        {
+            await botInstance.SendChatMessageAsync("Hearings list was null", true);
+            return;
+        }
+        var hearingIndex = Convert.ToInt32(arguments["index"].Value);
+        if (hearings.Count < hearingIndex)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"Index supplied is out of range. There are only {hearings.Count} hearings in the database", true);
+            return;
+        }
+        
+        hearings.RemoveAt(hearingIndex + 1);
+        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotCourtCalendar, hearings);
+        await botInstance.SendChatMessageAsync("Updated list of hearings", true);
+    }
+}

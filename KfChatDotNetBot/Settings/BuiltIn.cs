@@ -607,6 +607,24 @@ public static class BuiltIn
             Default = "2024-10-29T09:00:00-04:00",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotJailStartTime,
+            Regex = ".+",
+            Description = "ISO8601 date of when Bossman's incarceration began",
+            Default = "2024-10-27T03:25:00-05:00",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotCourtCalendar,
+            Regex = ".+",
+            Description = "JSON array containing court hearings",
+            Default = "[]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.Zero
         }
     ];
     
@@ -666,5 +684,7 @@ public static class BuiltIn
         public static string BotRehabEndTime = "Bot.Rehab.EndTime";
         public static string BotPoNextVisit = "Bot.Po.NextVisit";
         public static string BotNextCourtHearing = "Bot.Court.NextHearing";
+        public static string BotJailStartTime = "Bot.Jail.StartTime";
+        public static string BotCourtCalendar = "Bot.Court.Calendar";
     }
 }

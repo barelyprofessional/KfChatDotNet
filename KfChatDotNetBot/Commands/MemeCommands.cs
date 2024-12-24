@@ -254,22 +254,20 @@ public class NextCourtHearingCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(120);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var time = await Helpers.GetValue(BuiltIn.Keys.BotNextCourtHearing);
-        if (time.Value == null)
+        var hearings = (await Helpers.GetValue(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
+        if (hearings == null)
         {
-            await botInstance.SendChatMessageAsync("There is no next court hearing :(", true);
-            return;
-        }
-        var timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
-        if (timespan.TotalSeconds < 0)
-        {
-            await botInstance.SendChatMessageAsync("It's over", true);
+            await botInstance.SendChatMessageAsync("Caught a null when grabbing hearings", true);
             return;
         }
 
-        var sent = await botInstance.SendChatMessageAsync(
-            $"Bossman's next court hearing will be in {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}",
-            true);
+        if (RenderHearings(hearings) == string.Empty)
+        {
+            await botInstance.SendChatMessageAsync("There are no upcoming hearings in the bot's calendar", true);
+            return;
+        }
+
+        var sent = await botInstance.SendChatMessageAsync(RenderHearings(hearings),true);
         while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
         {
             await Task.Delay(250, ctx);
@@ -278,10 +276,46 @@ public class NextCourtHearingCommand : ICommand
         while (i < 60)
         {
             await Task.Delay(1000, ctx);
-            timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
-            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value,
-                $"Bossman's next court hearing will be in {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}");
+            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value, RenderHearings(hearings));
             i++;
         }
+    }
+
+    private static string RenderHearings(List<CourtHearingModel> hearings)
+    {
+        var i = 0;
+        var result = string.Empty;
+        foreach (var hearing in hearings)
+        {
+            i++;
+            var timespan = hearing.Time - DateTimeOffset.UtcNow;
+            if (timespan.TotalSeconds < 0) continue; // Already passed
+            result +=
+                //$"{i}: [url=https://eapps.courts.state.va.us/ocis/details;fromOcis=true;fullcaseNumber=109{hearing.CaseNumber.Replace("-", string.Empty)}]{hearing.CaseNumber}[/url] " +
+                $"{i}: {hearing.CaseNumber} " +
+                $"{hearing.Description} will be heard in {timespan.Humanize(precision: 10, minUnit: TimeUnit.Second, maxUnit: TimeUnit.Year)}\r\n";
+        }
+        return result.Trim();
+    }
+}
+
+public class JailCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^jail")
+    ];
+    public string? HelpText => "How long has Bossman been in jail?";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var start = await Helpers.GetValue(BuiltIn.Keys.BotJailStartTime);
+        if (start.Value == null)
+        {
+            await botInstance.SendChatMessageAsync("He ain't in jail nigga", true);
+            return;
+        }
+        var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
+        await botInstance.SendChatMessageAsync($"Bossman has been in jail {timespan.Humanize(precision:5)}", true);
     }
 }
