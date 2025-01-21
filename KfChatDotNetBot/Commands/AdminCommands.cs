@@ -123,7 +123,7 @@ public class GmKasinoListCommand : ICommand
             result += $"[br]{i}: {image}";
         }
 
-        await botInstance.SendChatMessageAsync(result, true);
+        await botInstance.SendChatMessagesAsync(result.SplitMessage().ToList(), true);
     }
 }
 
@@ -213,7 +213,7 @@ public class GnKasinoListCommand : ICommand
             result += $"[br]{i}: {image}";
         }
 
-        await botInstance.SendChatMessageAsync(result, true);
+        await botInstance.SendChatMessagesAsync(result.SplitMessage().ToList(), true);
     }
 }
 
@@ -384,7 +384,7 @@ public class RemoveCourtHearingCommand : ICommand
             return;
         }
         
-        hearings.RemoveAt(hearingIndex + 1);
+        hearings.RemoveAt(hearingIndex - 1);
         await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotCourtCalendar, hearings);
         await botInstance.SendChatMessageAsync("Updated list of hearings", true);
     }
