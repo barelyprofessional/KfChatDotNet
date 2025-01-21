@@ -121,8 +121,13 @@ public class BotServices
     
     private async Task BuildChipsgg()
     {
-        var proxy = await Helpers.GetValue(BuiltIn.Keys.Proxy);
-        _chipsgg = new Chipsgg(proxy.Value, _cancellationToken);
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.ChipsggEnabled]);
+        if (!settings[BuiltIn.Keys.ChipsggEnabled].ToBoolean())
+        {
+            _logger.Debug("Chips.gg is disabled");
+            return;
+        }
+        _chipsgg = new Chipsgg(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _chipsgg.OnChipsggRecentBet += OnChipsggRecentBet;
         await _chipsgg.StartWsClient();
         _logger.Info("Built Chips.gg Websocket connection");
@@ -155,8 +160,13 @@ public class BotServices
 
     private async Task BuildHowlgg()
     {
-        var proxy = await Helpers.GetValue(BuiltIn.Keys.Proxy);
-        _howlgg = new Howlgg(proxy.Value, _cancellationToken);
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.HowlggEnabled]);
+        if (!settings[BuiltIn.Keys.HowlggEnabled].ToBoolean())
+        {
+            _logger.Debug("Howlgg is disabled");
+            return;
+        }
+        _howlgg = new Howlgg(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _howlgg.OnHowlggBetHistory += OnHowlggBetHistory;
         await _howlgg.StartWsClient();
         _logger.Info("Built Howl.gg Websocket connection");
@@ -217,7 +227,7 @@ public class BotServices
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             if (_chatBot.InitialStartCooldown) continue;
-            var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.KickEnabled]);
+            var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled]);
             try
             {
                 if (!_shuffle.IsConnected())
@@ -252,7 +262,7 @@ public class BotServices
                     await BuildTwitchChat();
                 }
 
-                if (!_howlgg.IsConnected())
+                if (settings[BuiltIn.Keys.HowlggEnabled].ToBoolean() && !_howlgg.IsConnected())
                 {
                     _logger.Error("Howl.gg died, recreating it");
                     _howlgg.Dispose();
@@ -268,7 +278,7 @@ public class BotServices
                     await BuildJackpot();
                 }
 
-                if (!_chipsgg.IsConnected())
+                if (settings[BuiltIn.Keys.ChipsggEnabled].ToBoolean() && !_chipsgg.IsConnected())
                 {
                     _logger.Error("Chips died, recreating it");
                     _chipsgg.Dispose();

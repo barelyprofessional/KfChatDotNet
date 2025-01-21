@@ -625,6 +625,33 @@ public static class BuiltIn
             Default = "[]",
             IsSecret = false,
             CacheDuration = TimeSpan.Zero
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.HowlggEnabled,
+            Regex = "(true|false)",
+            Description = "Whether the Howl.gg integration is enabled at all",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.ChipsggEnabled,
+            Regex = "(true|false)",
+            Description = "Whether the Chips.gg integration is enabled at all",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.RainbetEnabled,
+            Regex = "(true|false)",
+            Description = "Whether the Rainbet integration is enabled at all",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1)
         }
     ];
     
@@ -686,5 +713,8 @@ public static class BuiltIn
         public static string BotNextCourtHearing = "Bot.Court.NextHearing";
         public static string BotJailStartTime = "Bot.Jail.StartTime";
         public static string BotCourtCalendar = "Bot.Court.Calendar";
+        public static string HowlggEnabled = "Howlgg.Enabled";
+        public static string ChipsggEnabled = "Chipsgg.Enabled";
+        public static string RainbetEnabled = "Rainbet.Enabled";
     }
 }

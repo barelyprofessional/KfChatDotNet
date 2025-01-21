@@ -36,6 +36,12 @@ public class Rainbet : IDisposable
         using var timer = new PeriodicTimer(_gameHistoryInterval);
         while (await timer.WaitForNextTickAsync(_gameHistoryCts.Token))
         {
+            var enabled = await Helpers.GetValue(BuiltIn.Keys.RainbetEnabled);
+            if (!enabled.ToBoolean())
+            {
+                _logger.Debug("Rainbet is disabled");
+                continue;
+            };
             try
             {
                 _logger.Info($"Retrieving game history from Rainbet, last success: {LastSuccessfulRefresh:yyyy-MM-dd HH:mm:ss}");
