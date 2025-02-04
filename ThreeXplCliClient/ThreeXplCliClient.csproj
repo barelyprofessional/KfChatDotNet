@@ -8,9 +8,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="NLog" Version="5.3.4" />
+      <PackageReference Include="NLog" Version="5.4.0" />
       <PackageReference Include="Spectre.Console" Version="0.49.1" />
-      <PackageReference Include="System.Text.Json" Version="9.0.0" />
+      <PackageReference Include="System.Text.Json" Version="9.0.1" />
     </ItemGroup>
 
     <ItemGroup>
