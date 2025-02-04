@@ -31,12 +31,6 @@
         <PackageReference Include="ReactiveUI" Version="20.1.63" />
     </ItemGroup>
     <ItemGroup>
-      <None Remove="NLog.config" />
-      <Content Include="NLog.config">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-    <ItemGroup>
       <ProjectReference Include="..\KfChatDotNetWsClient\KfChatDotNetWsClient.csproj" />
     </ItemGroup>
 </Project>

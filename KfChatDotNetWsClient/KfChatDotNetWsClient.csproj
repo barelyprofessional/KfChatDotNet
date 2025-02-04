@@ -12,11 +12,4 @@
       <PackageReference Include="Websocket.Client" Version="5.1.2" />
     </ItemGroup>
 
-    <ItemGroup>
-      <None Remove="NLog.config" />
-      <Content Include="NLog.config">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-
 </Project>

@@ -18,11 +18,4 @@
       <ProjectReference Include="..\KfChatDotNetWsClient\KfChatDotNetWsClient.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <None Remove="NLog.config" />
-      <Content Include="NLog.config">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
-
 </Project>
