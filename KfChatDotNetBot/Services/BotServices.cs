@@ -584,7 +584,7 @@ public class BotServices
         }
 
         _chatBot.SendChatMessage(
-            $"Did you just get a {length} second ad on Twitch? The Kasino Kasino encourages Total Advertiser Death.[br]" +
+            $"Did you just get a {length} second ad on Twitch? The Keno Kasino encourages Total Advertiser Death.[br]" +
             $"Bossman streams are being re-streamed in low latency, ad-free form thanks to @Kees H. Do not watch ads.[br]{settings[BuiltIn.Keys.RestreamUrl].Value}",
             true);
     }
