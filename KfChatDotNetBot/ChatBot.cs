@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text;
 using System.Text.Json;
 using Humanizer;
 using KfChatDotNetBot.Models;
@@ -245,7 +246,9 @@ public class ChatBot
         if (InitialStartCooldown) InitialStartCooldown = false;
     }
 
-    public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 500)
+    // Reference for Sneedchat hardcoded length limit
+    // https://github.com/jaw-sh/ruforo/blob/master/src/web/chat/connection.rs#L226
+    public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023)
     {
         var settings = await Helpers
             .GetMultipleValues([
@@ -282,7 +285,7 @@ public class ChatBot
             return messageTracker;
         }
         
-        if (messageTracker.Message.Length > lengthLimit && lengthLimitBehavior != LengthLimitBehavior.DoNothing)
+        if (Encoding.UTF8.GetByteCount(messageTracker.Message) > lengthLimit && lengthLimitBehavior != LengthLimitBehavior.DoNothing)
         {
             if (lengthLimitBehavior == LengthLimitBehavior.RefuseToSend)
             {
@@ -320,13 +323,15 @@ public class ChatBot
 
     // If you feed this long ass messages they will be eaten, don't be retarded.
     public async Task<List<SentMessageTrackerModel>> SendChatMessagesAsync(List<string> messages,
-        bool bypassSeshDetect = false)
+        bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.RefuseToSend)
     {
         List<SentMessageTrackerModel> sentMessages = [];
 
         foreach (var message in messages)
         {
-            sentMessages.Add(await SendChatMessageAsync(message, bypassSeshDetect, LengthLimitBehavior.RefuseToSend));
+            sentMessages.Add(await SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior));
+            // Delay sending each message, hopefully this will help the issue where messages come out of order
+            await Task.Delay(TimeSpan.FromMilliseconds(100), _cancellationToken);
         }
 
         return sentMessages;
