@@ -391,7 +391,7 @@ public class BotServices
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Payout < bet.Wager) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage($"🚨🚨 JACKPOT BETTING 🚨🚨 {bet.User} just bet {bet.Wager} {bet.Currency} which paid out " +
-                                 $"[color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰");
+                                 $"[color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)
