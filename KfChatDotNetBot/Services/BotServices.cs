@@ -475,7 +475,7 @@ public class BotServices
         // }
         // _lastDiscordStatus = presence.Status;
         var clientStatus = presence.ClientStatus.Keys.Aggregate(string.Empty, (current, device) => current + $"{device} is {presence.ClientStatus[device]}; ");
-        _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {presence.User.Username ?? "austingambles"} has updated his Discord presence: {clientStatus}");
+        _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {presence.User.GlobalName ?? presence.User.Username} has updated his Discord presence: {clientStatus}");
     }
 
     private void DiscordOnMessageReceived(object sender, DiscordMessageModel message)
@@ -488,19 +488,19 @@ public class BotServices
 
         if (message.Type == DiscordMessageType.StageStart)
         {
-            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.Username ?? "austingambles"} just started a stage called {message.Content} 🚨🚨" +
-                                     $"[br]🚨🚨 {message.Author.Username ?? "austingambles"} is [b]LIVE[/b] on Discord! 🚨🚨",
+            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username} just started a stage called {message.Content} 🚨🚨" +
+                                     $"[br]🚨🚨 {message.Author.GlobalName ?? message.Author.Username} is [b]LIVE[/b] on Discord! 🚨🚨",
                 true);
             return;
         }
         if (message.Type == DiscordMessageType.StageEnd)
         {
-            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.Username ?? "austingambles"} just ended a stage called {message.Content} :lossmanjack:",
+            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username} just ended a stage called {message.Content} :lossmanjack:",
                 true);
             return;
         }
         
-        var result = $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.Username ?? "austingambles"}: {message.Content}";
+        var result = $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username}: {message.Content}";
         foreach (var attachment in message.Attachments ?? [])
         {
             result += $"[br]Attachment: {attachment.GetProperty("filename").GetString()} {attachment.GetProperty("url").GetString()}";

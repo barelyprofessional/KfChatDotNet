@@ -259,7 +259,9 @@ public class DiscordUserModel
     [JsonPropertyName("id")]
     public required string Id { get; set; }
     [JsonPropertyName("username")]
-    public string? Username { get; set; }
+    public required string Username { get; set; }
+    [JsonPropertyName("global_name")]
+    public string? GlobalName { get; set; }
 }
 
 public class DiscordMessageModel
