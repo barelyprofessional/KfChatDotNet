@@ -561,15 +561,16 @@ public class BotServices
     private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
+
         if (isLive)
         {
-            var restream = Helpers.GetValue(BuiltIn.Keys.RestreamUrl).Result.Value;
-            _chatBot.SendChatMessage("BossmanJack just went live on Twitch! https://www.twitch.tv/thebossmanjack\r\n" +
-                                     $"Ad-free re-stream at {restream} courtesy of @Kees H");
+            _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just went live on Twitch! https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}\r\n" +
+                                     settings[BuiltIn.Keys.RestreamUrl]);
             IsBmjLive = true;
             return;
         }
-        _chatBot.SendChatMessage("BossmanJack is no longer live! :lossmanjack:");
+        _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is no longer live! :lossmanjack:");
         IsBmjLive = false;
     }
     
