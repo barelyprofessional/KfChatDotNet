@@ -566,7 +566,7 @@ public class BotServices
         if (isLive)
         {
             _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just went live on Twitch! https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}\r\n" +
-                                     settings[BuiltIn.Keys.RestreamUrl]);
+                                     settings[BuiltIn.Keys.RestreamUrl].Value);
             IsBmjLive = true;
             return;
         }
