@@ -319,3 +319,16 @@ public class JailCommand : ICommand
         await botInstance.SendChatMessageAsync($"Bossman has been in jail {timespan.Humanize(precision:5)}", true);
     }
 }
+
+public class BassmanJack : ICommand
+{
+    public List<Regex> Patterns => [new Regex("^bassmanjack")];
+    public string? HelpText => "Bassman image";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        // ReSharper disable once StringLiteralTypo
+        await botInstance.SendChatMessageAsync("[img]https://i.postimg.cc/SRstzMQt/boss-soy-koi.gif[/img]", true);
+    }
+}
