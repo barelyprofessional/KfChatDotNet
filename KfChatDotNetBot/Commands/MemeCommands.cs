@@ -175,11 +175,11 @@ public class CleanCommand : ICommand
         var start = await Helpers.GetValue(BuiltIn.Keys.BotCleanStartTime);
         if (start.Value == null)
         {
-            await botInstance.SendChatMessageAsync("Bossman's sobriety start date was null", true);
+            await botInstance.SendChatMessageAsync("Austin's sobriety start date was null", true);
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"Bossman has been clean {timespan.Humanize(precision:5)}", true);
+        await botInstance.SendChatMessageAsync($"AustinGambles has been clean {timespan.Humanize(precision:5)}", true);
     }
 }
 
@@ -196,11 +196,11 @@ public class RehbCommand : ICommand
         var end = await Helpers.GetValue(BuiltIn.Keys.BotRehabEndTime);
         if (end.Value == null)
         {
-            await botInstance.SendChatMessageAsync("Bossman's rehab end date was null", true);
+            await botInstance.SendChatMessageAsync("Austin's rehab end date was null", true);
             return;
         }
         var timespan = DateTimeOffset.Parse(end.Value) - DateTimeOffset.UtcNow;
-        await botInstance.SendChatMessageAsync($"Bossman was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
+        await botInstance.SendChatMessageAsync($"AustinGambles was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
     }
 }
 
@@ -227,7 +227,7 @@ public class NextPoVisitCommand : ICommand
             await botInstance.SendChatMessageAsync("It's over", true);
             return;
         }
-        var sent = await botInstance.SendChatMessageAsync($"Bossman's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}", true);
+        var sent = await botInstance.SendChatMessageAsync($"Austin's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}", true);
         while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
         {
             await Task.Delay(250, ctx);
@@ -238,7 +238,7 @@ public class NextPoVisitCommand : ICommand
             await Task.Delay(1000, ctx);
             timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
             await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value,
-                $"Bossman's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}");
+                $"Austin's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}");
             i++;
         }
     }
@@ -316,7 +316,7 @@ public class JailCommand : ICommand
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"Bossman has been in jail {timespan.Humanize(precision:5)}", true);
+        await botInstance.SendChatMessageAsync($"AustinGambles has been in jail {timespan.Humanize(precision:5)}", true);
     }
 }
 
