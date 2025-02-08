@@ -1,3 +1,5 @@
+using KfChatDotNetBot.Models.DbModels;
+
 namespace KfChatDotNetBot.Models;
 
 public class BuiltInSettingsModel
@@ -10,4 +12,5 @@ public class BuiltInSettingsModel
     public string? Default { get; set; }
     public required bool IsSecret { get; set; }
     public required TimeSpan CacheDuration { get; set; } = TimeSpan.Zero;
+    public required SettingValueType ValueType { get; set; }
 }

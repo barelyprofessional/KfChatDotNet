@@ -18,4 +18,18 @@ public class SettingDbModel
     public bool IsSecret { get; set; } = false;
     // Number of seconds to cache in memory, 0 to not cache
     public double CacheDuration { get; set; } = 0;
+    // Value type to assist with admin interaction from chat
+    public SettingValueType ValueType { get; set; } = SettingValueType.Undefined;
+
+}
+
+public enum SettingValueType
+{
+    Boolean,
+    Text, // This includes values which are only decimals
+    Array, // It's presumed that your array contains text, don't use this if your array contains complex types
+    // You can use the array value type on delimited values or JSON arrays. For JSON, it's presumed to be like ['str']
+    Complex, // Basically for JSON blobs that are encoded into settings
+    Undefined // Default value. Should only be set to this for orphaned settings. My suggestion is you don't allow users
+    // to interact with settings with an undefined type
 }

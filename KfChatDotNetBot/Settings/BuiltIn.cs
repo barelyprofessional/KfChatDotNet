@@ -27,7 +27,8 @@ public static class BuiltIn
                     Description = builtIn.Description,
                     Default = builtIn.Default,
                     IsSecret = builtIn.IsSecret,
-                    CacheDuration = builtIn.CacheDuration.TotalSeconds
+                    CacheDuration = builtIn.CacheDuration.TotalSeconds,
+                    ValueType = builtIn.ValueType
                 });
                 continue;
             }
@@ -38,6 +39,7 @@ public static class BuiltIn
             setting.Default = builtIn.Default;
             setting.IsSecret = builtIn.IsSecret;
             setting.CacheDuration = builtIn.CacheDuration.TotalSeconds;
+            setting.ValueType = builtIn.ValueType;
         }
         logger.Info("Saving changes to the DB");
         await db.SaveChangesAsync();
@@ -104,7 +106,8 @@ public static class BuiltIn
                 "Pusher WebSocket endpoint URL",
             Default = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -114,7 +117,8 @@ public static class BuiltIn
                 "Kiwi Farms chat WebSocket endpoint",
             Default = "wss://kiwifarms.st:9443/chat.ws",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -124,7 +128,8 @@ public static class BuiltIn
                 "List of Pusher channels to subscribe to",
             Default = null,
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -134,7 +139,8 @@ public static class BuiltIn
                 "Kiwi Farms Keno Kasino room ID",
             Default = "15",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -144,7 +150,8 @@ public static class BuiltIn
                 "Proxy to use for all outgoing requests. Null to disable",
             Default = null,
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -154,7 +161,8 @@ public static class BuiltIn
                 "Kiwi Farms chat reconnect timeout",
             Default = "30",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -164,7 +172,8 @@ public static class BuiltIn
                 "Pusher reconnect timeout",
             Default = "30",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -174,7 +183,8 @@ public static class BuiltIn
                 "Whether to enable detection for the presence of GambaSesh",
             Default = "true",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromMinutes(5)
+            CacheDuration = TimeSpan.FromMinutes(5),
+            ValueType = SettingValueType.Boolean
         },
         new BuiltInSettingsModel
         {
@@ -184,7 +194,8 @@ public static class BuiltIn
                 "GambaSesh's uer ID for the purposes of detection",
             Default = "168162",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -194,7 +205,8 @@ public static class BuiltIn
                 "Kick Icon to use for relaying chat messages",
             Default = "https://i.postimg.cc/Qtw4nCPG/kick16.png",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -204,7 +216,8 @@ public static class BuiltIn
                 "Domain to use when retrieving a session token",
             Default = "kiwifarms.st",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -214,7 +227,8 @@ public static class BuiltIn
                 "Username to use when authenticating with Kiwi Farms",
             Default = null,
             IsSecret = true,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -224,7 +238,8 @@ public static class BuiltIn
                 "Password to use when authenticating with Kiwi Farms",
             Default = null,
             IsSecret = true,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -234,7 +249,8 @@ public static class BuiltIn
                 "Path to download the Chromium install used for the token grabber",
             Default = "chromium_install",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -244,7 +260,8 @@ public static class BuiltIn
                 "BossmanJack's Twitch channel ID",
             Default = "114122847",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -254,7 +271,8 @@ public static class BuiltIn
                 "BossmanJack's Twitch channel username",
             Default = "thebossmanjack",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -264,7 +282,8 @@ public static class BuiltIn
                 "Enable to prevent messages from actually being sent to chat.",
             Default = "false",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         },
         new BuiltInSettingsModel
         {
@@ -274,7 +293,8 @@ public static class BuiltIn
                 "Token to use when authenticating with Discord. Set to null to disable.",
             Default = null,
             IsSecret = true,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -284,7 +304,8 @@ public static class BuiltIn
                 "BossmanJack's Discord user ID",
             Default = "554123642246529046",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -293,7 +314,8 @@ public static class BuiltIn
             Description = "URL for the 16px Twitch icon",
             Default = "https://i.postimg.cc/QMFVV2Xk/twitch16.png",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -302,7 +324,8 @@ public static class BuiltIn
             Description = "URL for the 16px Discord icon",
             Default = "https://i.postimg.cc/cLmQrp89/discord16.png",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -311,7 +334,8 @@ public static class BuiltIn
             Description = "Bossman's Shuffle Username",
             Default = "TheBossmanJack",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -320,7 +344,8 @@ public static class BuiltIn
             Description = "Cooldown (in seconds) until you can get juiced again",
             Default = "3600",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromMinutes(5)
+            CacheDuration = TimeSpan.FromMinutes(5),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -329,7 +354,8 @@ public static class BuiltIn
             Description = "Amount of $KKK to juice",
             Default = "50",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromMinutes(5)
+            CacheDuration = TimeSpan.FromMinutes(5),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -338,7 +364,8 @@ public static class BuiltIn
             Description = "Whether to enable Kick functionality (Pusher websocket mainly)",
             Default = "true",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         },
         new BuiltInSettingsModel
         {
@@ -347,7 +374,8 @@ public static class BuiltIn
             Description = "How much to divide the Howlgg bets/profit by to get the real value",
             Default = "1650",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel()
         {
@@ -356,7 +384,8 @@ public static class BuiltIn
             Description = "Green color used for showing positive values in chat",
             Default = "#3dd179",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel()
         {
@@ -365,7 +394,8 @@ public static class BuiltIn
             Description = "Red color used for showing negative values in chat",
             Default = "#f1323e",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel()
         {
@@ -374,7 +404,8 @@ public static class BuiltIn
             Description = "Bossman's username on Jackpot",
             Default = "TheBossmanJack",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -383,7 +414,8 @@ public static class BuiltIn
             Description = "Bossman's rainbet public IDs",
             Default = "[\"Ir04170wLulcjtePCL7P6lmeOlepRaNp\", \"IA9RHFR1NLHL33AVOM9GL2G2CINM9I6P\"]",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -392,7 +424,8 @@ public static class BuiltIn
             Description = "URL for your FlareSolverr service API",
             Default = "http://localhost:8191/",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -401,7 +434,8 @@ public static class BuiltIn
             Description = "Proxy in use specifically for FlareSolverr",
             Default = null,
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -411,7 +445,8 @@ public static class BuiltIn
             //Default = "[\"TheBossmanJack\", \"Yabuddy757\"]",
             Default = "[\"1af247cd-67e0-4029-8a93-b8d19c275072\", \"e97ebf3e-d5a8-4583-ab35-5095a05f282e\"]",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -420,7 +455,8 @@ public static class BuiltIn
             Description = "URL for the restream",
             Default = "No URL set",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -429,7 +465,8 @@ public static class BuiltIn
             Description = "BMJ's user ID on howl.gg",
             Default = "951905",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -439,7 +476,8 @@ public static class BuiltIn
             // Empty JSON object as it's a Dictionary<string, string> object
             Default = "{}",
             IsSecret = true,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Complex
         },
         new BuiltInSettingsModel
         {
@@ -449,7 +487,8 @@ public static class BuiltIn
             // It's a JSON array
             Default = "[\"https://i.postimg.cc/QMzBRmH7/hiiiii.gif\"]",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -459,7 +498,8 @@ public static class BuiltIn
             // It's a JSON array
             Default = "[\"https://kiwifarms.st/attachments/sleepyjack-gif.5342620/\"]",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -468,7 +508,8 @@ public static class BuiltIn
             Description = "Whether to shill the ad-free restream on commercial",
             Default = "true",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         },
         new BuiltInSettingsModel
         {
@@ -479,7 +520,8 @@ public static class BuiltIn
             Description = "Length of time the client can go without receiving ANY packets from Sneedchat before forcing a reconnect.",
             Default = "300",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -489,7 +531,8 @@ public static class BuiltIn
                           "Note this affects how often the bot will check inactivity of the connection.",
             Default = "10",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -498,7 +541,8 @@ public static class BuiltIn
             Description = "Amount to divide the juice by if the user's rack is Loser",
             Default = "5",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -507,7 +551,8 @@ public static class BuiltIn
             Description = "FuckUpMode. 0 = Min, 1 = Normal, 2 = Max",
             Default = "1",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -516,7 +561,8 @@ public static class BuiltIn
             Description = "FuckUpPosition: 1 = Up, 2 = Middle, 3 = UpAndMiddle, 4 = Bot (Bottom), 5 = UpAndBot, 6 = MiddleAndBot, 7 = All",
             Default = "2",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -525,7 +571,8 @@ public static class BuiltIn
             Description = "URL for the winmanjack image",
             Default = "https://kiwifarms.st/attachments/winmanjack_bgr-png.6414050/",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -534,7 +581,8 @@ public static class BuiltIn
             Description = "Limit of messages which could not be sent while bot was disconnected to replay on connect",
             Default = "10",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -543,7 +591,8 @@ public static class BuiltIn
             Description = "Limit of times to fail joining the room before wiping cookies",
             Default = "2",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -552,7 +601,8 @@ public static class BuiltIn
             Description = "Kick channels the bot knows about for notifications",
             Default = "[]",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -561,7 +611,8 @@ public static class BuiltIn
             Description = "Image URL for the prayge command",
             Default = "https://uploads.kiwifarms.st/data/attachments/5962/5962565-2485292e69a4ccc23505826f88ecdab1.jpg",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -570,7 +621,8 @@ public static class BuiltIn
             Description = "Image URL for the crackpipe command",
             Default = "https://kiwifarms.st/attachments/crack-smoke-gif.6449901/",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -579,7 +631,8 @@ public static class BuiltIn
             Description = "ISO8601 date of Bossman's sobriety",
             Default = "2024-09-19T13:33:00-04:00",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -588,7 +641,8 @@ public static class BuiltIn
             Description = "ISO8601 date of Bossman's rehab end",
             Default = "2024-10-24T09:00:00-04:00",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -597,7 +651,8 @@ public static class BuiltIn
             Description = "ISO8601 date of Bossman's next PO visit",
             Default = "2024-10-18T12:00:00-04:00",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -606,7 +661,8 @@ public static class BuiltIn
             Description = "ISO8601 date of Bossman's next court hearing",
             Default = "2024-10-29T09:00:00-04:00",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -615,7 +671,8 @@ public static class BuiltIn
             Description = "ISO8601 date of when Bossman's incarceration began",
             Default = "2024-10-27T03:25:00-05:00",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
         {
@@ -624,7 +681,8 @@ public static class BuiltIn
             Description = "JSON array containing court hearings",
             Default = "[]",
             IsSecret = false,
-            CacheDuration = TimeSpan.Zero
+            CacheDuration = TimeSpan.Zero,
+            ValueType = SettingValueType.Complex
         },
         new BuiltInSettingsModel
         {
@@ -633,7 +691,8 @@ public static class BuiltIn
             Description = "Whether the Howl.gg integration is enabled at all",
             Default = "false",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         },
         new BuiltInSettingsModel
         {
@@ -642,7 +701,8 @@ public static class BuiltIn
             Description = "Whether the Chips.gg integration is enabled at all",
             Default = "false",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         },
         new BuiltInSettingsModel
         {
@@ -652,6 +712,9 @@ public static class BuiltIn
             Default = "false",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1)
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
+        },
         }
     ];
     
