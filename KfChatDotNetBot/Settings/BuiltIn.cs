@@ -711,10 +711,18 @@ public static class BuiltIn
             Description = "Whether the Rainbet integration is enabled at all",
             Default = "false",
             IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1)
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
         },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotToyStoryImage,
+            Regex = ".+",
+            Description = "Image to use for the Toy Story joke",
+            Default = "https://i.ibb.co/603dk32R/nonce-drop.png",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -779,5 +787,6 @@ public static class BuiltIn
         public static string HowlggEnabled = "Howlgg.Enabled";
         public static string ChipsggEnabled = "Chipsgg.Enabled";
         public static string RainbetEnabled = "Rainbet.Enabled";
+        public static string BotToyStoryImage = "Bot.ToyStoryImage";
     }
 }

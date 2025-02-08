@@ -36,6 +36,7 @@ public class BotServices
     private string? _lastDiscordStatus;
     internal bool IsBmjLive = false;
     private bool _isBmjLiveSynced = false;
+    internal bool IsChrisDjLive = false;
     
     // lol
     internal bool TemporarilyBypassGambaSeshForDiscord = false;
@@ -561,12 +562,16 @@ public class BotServices
     private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.BotToyStoryImage]).Result;
 
         if (isLive)
         {
             _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just went live on Twitch! https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}\r\n" +
                                      settings[BuiltIn.Keys.RestreamUrl].Value);
+            if (IsChrisDjLive)
+            {
+                _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotToyStoryImage].Value}[/img]", true);
+            }
             IsBmjLive = true;
             return;
         }
@@ -677,7 +682,8 @@ public class BotServices
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
         if (e == null) return;
-        var channels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotToyStoryImage]).Result;
+        var channels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
         if (channels == null)
         {
             _logger.Error("Caught null when grabbing Kick channels");
@@ -701,6 +707,12 @@ public class BotServices
 
         _chatBot.SendChatMessage(
             $"@{user.KfUsername} is live! {e.Livestream.SessionTitle} https://kick.com/{channel.ChannelSlug}", true);
+        
+        if (channel.ChannelSlug == "christopherdj")
+        {
+            IsChrisDjLive = true;
+            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotToyStoryImage].Value}[/img]", true);
+        }
     }
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
@@ -730,5 +742,6 @@ public class BotServices
 
         _chatBot.SendChatMessage(
             $"@{user.KfUsername} is no longer live! :lossmanjack:", true);
+        if (channel.ChannelSlug == "christopherdj") IsChrisDjLive = false;
     }
 }

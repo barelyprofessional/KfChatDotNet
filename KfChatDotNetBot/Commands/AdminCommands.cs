@@ -389,3 +389,19 @@ public class RemoveCourtHearingCommand : ICommand
         await botInstance.SendChatMessageAsync("Updated list of hearings", true);
     }
 }
+
+public class NonceLiveCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin togglenonce$")
+    ];
+
+    public string? HelpText => "Toggle IsChrisDjLive";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        botInstance.BotServices.IsChrisDjLive = !botInstance.BotServices.IsChrisDjLive;
+        await botInstance.SendChatMessageAsync($"IsChrisDjLive => {botInstance.BotServices.IsChrisDjLive}", true);
+    }
+}
