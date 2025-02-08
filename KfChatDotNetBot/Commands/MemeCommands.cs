@@ -332,3 +332,27 @@ public class BassmanJack : ICommand
         await botInstance.SendChatMessageAsync("[img]https://i.postimg.cc/SRstzMQt/boss-soy-koi.gif[/img]", true);
     }
 }
+
+public class LastStreamCommand : ICommand
+{
+    public List<Regex> Patterns => [new Regex("^laststream")];
+    public string? HelpText => "How long ago did Austin Gambles last stream (on Twitch)?";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var latest = db.TwitchViewCounts.OrderByDescending(x => x.Id).FirstOrDefault();
+        if (latest == null)
+        {
+            await botInstance.SendChatMessageAsync("The Twitch view counts table is empty", true);
+            return;
+        }
+
+        var timespan = DateTimeOffset.UtcNow - latest.Time;
+        var agt = TimeZoneInfo.ConvertTime(latest.Time, TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"));
+        // The table doesn't contain the name of the person so we'll just have to assume it's his Twitch username
+        var username = await Helpers.GetValue(BuiltIn.Keys.TwitchBossmanJackUsername);
+        await botInstance.SendChatMessageAsync($"{username.Value} last streamed on Twitch approximately {timespan.Humanize(precision: 2, minUnit: TimeUnit.Minute, maxUnit: TimeUnit.Hour)} ago at {agt:dddd h:mm tt} AGT", true);
+    }
+}
