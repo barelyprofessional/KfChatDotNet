@@ -320,7 +320,7 @@ public class JailCommand : ICommand
     }
 }
 
-public class BassmanJack : ICommand
+public class BassmanJackCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^bassmanjack")];
     public string? HelpText => "Bassman image";
