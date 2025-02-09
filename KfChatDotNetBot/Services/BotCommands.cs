@@ -59,13 +59,15 @@ internal class BotCommands
                 // This should never happen as brand-new users are created upon join
                 if (user == null) return;
                 if (user.Ignored) return;
+                var continueAfterProcess = HasAttribute<AllowAdditionalMatches>(command);
                 if (user.UserRight < command.RequiredRight)
                 {
                     _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
+                    if (continueAfterProcess) continue;
                     break;
                 }
                 _ = ProcessMessageAsync(command, message, user, match.Groups);
-                break;
+                if (!continueAfterProcess) break;
             }
         }
     }
@@ -89,4 +91,18 @@ internal class BotCommands
             _logger.Error(task.Exception);
         }
     }
+    
+    private static bool HasAttribute<T>(ICommand command) where T : Attribute
+    {
+        return Attribute.GetCustomAttribute(command.GetType(), typeof(T)) != null;
+    }
+
 }
+
+/// <summary>
+/// Normally if a command is matched and executed, the loop breaks and no further commands are processed
+/// Use this attribute if you want to continue attempting to match and run other commands after this one
+/// Keep in mind since commands are executed in a throwaway task and not awaited, they will run concurrently
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+internal class AllowAdditionalMatches : Attribute;
