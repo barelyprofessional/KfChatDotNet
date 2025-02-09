@@ -285,7 +285,7 @@ public class ChatBot
             return messageTracker;
         }
         
-        if (Encoding.UTF8.GetByteCount(messageTracker.Message) > lengthLimit && lengthLimitBehavior != LengthLimitBehavior.DoNothing)
+        if (messageTracker.Message.Utf8LengthBytes() > lengthLimit && lengthLimitBehavior != LengthLimitBehavior.DoNothing)
         {
             if (lengthLimitBehavior == LengthLimitBehavior.RefuseToSend)
             {
@@ -296,7 +296,8 @@ public class ChatBot
             }
             if (lengthLimitBehavior == LengthLimitBehavior.TruncateNicely)
             {
-                messageTracker.Message = messageTracker.Message.Truncate(lengthLimit);
+                // '…' is 3 bytes so we have to make room for it
+                messageTracker.Message = messageTracker.Message.TruncateBytes(lengthLimit - 3).TrimEnd() + "…";
             }
 
             if (lengthLimitBehavior == LengthLimitBehavior.TruncateExactly)
@@ -304,7 +305,7 @@ public class ChatBot
                 // ReSharper disable once ReplaceSubstringWithRangeIndexer
                 // The range indexer is a fucking piece of shit that does not work.
                 // TrimEnd in case you end up truncating on a space (happened during testing) as Sneedchat will trim it
-                messageTracker.Message = messageTracker.Message.Substring(0, lengthLimit).TrimEnd();
+                messageTracker.Message = messageTracker.Message.TruncateBytes(lengthLimit).TrimEnd();
             }
         }
         
@@ -316,7 +317,7 @@ public class ChatBot
     }
 
     public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false,
-        LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 500)
+        LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023)
     {
         return SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior, lengthLimit).Result;
     }
