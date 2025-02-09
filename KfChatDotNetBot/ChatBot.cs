@@ -302,8 +302,6 @@ public class ChatBot
 
             if (lengthLimitBehavior == LengthLimitBehavior.TruncateExactly)
             {
-                // ReSharper disable once ReplaceSubstringWithRangeIndexer
-                // The range indexer is a fucking piece of shit that does not work.
                 // TrimEnd in case you end up truncating on a space (happened during testing) as Sneedchat will trim it
                 messageTracker.Message = messageTracker.Message.TruncateBytes(lengthLimit).TrimEnd();
             }
@@ -311,6 +309,7 @@ public class ChatBot
         
         messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
         messageTracker.SentAt = DateTimeOffset.UtcNow;
+        _logger.Debug($"Message is {messageTracker.Message.Utf8LengthBytes()} bytes");
         _sentMessages.Add(messageTracker);
         await KfClient.SendMessageInstantAsync(messageTracker.Message);
         return messageTracker;

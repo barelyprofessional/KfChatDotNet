@@ -115,10 +115,18 @@ public static class Extensions
 
     public static string TruncateBytes(this string s, int limitBytes)
     {
-        return Encoding.UTF8.GetString(
-            Encoding.UTF8.GetBytes(s)
-                .Take(limitBytes)
-                .ToArray()
-        ).TrimEnd();
+        if (string.IsNullOrEmpty(s) || limitBytes <= 0)
+        {
+            return string.Empty;
+        }
+
+        if (s.Utf8LengthBytes() <= limitBytes)
+        {
+            return s;
+        }
+
+        var bytes = Encoding.UTF8.GetBytes(s);
+        var charCount = Encoding.UTF8.GetCharCount(bytes, 0, limitBytes);
+        return s.Substring(0, charCount);
     }
 }
