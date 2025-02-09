@@ -51,12 +51,13 @@ public static class Extensions
     /// <param name="s">String that should get split</param>
     /// <param name="partLengthBytes">Length limit, no part should be > than the number of bytes specified</param>
     /// <param name="partLimit">Limit for how many parts to return (returns first n elements). Set to 0 to disable.</param>
-    /// <returns></returns>
-    public static List<string> FancySplitMessage(this string s, int partLengthBytes = 1023, int partLimit = 5)
+    /// <param name="partSeparator">Separator to use when splitting up parts of the message</param>
+    /// <returns>List of string values which represents the split up message</returns>
+    public static List<string> FancySplitMessage(this string s, int partLengthBytes = 1023, int partLimit = 5, string partSeparator = " ")
     {
         var output = new List<string>();
         var part = string.Empty;
-        foreach (var word in s.Split(' '))
+        foreach (var word in s.Split(partSeparator))
         {
             if (word.Utf8LengthBytes() > partLengthBytes)
             {
@@ -75,11 +76,11 @@ public static class Extensions
             {
                 // TrimEnd() to remove trailing spaces
                 output.Add(part.TrimEnd());
-                part = word + " ";
+                part = word + partSeparator;
                 continue;
             }
 
-            part += word + " ";
+            part += word + partSeparator;
         }
 
         // Add on whatever remains

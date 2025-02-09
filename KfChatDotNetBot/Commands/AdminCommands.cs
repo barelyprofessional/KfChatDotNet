@@ -123,7 +123,7 @@ public class GmKasinoListCommand : ICommand
             result += $"[br]{i}: {image}";
         }
 
-        await botInstance.SendChatMessagesAsync(result.FancySplitMessage(), true);
+        await botInstance.SendChatMessagesAsync(result.FancySplitMessage(partSeparator: "[br]"), true);
     }
 }
 
@@ -213,7 +213,7 @@ public class GnKasinoListCommand : ICommand
             result += $"[br]{i}: {image}";
         }
 
-        await botInstance.SendChatMessagesAsync(result.FancySplitMessage(), true);
+        await botInstance.SendChatMessagesAsync(result.FancySplitMessage(partSeparator: "[br]"), true);
     }
 }
 
