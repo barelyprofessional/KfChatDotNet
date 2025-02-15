@@ -1,6 +1,7 @@
 using System.Text.Json;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
+using Microsoft.EntityFrameworkCore;
 using NLog;
 
 namespace KfChatDotNetBot.Settings;
@@ -94,6 +95,89 @@ public static class BuiltIn
         Utils.SafelyRenameFile(oldConfigPath, $"{oldConfigPath}.migrated");
 
         logger.Info("File renamed");
+    }
+
+    public static async Task MigrateImages()
+    {
+        var logger = LogManager.GetCurrentClassLogger();
+        await using var db = new ApplicationDbContext();
+        logger.Info("Migrating images to the database table");
+        if (await db.Images.AnyAsync())
+        {
+            logger.Info("Not continuing as there's already images in the database");
+            return;
+        }
+
+        var imagesToMigrate = await Helpers.GetMultipleValues([
+            Keys.BotGmKasinoImageRotation, Keys.BotGnKasinoImageRotation, Keys.WinmanjackImgUrl, Keys.BotPraygeImgUrl,
+            Keys.BotCrackpipeImgUrl
+        ]);
+
+        logger.Info("Migrating gmkasino images");
+        foreach (var image in imagesToMigrate[Keys.BotGmKasinoImageRotation].JsonDeserialize<List<string>>() ?? [])
+        {
+            await db.Images.AddAsync(new ImageDbModel {Key = "gmkasino", LastSeen = DateTimeOffset.UtcNow, Url = image});
+        }
+        
+        logger.Info("Migrating gnkasino images");
+        foreach (var image in imagesToMigrate[Keys.BotGnKasinoImageRotation].JsonDeserialize<List<string>>() ?? [])
+        {
+            await db.Images.AddAsync(new ImageDbModel {Key = "gnkasino", LastSeen = DateTimeOffset.UtcNow, Url = image});
+        }
+
+        if (imagesToMigrate[Keys.WinmanjackImgUrl].Value != null)
+        {
+            logger.Info("Migrating winmanjack");
+            await db.Images.AddAsync(new ImageDbModel
+            {
+                Key = "winmanjack", LastSeen = DateTimeOffset.UtcNow,
+                Url = imagesToMigrate[Keys.WinmanjackImgUrl].Value!
+            });
+        }
+        
+        if (imagesToMigrate[Keys.BotPraygeImgUrl].Value != null)
+        {
+            logger.Info("Migrating prayge");
+            await db.Images.AddAsync(new ImageDbModel
+            {
+                Key = "prayge", LastSeen = DateTimeOffset.UtcNow,
+                Url = imagesToMigrate[Keys.BotPraygeImgUrl].Value!
+            });
+        }
+
+        if (imagesToMigrate[Keys.BotCrackpipeImgUrl].Value != null)
+        {
+            logger.Info("Migrating crackpipe");
+            await db.Images.AddAsync(new ImageDbModel
+            {
+                Key = "crackpipe", LastSeen = DateTimeOffset.UtcNow,
+                Url = imagesToMigrate[Keys.BotCrackpipeImgUrl].Value!
+            });
+        }
+        
+        logger.Info("Adding bassmanjack");
+        await db.Images.AddAsync(new ImageDbModel
+        {
+            Key = "bassmanjack", LastSeen = DateTimeOffset.UtcNow,
+            Url = "https://i.postimg.cc/SRstzMQt/boss-soy-koi.gif"
+        });
+        
+        logger.Info("Adding sent");
+        await db.Images.AddAsync(new ImageDbModel
+        {
+            Key = "sent", LastSeen = DateTimeOffset.UtcNow,
+            Url = "https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png"
+        });
+
+        logger.Info("Adding helpme");
+        await db.Images.AddAsync(new ImageDbModel
+        {
+            Key = "helpme", LastSeen = DateTimeOffset.UtcNow,
+            Url = "https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png"
+        });
+
+        await db.SaveChangesAsync();
+        logger.Info("Image migration complete");
     }
     
     public static List<BuiltInSettingsModel> BuiltInSettings =
@@ -716,10 +800,33 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
+            Key = Keys.BotImageAcceptableKeys,
+            Regex = ".+",
+            Description = "List of valid keys for the image rotation feature",
+            Default = "[\"gmkasino\", \"gnkasino\", \"winmanjack\", \"prayge\", \"crackpipe\", \"bassmanjack\", \"sent\", \"helpme\"]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
+        },
+        new BuiltInSettingsModel
+        {
             Key = Keys.BotToyStoryImage,
             Regex = ".+",
             Description = "Image to use for the Toy Story joke",
             Default = "https://i.ibb.co/603dk32R/nonce-drop.png",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImageRandomSliceDivideBy,
+            Regex = @"\d+",
+            Description = "What value to divide the image count by for determining how many images to randomly choose from. " +
+                          "e.g. a value of 10 on 50 images means the 5 least seen images are chosen from randomly. " +
+                          "If the count of images is =< this value, it'll just grab the oldest image. " +
+                          "Fractions will be rounded, so a value of 5 with 7 images will round down and take the oldest image.",
+            Default = "5",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
@@ -787,6 +894,8 @@ public static class BuiltIn
         public static string HowlggEnabled = "Howlgg.Enabled";
         public static string ChipsggEnabled = "Chipsgg.Enabled";
         public static string RainbetEnabled = "Rainbet.Enabled";
+        public static string BotImageAcceptableKeys = "Bot.Image.AcceptableKeys";
         public static string BotToyStoryImage = "Bot.ToyStoryImage";
+        public static string BotImageRandomSliceDivideBy = "Bot.Image.RandomSliceDivideBy";
     }
 }

@@ -36,64 +36,6 @@ public class TwistedCommand : ICommand
     }
 }
 
-public class HelpMeCommand : ICommand
-{
-    public List<Regex> Patterns => [new Regex("^helpme")];
-    public string? HelpText => "Somebody please help me";
-    public UserRight RequiredRight => UserRight.Guest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        // ReSharper disable once StringLiteralTypo
-        await botInstance.SendChatMessageAsync("[img]https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png[/img]", true);
-    }
-}
-
-public class SentCommand : ICommand
-{
-    public List<Regex> Patterns => [new Regex("^sent$")];
-    public string? HelpText => "Sent love";
-    public UserRight RequiredRight => UserRight.Guest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        // ReSharper disable once StringLiteralTypo
-        await botInstance.SendChatMessageAsync("[img]https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png[/img]", true);
-    }
-}
-
-public class GmKasinoCommand : ICommand
-{
-    public List<Regex> Patterns => [new Regex("^gmkasino")];
-    public string? HelpText => "Good Morning Kasino";
-    public UserRight RequiredRight => UserRight.Guest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGmKasinoImageRotation)).JsonDeserialize<List<string>>();
-        if (images == null) return;
-        var random = new Random();
-        var image = images[random.Next(images.Count)];
-        await botInstance.SendChatMessageAsync($"[img]{image}[/img]", true);
-    }
-}
-
-public class GnKasinoCommand : ICommand
-{
-    public List<Regex> Patterns => [new Regex("^gnkasino")];
-    public string? HelpText => "Good Night, Kasino";
-    public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        var images = (await Helpers.GetValue(BuiltIn.Keys.BotGnKasinoImageRotation)).JsonDeserialize<List<string>>();
-        if (images == null) return;
-        var random = new Random();
-        var image = images[random.Next(images.Count)];
-        await botInstance.SendChatMessageAsync($"[img]{image}[/img]", true);
-    }
-}
-
 public class CrackedCommand : ICommand
 {
     public List<Regex> Patterns => [
@@ -114,51 +56,6 @@ public class CrackedCommand : ICommand
             (FuckUpPosition)settings[BuiltIn.Keys.CrackedZalgoFuckUpPosition].ToType<int>());
         logger.Info($"Zalgo length: {zalgo.ToString().Length}");
         await botInstance.SendChatMessageAsync(zalgo.ToString(), true, ChatBot.LengthLimitBehavior.TruncateExactly);
-    }
-}
-
-public class WinmanjackCommand : ICommand
-{
-    public List<Regex> Patterns => [
-        new Regex("^winmanjack")
-    ];
-    public string? HelpText => "winmanjack.jpg";
-    public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        var image = await Helpers.GetValue(BuiltIn.Keys.WinmanjackImgUrl);
-        await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
-    }
-}
-
-public class PraygeCommand : ICommand
-{
-    public List<Regex> Patterns => [
-        new Regex("^prayge")
-    ];
-    public string? HelpText => "prayge.jpg";
-    public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        var image = await Helpers.GetValue(BuiltIn.Keys.BotPraygeImgUrl);
-        await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
-    }
-}
-
-public class CrackpipeCommand : ICommand
-{
-    public List<Regex> Patterns => [
-        new Regex("^crackpipe")
-    ];
-    public string? HelpText => "crackpipe.gif";
-    public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        var image = await Helpers.GetValue(BuiltIn.Keys.BotCrackpipeImgUrl);
-        await botInstance.SendChatMessageAsync($"[img]{image.Value}[/img]", true);
     }
 }
 
@@ -183,7 +80,7 @@ public class CleanCommand : ICommand
     }
 }
 
-public class RehbCommand : ICommand
+public class RehabCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex("^rehab")
@@ -317,19 +214,6 @@ public class JailCommand : ICommand
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
         await botInstance.SendChatMessageAsync($"AustinGambles has been in jail {timespan.Humanize(precision:5)}", true);
-    }
-}
-
-public class BassmanJackCommand : ICommand
-{
-    public List<Regex> Patterns => [new Regex("^bassmanjack")];
-    public string? HelpText => "Bassman image";
-    public UserRight RequiredRight => UserRight.Guest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        // ReSharper disable once StringLiteralTypo
-        await botInstance.SendChatMessageAsync("[img]https://i.postimg.cc/SRstzMQt/boss-soy-koi.gif[/img]", true);
     }
 }
 
