@@ -225,3 +225,36 @@ public class NonceLiveCommand : ICommand
         await botInstance.SendChatMessageAsync($"IsChrisDjLive => {botInstance.BotServices.IsChrisDjLive}", true);
     }
 }
+
+public class DeleteMessagesCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin delete (?<msg_count>\d+)$")
+    ];
+
+    public string? HelpText => "Delete the most recent x number of messages";
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        var amount = int.Parse(arguments["msg_count"].Value);
+        if (amount > 10)
+        {
+            await botInstance.SendChatMessageAsync("More than 10 messages seems like a bit much?", true);
+            return;
+        }
+        var messages = botInstance.SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ResponseReceived)
+            .TakeLast(amount);
+        foreach (var msg in messages)
+        {
+            if (msg.ChatMessageId == null)
+            {
+                continue;
+            }
+
+            await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
+        }
+    }
+}

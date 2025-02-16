@@ -26,7 +26,7 @@ public class ChatBot
     internal bool InitialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
     private readonly BotCommands _botCommands;
-    private readonly List<SentMessageTrackerModel> _sentMessages = [];
+    public readonly List<SentMessageTrackerModel> SentMessages = [];
     internal bool GambaSeshPresent;
     internal readonly BotServices BotServices;
     private Task _kfChatPing;
@@ -158,7 +158,7 @@ public class ChatBot
                 BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit])
             .Result;
         // Send messages if there are any to replay (Assuming we DC'd, and it's now the message flood)
-        foreach (var replayMsg in _sentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected)
+        foreach (var replayMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected)
                      .TakeLast(settings[BuiltIn.Keys.BotDisconnectReplayLimit].ToType<int>()))
         {
             // Bypass the helpful method we have for sending messages so we don't create new sent message items for them
@@ -167,7 +167,7 @@ public class ChatBot
             replayMsg.Status = SentMessageTrackerStatus.WaitingForResponse;
             replayMsg.SentAt = DateTimeOffset.UtcNow;
         }
-        foreach(var lostMsg in _sentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected))
+        foreach(var lostMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected))
         {
             lostMsg.Status = SentMessageTrackerStatus.Lost;
         }
@@ -179,7 +179,7 @@ public class ChatBot
             {
                 // MessageRaw is not actually REAL and RAW. The messages are still HTML encoded
                 var decodedMessage = WebUtility.HtmlDecode(message.MessageRaw);
-                var sentMessage = _sentMessages.FirstOrDefault(sent =>
+                var sentMessage = SentMessages.FirstOrDefault(sent =>
                     sent.Message == decodedMessage && sent.Status == SentMessageTrackerStatus.WaitingForResponse);
                 if (sentMessage == null)
                 {
@@ -187,7 +187,7 @@ public class ChatBot
                     _logger.Error(JsonSerializer.Serialize(message));
                     _logger.Error("Last item inserted into the sent messages collection waiting for response:");
                     var latest =
-                        _sentMessages.LastOrDefault(msg => msg.Status == SentMessageTrackerStatus.WaitingForResponse);
+                        SentMessages.LastOrDefault(msg => msg.Status == SentMessageTrackerStatus.WaitingForResponse);
                     _logger.Error(JsonSerializer.Serialize(latest));
                     if (latest != null)
                     {
@@ -266,14 +266,14 @@ public class ChatBot
             _logger.Info("Not sending message as SuppressChatMessages is enabled");
             _logger.Info($"Message was: {message}");
             messageTracker.Status = SentMessageTrackerStatus.NotSending;
-            _sentMessages.Add(messageTracker);
+            SentMessages.Add(messageTracker);
             return messageTracker;
         }
         if (GambaSeshPresent && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !bypassSeshDetect)
         {
             _logger.Info($"Not sending message '{message}' as GambaSesh is present");
             messageTracker.Status = SentMessageTrackerStatus.NotSending;
-            _sentMessages.Add(messageTracker);
+            SentMessages.Add(messageTracker);
             return messageTracker;
         }
 
@@ -281,7 +281,7 @@ public class ChatBot
         {
             _logger.Info($"Not sending message '{message}' as Sneedchat is not connected");
             messageTracker.Status = SentMessageTrackerStatus.ChatDisconnected;
-            _sentMessages.Add(messageTracker);
+            SentMessages.Add(messageTracker);
             return messageTracker;
         }
         
@@ -291,7 +291,7 @@ public class ChatBot
             {
                 _logger.Info("Refusing to send message as it exceeds the length limit and LengthLimitBehavior is RefuseToSend");
                 messageTracker.Status = SentMessageTrackerStatus.NotSending;
-                _sentMessages.Add(messageTracker);
+                SentMessages.Add(messageTracker);
                 return messageTracker;
             }
             if (lengthLimitBehavior == LengthLimitBehavior.TruncateNicely)
@@ -310,7 +310,7 @@ public class ChatBot
         messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
         messageTracker.SentAt = DateTimeOffset.UtcNow;
         _logger.Debug($"Message is {messageTracker.Message.Utf8LengthBytes()} bytes");
-        _sentMessages.Add(messageTracker);
+        SentMessages.Add(messageTracker);
         await KfClient.SendMessageInstantAsync(messageTracker.Message);
         return messageTracker;
     }
@@ -339,7 +339,7 @@ public class ChatBot
 
     public SentMessageTrackerModel GetSentMessageStatus(string reference)
     {
-        var message = _sentMessages.FirstOrDefault(m => m.Reference == reference);
+        var message = SentMessages.FirstOrDefault(m => m.Reference == reference);
         if (message == null)
         {
             throw new SentMessageNotFoundException();
