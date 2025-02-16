@@ -22,7 +22,6 @@ public class GetRestreamCommand : ICommand
         var url = await Helpers.GetValue(BuiltIn.Keys.RestreamUrl);
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: {url.Value}", true);
     }
-
 }
 
 public class SetRestreamCommand : ICommand
@@ -66,5 +65,23 @@ public class SelfPromoCommand : ICommand
         }
 
         await botInstance.SendChatMessageAsync($"@{user.KfUsername} is a weirdo who streams. Come check out his channel at https://kick.com/{channel.ChannelSlug}", true);
+    }
+}
+
+public class GetRestreamPlainCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^restream plain$")
+    ];
+
+    public string? HelpText => "Grab restream URL with plain prefixed";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        var url = await Helpers.GetValue(BuiltIn.Keys.RestreamUrl);
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: [plain]{url.Value}", true);
     }
 }
