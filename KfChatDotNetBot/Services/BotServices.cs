@@ -708,7 +708,7 @@ public class BotServices
         _chatBot.SendChatMessage(
             $"@{user.KfUsername} is live! {e.Livestream.SessionTitle} https://kick.com/{channel.ChannelSlug}", true);
         
-        if (channel.ChannelSlug == "christopherdj" && settings[BuiltIn.Keys.BotToyStoryImageOnChrisDjLive].ToBoolean())
+        if (channel.ChannelSlug == "christopherdj" && settings[BuiltIn.Keys.BotToyStoryImageOnChrisDjLive].ToBoolean() && _isBmjLiveSynced && IsBmjLive)
         {
             IsChrisDjLive = true;
             _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotToyStoryImage].Value}[/img]", true);
