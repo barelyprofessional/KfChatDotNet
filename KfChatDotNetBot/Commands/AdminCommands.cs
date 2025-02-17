@@ -233,7 +233,7 @@ public class DeleteMessagesCommand : ICommand
     ];
 
     public string? HelpText => "Delete the most recent x number of messages";
-    public UserRight RequiredRight => UserRight.Admin;
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
