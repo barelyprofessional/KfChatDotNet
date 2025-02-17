@@ -840,6 +840,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.TwitchCommercialRestreamShillMessage,
+            Regex = ".+",
+            Description = "The specific restream to shill when a commercial is detected if shilling is enabled",
+            Default = "No commercial restream shill message set",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -908,5 +918,6 @@ public static class BuiltIn
         public static string BotToyStoryImage = "Bot.ToyStoryImage";
         public static string BotImageRandomSliceDivideBy = "Bot.Image.RandomSliceDivideBy";
         public static string BotToyStoryImageOnChrisDjLive = "Bot.ToyStoryImageOnChrisDjLive";
+        public static string TwitchCommercialRestreamShillMessage = "Twitch.CommercialRestreamShillMessage";
     }
 }

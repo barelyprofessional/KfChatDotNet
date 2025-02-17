@@ -582,7 +582,7 @@ public class BotServices
     private void OnTwitchStreamCommercial(object sender, int channelId, int length, bool scheduled)
     {
         var settings = Helpers
-            .GetMultipleValues([BuiltIn.Keys.TwitchShillRestreamOnCommercial, BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
+            .GetMultipleValues([BuiltIn.Keys.TwitchShillRestreamOnCommercial, BuiltIn.Keys.TwitchCommercialRestreamShillMessage, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
         if (!settings[BuiltIn.Keys.TwitchShillRestreamOnCommercial].ToBoolean())
         {
             _logger.Debug("Not shilling as it's disabled");
@@ -591,7 +591,7 @@ public class BotServices
 
         _chatBot.SendChatMessage(
             $"Did you just get a {length} second ad on Twitch? The Keno Kasino encourages Total Advertiser Death.[br]" +
-            $"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} streams are being re-streamed in low latency, ad-free form thanks to @Kees H. Do not watch ads.[br]{settings[BuiltIn.Keys.RestreamUrl].Value}",
+            $"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} streams are being re-streamed in low latency, ad-free form thanks to @Kees H. Do not watch ads.[br]{settings[BuiltIn.Keys.TwitchCommercialRestreamShillMessage].Value}",
             true);
     }
     
