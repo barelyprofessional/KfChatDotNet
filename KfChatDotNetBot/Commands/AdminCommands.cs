@@ -258,3 +258,71 @@ public class DeleteMessagesCommand : ICommand
         }
     }
 }
+
+public class IgnoreCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin ignore (?<user_id>\d+)$")
+    ];
+
+    public string? HelpText => "Ignore a user by ID";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value),
+            cancellationToken: ctx);
+        if (targetUser == null)
+        {
+            await botInstance.SendChatMessageAsync("Can't find user", true);
+            return;
+        }
+
+        if (targetUser.Ignored)
+        {
+            await botInstance.SendChatMessageAsync($"User {targetUser.KfUsername} has already been ignored", true);
+            return;
+        }
+
+        targetUser.Ignored = true;
+        await db.SaveChangesAsync(ctx);
+        await botInstance.SendChatMessageAsync($"Now ignoring {targetUser.KfUsername}", true);
+    }
+}
+
+public class UnignoreCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin unignore (?<user_id>\d+)$")
+    ];
+
+    public string? HelpText => "Unignore a user by ID";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value),
+            cancellationToken: ctx);
+        if (targetUser == null)
+        {
+            await botInstance.SendChatMessageAsync("Can't find user", true);
+            return;
+        }
+
+        if (!targetUser.Ignored)
+        {
+            await botInstance.SendChatMessageAsync($"User {targetUser.KfUsername} is not ignored", true);
+            return;
+        }
+
+        targetUser.Ignored = false;
+        await db.SaveChangesAsync(ctx);
+        await botInstance.SendChatMessageAsync($"No longer ignoring {targetUser.KfUsername}", true);
+    }
+}
