@@ -830,6 +830,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotToyStoryImageOnChrisDjLive,
+            Regex = "(true|false)",
+            Description = "Whether to spam the Toy Story image joke when ChrisDJ goes live while BossmanAustin is live",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         }
     ];
     
@@ -897,5 +907,6 @@ public static class BuiltIn
         public static string BotImageAcceptableKeys = "Bot.Image.AcceptableKeys";
         public static string BotToyStoryImage = "Bot.ToyStoryImage";
         public static string BotImageRandomSliceDivideBy = "Bot.Image.RandomSliceDivideBy";
+        public static string BotToyStoryImageOnChrisDjLive = "Bot.ToyStoryImageOnChrisDjLive";
     }
 }
