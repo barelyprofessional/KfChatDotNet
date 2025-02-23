@@ -682,7 +682,7 @@ public class BotServices
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
         if (e == null) return;
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotToyStoryImage, BuiltIn.Keys.BotToyStoryImageOnChrisDjLive]).Result;
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotChrisDjLiveImage]).Result;
         var channels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
         if (channels == null)
         {
@@ -708,10 +708,10 @@ public class BotServices
         _chatBot.SendChatMessage(
             $"@{user.KfUsername} is live! {e.Livestream.SessionTitle} https://kick.com/{channel.ChannelSlug}", true);
         
-        if (channel.ChannelSlug == "christopherdj" && settings[BuiltIn.Keys.BotToyStoryImageOnChrisDjLive].ToBoolean() && _isBmjLiveSynced && IsBmjLive)
+        if (channel.ChannelSlug == "christopherdj")
         {
             IsChrisDjLive = true;
-            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotToyStoryImage].Value}[/img]", true);
+            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotChrisDjLiveImage].Value}[/img]", true);
         }
     }
 
