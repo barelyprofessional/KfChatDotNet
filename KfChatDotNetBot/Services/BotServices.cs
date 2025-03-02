@@ -39,13 +39,15 @@ public class BotServices
     internal bool IsChrisDjLive = false;
     
     // lol
-    internal bool TemporarilyBypassGambaSeshForDiscord = false;
+    internal bool TemporarilyBypassGambaSeshForDiscord;
     internal bool TemporarilySuppressGambaMessages = false;
 
     public BotServices(ChatBot botInstance, CancellationToken ctx)
     {
         _chatBot = botInstance;
         _cancellationToken = ctx;
+        TemporarilyBypassGambaSeshForDiscord =
+            Helpers.GetValue(BuiltIn.Keys.DiscordTemporarilyBypassGambaSeshInitialValue).Result.ToBoolean();
         
         _logger.Info("Bot services ready to initialize!");
     }

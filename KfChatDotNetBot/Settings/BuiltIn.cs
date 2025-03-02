@@ -850,6 +850,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.DiscordTemporarilyBypassGambaSeshInitialValue,
+            Regex = "(true|false)",
+            Description = "What the initial value of the Discord GambaSesh temporary bypass variable should be",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         }
     ];
     
@@ -919,5 +929,7 @@ public static class BuiltIn
         public static string BotImageRandomSliceDivideBy = "Bot.Image.RandomSliceDivideBy";
         public static string TwitchCommercialRestreamShillMessage = "Twitch.CommercialRestreamShillMessage";
         public static string BotChrisDjLiveImage = "Bot.ChrisDjLiveImage";
+        public static string DiscordTemporarilyBypassGambaSeshInitialValue =
+            "Discord.TemporarilyBypassGambaSeshInitialValue";
     }
 }
