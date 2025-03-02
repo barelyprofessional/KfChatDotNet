@@ -352,7 +352,7 @@ public class ChatBot
     
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
+        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.BotKeesSeen])
             .Result;
         _logger.Debug($"Received {users.Count} user join events");
         using var db = new ApplicationDbContext();
@@ -371,6 +371,13 @@ public class ChatBot
                     $":!: :!: General Chat weirdo {user.Username} has joined. This means your messages are now being logged forever by his unofficial Sneedchat client :!: :!:",
                     true);
                 _yatsLastSeen = DateTimeOffset.UtcNow;
+            }
+
+            if (user.Id == 89776 && !settings[BuiltIn.Keys.BotKeesSeen].ToBoolean())
+            {
+                _logger.Info("Kees has joined!");
+                SendChatMessage($":!: :!: {user.Username} has appeared! :!: :!:", true);
+                Helpers.SetValueAsBoolean(BuiltIn.Keys.BotKeesSeen, true).Wait(_cancellationToken);
             }
             _logger.Info($"{user.Username} joined!");
 

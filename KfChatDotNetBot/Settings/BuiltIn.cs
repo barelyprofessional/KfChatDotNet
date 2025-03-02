@@ -860,6 +860,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotKeesSeen,
+            Regex = "(true|false)",
+            Description = "Track if Kees has been seen so users can receive a one-time notice if he suddenly shows up",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         }
     ];
     
@@ -931,5 +941,6 @@ public static class BuiltIn
         public static string BotChrisDjLiveImage = "Bot.ChrisDjLiveImage";
         public static string DiscordTemporarilyBypassGambaSeshInitialValue =
             "Discord.TemporarilyBypassGambaSeshInitialValue";
+        public static string BotKeesSeen = "Bot.KeesSeen";
     }
 }
