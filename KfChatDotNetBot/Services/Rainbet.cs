@@ -96,7 +96,7 @@ public class Rainbet : IDisposable
             await RefreshCookies();
         }
         var flareSolverrProxy = await Helpers.GetValue(BuiltIn.Keys.FlareSolverrProxy);
-        var gameHistoryUrl = "https://sportsbook.rainbet.com/v1/game-history";
+        var gameHistoryUrl = "https://services.rainbet.com/v1/game-history";
         var jsonBody = new Dictionary<string, int> { {"take", take} };
         var postData = JsonContent.Create(jsonBody);
         var postClientHandler = new HttpClientHandler();
