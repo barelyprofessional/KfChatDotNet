@@ -12,7 +12,7 @@ public class RainbetBetsDbModel
     public required float Value { get; set; }
     public required float Payout { get; set; }
     public required float Multiplier { get; set; }
-    public required long BetId { get; set; }
+    public required string BetId { get; set; }
     public required DateTimeOffset UpdatedAt { get; set; }
     public required DateTimeOffset BetSeenAt { get; set; }
 }

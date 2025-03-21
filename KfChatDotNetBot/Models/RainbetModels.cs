@@ -5,7 +5,7 @@ namespace KfChatDotNetBot.Models;
 public class RainbetBetHistoryModel
 {
     [JsonPropertyName("id")]
-    public required int Id { get; set; }
+    public required string Id { get; set; }
     [JsonPropertyName("value")]
     public required float Value { get; set; }
     [JsonPropertyName("payout")]
