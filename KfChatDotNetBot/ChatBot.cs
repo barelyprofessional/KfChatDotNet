@@ -174,7 +174,10 @@ public class ChatBot
         _logger.Debug($"Received {messages.Count} message(s)");
         foreach (var message in messages)
         {
-            _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
+            if (message.MessageEditDate == null)
+            {
+                _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
+            }
             if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate == null)
             {
                 // MessageRaw is not actually REAL and RAW. The messages are still HTML encoded
