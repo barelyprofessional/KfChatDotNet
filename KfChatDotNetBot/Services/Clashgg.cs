@@ -209,7 +209,7 @@ public class Clashgg : IDisposable
                 return;
             }
             
-            _logger.Info($"Message of type '{packet[0].GetString()}' from Clash.gg not handled");
+            _logger.Debug($"Message of type '{packet[0].GetString()}' from Clash.gg not handled");
         }
         catch (Exception e)
         {
