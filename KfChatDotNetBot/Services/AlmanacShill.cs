@@ -23,8 +23,11 @@ public class AlmanacShill(ChatBot kfChatBot) : IDisposable
 
     public bool IsShillTaskRunning()
     {
+        _logger.Info($"_almanacShillTask is null? {_almanacShillTask == null}");
         if (_almanacShillTask == null) return false;
-        if (_almanacShillTask.Status != TaskStatus.Running) return false;
+        _logger.Info($"_almanacShillTask.Status is {_almanacShillTask.Status}");
+        if (_almanacShillTask.Status is not (TaskStatus.Running or TaskStatus.WaitingForActivation)) return false;
+        _logger.Info($"_almanacShillCts.IsCancellationRequested is {_almanacShillCts.IsCancellationRequested}");
         if (_almanacShillCts.IsCancellationRequested) return false;
         return true;
     }
