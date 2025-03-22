@@ -70,7 +70,8 @@ public class BotServices
             BuildJackpot(),
             BuildChipsgg(),
             BuildKick(),
-            BuildTwitch()
+            BuildTwitch(),
+            BuildClashgg()
         ];
         try
         {
