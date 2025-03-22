@@ -47,8 +47,17 @@ public static class Helpers
             logger.Debug($"{key}'s value is null so returning SettingValue(null)");
             return new SettingValue(null, setting, false);
         }
-        
-        logger.Info($"Cache Miss! Returning '{setting.Value}' for {key}");
+
+        if (setting.IsSecret)
+        {
+            logger.Info($"Cache Miss! Returning secret of length '{setting.Value?.Length}' for {key}");
+
+        }
+        else
+        {
+            logger.Info($"Cache Miss! Returning '{setting.Value}' for {key}");
+
+        }
         return new SettingValue(setting.Value, setting, false);
     }
 
