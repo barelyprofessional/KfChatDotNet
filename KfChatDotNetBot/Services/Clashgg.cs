@@ -23,9 +23,11 @@ public class Clashgg : IDisposable
     private CancellationToken _cancellationToken = CancellationToken.None;
     private CancellationTokenSource _pingCts = new();
     private Task? _heartbeatTask;
-    // There's no smarts, it just does 30-second pings
-    private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(30);
+    private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(60);
     private bool _isOnline = false;
+    private DateTime _lastBet = DateTime.Now;
+    // How long we can go without any gambling activity until we go 'fuck it' and reconnect
+    private TimeSpan _lastBetTolerance = TimeSpan.FromMinutes(5);
 
     public Clashgg(string? proxy = null, CancellationToken? cancellationToken = null)
     {
@@ -85,11 +87,14 @@ public class Clashgg : IDisposable
         {
             if (_wsClient == null)
             {
-                _logger.Debug("_wsClient doesn't exist yet, not going to try ping");
+                _logger.Debug("_wsClient doesn't exist yet, not going to do anything");
                 continue;
             }
-            //_logger.Debug("Sending Jackpot ping packet");
-            //_wsClient.Send("{\"id\":\"lfgkenokasino\",\"type\":\"ping\"}");
+
+            if (DateTime.Now - _lastBet <= _lastBetTolerance) continue;
+            _logger.Error("Forcing a disconnect of Clash.gg so the connection can be rebuilt " +
+                          $"as there's been no gambling since {DateTime.Now:o}");
+            await _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closed due to lack of gamba");
         }
     }
     
@@ -127,7 +132,13 @@ public class Clashgg : IDisposable
                 _wsClient.Send("[\"subscribe\",\"mines\"]");
                 _wsClient.Send("[\"subscribe\",\"keno\"]");
                 _isOnline = true;
+                _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);
                 return;
+            }
+
+            if (packet[0].GetString()!.Contains(":game"))
+            {
+                _lastBet = DateTime.Now;
             }
 
             if (packet[0].GetString() == "plinko:social-game")
@@ -197,6 +208,8 @@ public class Clashgg : IDisposable
                 OnClashBet?.Invoke(this, betData);
                 return;
             }
+            
+            _logger.Info($"Message of type '{packet[0].GetString()}' from Clash.gg not handled");
         }
         catch (Exception e)
         {
