@@ -27,6 +27,7 @@ public class BotServices
     private Howlgg _howlgg;
     private Rainbet _rainbet;
     private Chipsgg _chipsgg;
+    private Clashgg _clashgg;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -145,6 +146,20 @@ public class BotServices
         _logger.Info("Built Jackpot Websocket connection");
     }
     
+    private async Task BuildClashgg()
+    {
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.ClashggEnabled]);
+        if (!settings[BuiltIn.Keys.ClashggEnabled].ToBoolean())
+        {
+            _logger.Debug("Clash.gg is disabled");
+            return;
+        }
+        _clashgg = new Clashgg(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _clashgg.OnClashBet += OnClashggBet;
+        await _clashgg.StartWsClient();
+        _logger.Info("Built Clash.gg Websocket connection");
+    }
+    
     private async Task BuildTwitch()
     {
         var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]);
@@ -230,7 +245,7 @@ public class BotServices
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             if (_chatBot.InitialStartCooldown) continue;
-            var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled]);
+            var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled, BuiltIn.Keys.ClashggEnabled]);
             try
             {
                 if (!_shuffle.IsConnected())
@@ -295,6 +310,14 @@ public class BotServices
                     KickClient.Dispose();
                     KickClient = null!;
                     await BuildKick();
+                }
+                
+                if (settings[BuiltIn.Keys.ClashggEnabled].ToBoolean() && !_clashgg.IsConnected())
+                {
+                    _logger.Error("Clash.gg died, recreating it");
+                    _clashgg.Dispose();
+                    _clashgg = null!;
+                    await BuildClashgg();
                 }
             }
             catch (Exception e)
@@ -395,6 +418,50 @@ public class BotServices
         if (bet.Payout < bet.Wager) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage($"🚨🚨 JACKPOT BETTING 🚨🚨 {bet.User} just bet {bet.Wager} {bet.Currency} which paid out " +
                                  $"[color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
+    }
+    
+    private void OnClashggBet(object sender, ClashggBetModel bet)
+    {
+        var settings = Helpers
+            .GetMultipleValues([
+                BuiltIn.Keys.ClashggBmjIds, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Trace("Jackpot bet has arrived");
+        if (!settings[BuiltIn.Keys.ClashggBmjIds].JsonDeserialize<List<int>>()!.Contains(bet.UserId))
+        {
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING (on Clash.gg)");
+        if (IsBmjLive)
+        {
+            _logger.Info("Ignoring as BMJ is live");
+            return;
+        }
+        if (TemporarilySuppressGambaMessages)
+        {
+            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
+            return;
+        }
+
+        // Only check once because the bot should be tracking the Twitch stream
+        // This is just in case he's already live while the bot starts
+        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
+        if (!_isBmjLiveSynced)
+        {
+            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
+            _isBmjLiveSynced = true;
+        }
+        if (IsBmjLive)
+        {
+            _logger.Info("Double checked and he is really online");
+            return;
+        }
+
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (bet.Payout < bet.Bet) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet} {bet.Currency.Humanize()} Money which paid out " +
+                                 $"[color={payoutColor}]{bet.Payout} {bet.Currency.Humanize()} Money[/color] ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)

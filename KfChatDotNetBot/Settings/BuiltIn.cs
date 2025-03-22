@@ -870,6 +870,26 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.ClashggEnabled,
+            Regex = "(true|false)",
+            Description = "Whether the Clash.gg integration should be enabled",
+            Default = "true",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.ClashggBmjIds,
+            Regex = ".+",
+            Description = "List of IDs that austingambles is using",
+            Default = "[]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         }
     ];
     
@@ -942,5 +962,7 @@ public static class BuiltIn
         public static string DiscordTemporarilyBypassGambaSeshInitialValue =
             "Discord.TemporarilyBypassGambaSeshInitialValue";
         public static string BotKeesSeen = "Bot.KeesSeen";
+        public static string ClashggEnabled = "Clashgg.Enabled";
+        public static string ClashggBmjIds = "Clashgg.BmjIds";
     }
 }
