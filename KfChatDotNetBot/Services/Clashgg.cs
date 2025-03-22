@@ -117,9 +117,9 @@ public class Clashgg : IDisposable
 
         try
         {
-            var packet = JsonSerializer.Deserialize<Tuple<string, JsonElement>>(message.Text);
+            var packet = JsonSerializer.Deserialize<List<JsonElement>>(message.Text);
             if (packet == null) throw new InvalidOperationException("Caught a null when deserializing Clash.gg packet");
-            if (packet.Item1 == "online")
+            if (packet[0].GetString() == "online")
             {
                 _logger.Info("Received online packet from Clash.gg. Subscribing to Plinko, Mines and Keno");
                 _wsClient.Send("[\"subscribe\",\"plinko\"]");
@@ -128,10 +128,10 @@ public class Clashgg : IDisposable
                 return;
             }
 
-            if (packet.Item1 == "plinko:social-game")
+            if (packet[0].GetString() == "plinko:social-game")
             {
                 _logger.Debug("Received Plinko game from Clash.gg. Deserializing payload");
-                var betPacket = packet.Item2.Deserialize<ClashggWsPlinkoModel>();
+                var betPacket = packet[1].Deserialize<ClashggWsPlinkoModel>();
                 if (betPacket == null)
                 {
                     throw new Exception("Caught a null when deserializing a Clash.gg Plinko packet");
@@ -150,10 +150,10 @@ public class Clashgg : IDisposable
                 return;
             }
             
-            if (packet.Item1 == "mines:game")
+            if (packet[0].GetString() == "mines:game")
             {
                 _logger.Debug("Received Mines game from Clash.gg. Deserializing payload");
-                var betPacket = packet.Item2.Deserialize<ClashggWsMinesModel>();
+                var betPacket = packet[1].Deserialize<ClashggWsMinesModel>();
                 if (betPacket == null)
                 {
                     throw new Exception("Caught a null when deserializing a Clash.gg Mines packet");
@@ -173,10 +173,10 @@ public class Clashgg : IDisposable
                 return;
             }
             
-            if (packet.Item1 == "keno:game")
+            if (packet[0].GetString() == "keno:game")
             {
                 _logger.Debug("Received Keno game from Clash.gg. Deserializing payload");
-                var betPacket = packet.Item2.Deserialize<ClashggWsKenoModel>();
+                var betPacket = packet[1].Deserialize<ClashggWsKenoModel>();
                 if (betPacket == null)
                 {
                     throw new Exception("Caught a null when deserializing a Clash.gg Keno packet");
