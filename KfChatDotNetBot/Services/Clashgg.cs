@@ -117,7 +117,7 @@ public class Clashgg : IDisposable
 
         try
         {
-            var packet = JsonSerializer.Deserialize<Tuple<string, JsonProperty>>(message.Text);
+            var packet = JsonSerializer.Deserialize<Tuple<string, JsonElement>>(message.Text);
             if (packet == null) throw new InvalidOperationException("Caught a null when deserializing Clash.gg packet");
             if (packet.Item1 == "online")
             {
@@ -131,7 +131,7 @@ public class Clashgg : IDisposable
             if (packet.Item1 == "plinko:social-game")
             {
                 _logger.Debug("Received Plinko game from Clash.gg. Deserializing payload");
-                var betPacket = packet.Item2.Value.Deserialize<ClashggWsPlinkoModel>();
+                var betPacket = packet.Item2.Deserialize<ClashggWsPlinkoModel>();
                 if (betPacket == null)
                 {
                     throw new Exception("Caught a null when deserializing a Clash.gg Plinko packet");
@@ -153,7 +153,7 @@ public class Clashgg : IDisposable
             if (packet.Item1 == "mines:game")
             {
                 _logger.Debug("Received Mines game from Clash.gg. Deserializing payload");
-                var betPacket = packet.Item2.Value.Deserialize<ClashggWsMinesModel>();
+                var betPacket = packet.Item2.Deserialize<ClashggWsMinesModel>();
                 if (betPacket == null)
                 {
                     throw new Exception("Caught a null when deserializing a Clash.gg Mines packet");
@@ -176,7 +176,7 @@ public class Clashgg : IDisposable
             if (packet.Item1 == "keno:game")
             {
                 _logger.Debug("Received Keno game from Clash.gg. Deserializing payload");
-                var betPacket = packet.Item2.Value.Deserialize<ClashggWsKenoModel>();
+                var betPacket = packet.Item2.Deserialize<ClashggWsKenoModel>();
                 if (betPacket == null)
                 {
                     throw new Exception("Caught a null when deserializing a Clash.gg Keno packet");
@@ -198,7 +198,7 @@ public class Clashgg : IDisposable
         }
         catch (Exception e)
         {
-            _logger.Error("Failed to handle message from Jackpot");
+            _logger.Error("Failed to handle message from Clash.gg");
             _logger.Error(e);
             _logger.Error("--- Payload ---");
             _logger.Error(message.Text);
