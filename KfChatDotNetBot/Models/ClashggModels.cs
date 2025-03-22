@@ -38,7 +38,7 @@ public class ClashggBetModel
 // {"id":3122766,"role":"user","name":"nettspend","avatar":"https://avatars.steamstatic.com/6ceb09420f55ca4e84769169fad1436c0f1b6053_full.jpg","xp":28452,"isVerified":false,"isPrivate":false,"premiumUntil":null}
 public class ClashggWsUserModel
 {
-    [JsonPropertyName("user")]
+    [JsonPropertyName("id")]
     public required int Id { get; set; }
     [JsonPropertyName("name")]
     public required string Name { get; set; }
