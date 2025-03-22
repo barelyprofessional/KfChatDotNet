@@ -28,6 +28,7 @@ public class BotServices
     private Rainbet _rainbet;
     private Chipsgg _chipsgg;
     private Clashgg _clashgg;
+    public AlmanacShill AlmanacShill;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -71,7 +72,8 @@ public class BotServices
             BuildChipsgg(),
             BuildKick(),
             BuildTwitch(),
-            BuildClashgg()
+            BuildClashgg(),
+            BuildAlmanacShill()
         ];
         try
         {
@@ -238,6 +240,13 @@ public class BotServices
         _twitchChat = new TwitchChat($"#{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}", settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _twitchChat.OnMessageReceived += TwitchChatOnMessageReceived;
         await _twitchChat.StartWsClient();
+    }
+    
+    private async Task BuildAlmanacShill()
+    {
+        AlmanacShill = new AlmanacShill(_chatBot);
+        AlmanacShill.StartShillTask();
+        _logger.Info("Built the almanac shill task");
     }
     
     private async Task WebsocketWatchdog()

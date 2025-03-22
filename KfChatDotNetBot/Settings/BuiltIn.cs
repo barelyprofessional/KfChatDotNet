@@ -890,6 +890,26 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Array
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotAlmanacText,
+            Regex = ".+",
+            Description = "Text to send when reminding people of the Almanac",
+            Default = "Placeholder text for the Almanac",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotAlmanacInterval,
+            Regex = @"\d+",
+            Description = "Interval for Almanac reminders in seconds",
+            Default = "14400", // 4 hours
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -964,5 +984,7 @@ public static class BuiltIn
         public static string BotKeesSeen = "Bot.KeesSeen";
         public static string ClashggEnabled = "Clashgg.Enabled";
         public static string ClashggBmjIds = "Clashgg.BmjIds";
+        public static string BotAlmanacText = "Bot.Almanac.Text";
+        public static string BotAlmanacInterval = "Bot.Almanac.Interval";
     }
 }

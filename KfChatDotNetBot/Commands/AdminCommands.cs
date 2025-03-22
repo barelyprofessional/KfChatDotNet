@@ -326,3 +326,94 @@ public class UnignoreCommand : ICommand
         await botInstance.SendChatMessageAsync($"No longer ignoring {targetUser.KfUsername}", true);
     }
 }
+
+public class SetAlmanacTextCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^admin almanac set text (?<text>.+)$")
+    ];
+
+    public string? HelpText => "Set the almanac text to whatever";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await Helpers.SetValue(BuiltIn.Keys.BotAlmanacText, arguments["text"].Value);
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated text for the almanac shill", true);
+    }
+}
+
+public class SetAlmanacIntervalCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^admin almanac set interval (?<interval>.+)$")
+    ];
+
+    public string? HelpText => "Set the almanac interval to whatever in seconds";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        var interval = Convert.ToInt32(arguments["interval"].Value);
+        if (interval < 300)
+        {
+            await botInstance.SendChatMessageAsync("Not going to let you use an interval below 300 seconds", true);
+            return;
+        }
+        await Helpers.SetValue(BuiltIn.Keys.BotAlmanacInterval, arguments["interval"].Value);
+        await botInstance.BotServices.AlmanacShill.StopShillTaskAsync();
+        botInstance.BotServices.AlmanacShill.StartShillTask();
+        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated interval and restarted the shill task", true);
+    }
+}
+public class StopAlmanacCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^admin almanac stop$")
+    ];
+
+    public string? HelpText => "Stop the almanac reminder";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        if (!botInstance.BotServices.AlmanacShill.IsShillTaskRunning())
+        {
+            await botInstance.SendChatMessageAsync("Looks like the task isn't even running", true);
+            return;
+        }
+
+        await botInstance.BotServices.AlmanacShill.StopShillTaskAsync();
+        await botInstance.SendChatMessageAsync("Asked it nicely to stop", true);
+    }
+}
+
+public class StartAlmanacCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^admin almanac start")
+    ];
+
+    public string? HelpText => "Start the almanac reminder";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        if (botInstance.BotServices.AlmanacShill.IsShillTaskRunning())
+        {
+            await botInstance.SendChatMessageAsync("Looks like the task is already running", true);
+            return;
+        }
+
+        botInstance.BotServices.AlmanacShill.StartShillTask();
+        await botInstance.SendChatMessageAsync("Asked it nicely to start", true);
+    }
+}

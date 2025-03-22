@@ -240,3 +240,23 @@ public class LastStreamCommand : ICommand
         await botInstance.SendChatMessageAsync($"{username.Value} last streamed on Twitch approximately {timespan.Humanize(precision: 2, minUnit: TimeUnit.Minute, maxUnit: TimeUnit.Hour)} ago at {agt:dddd h:mm tt} AGT", true);
     }
 }
+
+public class AlmanacCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^almanac", RegexOptions.IgnoreCase)
+    ];
+    public string? HelpText => "Return details on how to submit almanac entries";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var text = await Helpers.GetValue(BuiltIn.Keys.BotAlmanacText);
+        if (message.MessageRaw.Contains("almanac plain"))
+        {
+            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, [plain]{text.Value}", true);
+            return;
+        }
+        await botInstance.SendChatMessageAsync($"@{user.KfUsername}, {text.Value}", true);
+    }
+}
