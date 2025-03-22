@@ -25,6 +25,7 @@ public class Clashgg : IDisposable
     private Task? _heartbeatTask;
     // There's no smarts, it just does 30-second pings
     private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(30);
+    private bool _isOnline = false;
 
     public Clashgg(string? proxy = null, CancellationToken? cancellationToken = null)
     {
@@ -119,12 +120,13 @@ public class Clashgg : IDisposable
         {
             var packet = JsonSerializer.Deserialize<List<JsonElement>>(message.Text);
             if (packet == null) throw new InvalidOperationException("Caught a null when deserializing Clash.gg packet");
-            if (packet[0].GetString() == "online")
+            if (packet[0].GetString() == "online" && !_isOnline)
             {
                 _logger.Info("Received online packet from Clash.gg. Subscribing to Plinko, Mines and Keno");
                 _wsClient.Send("[\"subscribe\",\"plinko\"]");
                 _wsClient.Send("[\"subscribe\",\"mines\"]");
                 _wsClient.Send("[\"subscribe\",\"keno\"]");
+                _isOnline = true;
                 return;
             }
 
