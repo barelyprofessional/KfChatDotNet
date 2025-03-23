@@ -371,7 +371,11 @@ public class BotServices
             return;
         }
 
-        var bmjBets = bets.Where(b => ids.Contains(b.User.PublicId ?? string.Empty));
+        var bmjBets = bets.Where(b => b.User.PublicId != null && ids.Contains(b.User.PublicId));
+        if (!bmjBets.Any())
+        {
+            return;
+        }
         foreach (var bet in bmjBets)
         {
             if (db.RainbetBets.Any(b => b.BetId == bet.Id))
@@ -401,7 +405,7 @@ public class BotServices
         
         var msg = $":!::!: {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is betting on Rainbet :!::!:";
 
-        foreach (var bet in bets.GroupBy(b => b.Game.Name))
+        foreach (var bet in bmjBets.GroupBy(b => b.Game.Name))
         {
             var wagered = bet.Sum(s => s.Value);
             var payout = bet.Sum(s => s.Payout);
