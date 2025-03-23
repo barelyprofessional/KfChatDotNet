@@ -920,6 +920,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.JuiceAllowedWhileStreaming,
+            Regex = "(true|false)",
+            Description = "Whether to allow juicers while Austin is streaming",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         }
     ];
     
@@ -997,5 +1007,6 @@ public static class BuiltIn
         public static string BotAlmanacText = "Bot.Almanac.Text";
         public static string BotAlmanacInterval = "Bot.Almanac.Interval";
         public static string BotAlmanacInitialState = "Bot.Almanac.InitialState";
+        public static string JuiceAllowedWhileStreaming = "Juice.AllowedWhileStreaming";
     }
 }

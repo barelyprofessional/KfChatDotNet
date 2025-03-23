@@ -21,7 +21,11 @@ public class JuiceCommand : ICommand
         // Have to attach the entity because it is coming from another DB context
         // https://stackoverflow.com/questions/52718652/ef-core-sqlite-sqlite-error-19-unique-constraint-failed
         db.Users.Attach(user);
-        var juicerSettings = await Helpers.GetMultipleValues([BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown, BuiltIn.Keys.JuiceLoserDivision, BuiltIn.Keys.GambaSeshDetectEnabled]);
+        var juicerSettings = await Helpers.GetMultipleValues([
+            BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown, BuiltIn.Keys.JuiceLoserDivision,
+            BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.JuiceAllowedWhileStreaming,
+            BuiltIn.Keys.TwitchBossmanJackUsername
+        ]);
         var cooldown = juicerSettings[BuiltIn.Keys.JuiceCooldown].ToType<int>();
         var amount = juicerSettings[BuiltIn.Keys.JuiceAmount].ToType<int>();
         if (user.UserRight == UserRight.Loser) amount /= juicerSettings[BuiltIn.Keys.JuiceLoserDivision].ToType<int>();
@@ -31,6 +35,14 @@ public class JuiceCommand : ICommand
             await botInstance.SendChatMessageAsync("Looks like GambaSesh isn't here. If he is, get him to say something then try again.", true);
             return;
         }
+
+        if (!juicerSettings[BuiltIn.Keys.JuiceAllowedWhileStreaming].ToBoolean() && botInstance.BotServices.IsBmjLive)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"No juicers permitted while {juicerSettings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is live!", true);
+            return;
+        }
+        
         if (lastJuicer.Count == 0)
         {
             await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
