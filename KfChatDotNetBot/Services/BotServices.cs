@@ -410,7 +410,7 @@ public class BotServices
             msg += $"[br]{bet.Sum(s => s.Value):C} wagered on {bet.Key} which paid out [color={payoutColor}]{payout:C}[/color] over {bet.Count()} bets";
         }
 
-        _chatBot.SendChatMessagesAsync(msg.FancySplitMessage(partSeparator: "[br]")).Wait(_cancellationToken);
+        _chatBot.SendChatMessagesAsync(msg.FancySplitMessage(partSeparator: "[br]"), true).Wait(_cancellationToken);
     }
 
     private void OnJackpotBet(object sender, JackpotWsBetPayloadModel bet)
