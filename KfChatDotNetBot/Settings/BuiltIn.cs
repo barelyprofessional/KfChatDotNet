@@ -910,6 +910,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotAlmanacInitialState,
+            Regex = "(true|false)",
+            Description = "Initial state of the Almanac reminder",
+            Default = "false",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         }
     ];
     
@@ -986,5 +996,6 @@ public static class BuiltIn
         public static string ClashggBmjIds = "Clashgg.BmjIds";
         public static string BotAlmanacText = "Bot.Almanac.Text";
         public static string BotAlmanacInterval = "Bot.Almanac.Interval";
+        public static string BotAlmanacInitialState = "Bot.Almanac.InitialState";
     }
 }

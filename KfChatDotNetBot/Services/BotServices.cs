@@ -245,6 +245,12 @@ public class BotServices
     private async Task BuildAlmanacShill()
     {
         AlmanacShill = new AlmanacShill(_chatBot);
+        var initialState = await Helpers.GetValue(BuiltIn.Keys.BotAlmanacInitialState);
+        if (!initialState.ToBoolean())
+        {
+            _logger.Info("Built the almanac service but not enabling as initial state is false");
+            return;
+        }
         AlmanacShill.StartShillTask();
         _logger.Info("Built the almanac shill task");
     }
