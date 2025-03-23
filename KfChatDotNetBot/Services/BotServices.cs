@@ -395,11 +395,16 @@ public class BotServices
         
         var msg = $":!::!: {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is betting on Rainbet :!::!:";
 
-        //var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
-        //if (bet.Payout < bet.Bet) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        //_chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100} {bet.Currency.Humanize()} Money which paid out " +
-        //                         $"[color={payoutColor}]{bet.Payout / 100} {bet.Currency.Humanize()} Money[/color] ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
+        foreach (var bet in bets.GroupBy(b => b.Game.Name))
+        {
+            var wagered = bet.Sum(s => s.Value);
+            var payout = bet.Sum(s => s.Payout);
+            var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+            if (payout < wagered) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+            msg += $"[br]{bet.Sum(s => s.Value):C} wagered on {bet.Key} which paid out [color={payoutColor}]{payout:C}[/color] over {bet.Count()} bets";
+        }
 
+        _chatBot.SendChatMessagesAsync(msg.FancySplitMessage(partSeparator: "[br]")).Wait(_cancellationToken);
     }
 
     private void OnJackpotBet(object sender, JackpotWsBetPayloadModel bet)
