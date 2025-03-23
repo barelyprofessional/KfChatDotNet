@@ -359,8 +359,14 @@ public class BotServices
         _logger.Trace("Rainbet bet has arrived");
         using var db = new ApplicationDbContext();
         var ids = settings[BuiltIn.Keys.RainbetBmjPublicIds].JsonDeserialize<List<string>>();
-        foreach (var bet in bets.Where(b => ids.Contains(b.User.PublicId)))
-        //foreach (var bet in bets)
+        if (ids == null)
+        {
+            _logger.Error("BMJ Rainbet Public IDs were null");
+            return;
+        }
+
+        var bmjBets = bets.Where(b => ids.Contains(b.User.PublicId ?? string.Empty));
+        foreach (var bet in bmjBets)
         {
             if (db.RainbetBets.Any(b => b.BetId == bet.Id))
             {
@@ -382,8 +388,18 @@ public class BotServices
             });
             _logger.Info("Added a Bossman Rainbet bet to the database");
         }
-
         db.SaveChanges();
+        
+        _logger.Info("ALERT BMJ IS BETTING (on Rainbet)");
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        
+        var msg = $":!::!: {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is betting on Rainbet :!::!:";
+
+        //var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        //if (bet.Payout < bet.Bet) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        //_chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100} {bet.Currency.Humanize()} Money which paid out " +
+        //                         $"[color={payoutColor}]{bet.Payout / 100} {bet.Currency.Humanize()} Money[/color] ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
+
     }
 
     private void OnJackpotBet(object sender, JackpotWsBetPayloadModel bet)
@@ -399,30 +415,8 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Jackpot)");
-        if (IsBmjLive)
-        {
-            _logger.Info("Ignoring as BMJ is live");
-            return;
-        }
-        if (TemporarilySuppressGambaMessages)
-        {
-            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
-            return;
-        }
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
 
-        // Only check once because the bot should be tracking the Twitch stream
-        // This is just in case he's already live while the bot starts
-        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
-        if (!_isBmjLiveSynced)
-        {
-            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
-            _isBmjLiveSynced = true;
-        }
-        if (IsBmjLive)
-        {
-            _logger.Info("Double checked and he is really online");
-            return;
-        }
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Payout < bet.Wager) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -443,30 +437,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Clash.gg)");
-        if (IsBmjLive)
-        {
-            _logger.Info("Ignoring as BMJ is live");
-            return;
-        }
-        if (TemporarilySuppressGambaMessages)
-        {
-            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
-            return;
-        }
-
-        // Only check once because the bot should be tracking the Twitch stream
-        // This is just in case he's already live while the bot starts
-        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
-        if (!_isBmjLiveSynced)
-        {
-            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
-            _isBmjLiveSynced = true;
-        }
-        if (IsBmjLive)
-        {
-            _logger.Info("Double checked and he is really online");
-            return;
-        }
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Payout < bet.Bet) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -607,30 +578,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING");
-        if (IsBmjLive)
-        {
-            _logger.Info("Ignoring as BMJ is live");
-            return;
-        }
-        if (TemporarilySuppressGambaMessages)
-        {
-            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
-            return;
-        }
-        
-        // Only check once because the bot should be tracking the Twitch stream
-        // This is just in case he's already live while the bot starts
-        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
-        if (!_isBmjLiveSynced)
-        {
-            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
-            _isBmjLiveSynced = true;
-        }
-        if (IsBmjLive)
-        {
-            _logger.Info("Double checked and he is really online");
-            return;
-        }
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -695,31 +643,7 @@ public class BotServices
             Currency = bet.Currency!, CurrencyPrice = bet.CurrencyPrice, BetId = bet.BetId
         });
         db.SaveChanges();
-        if (IsBmjLive)
-        {
-            _logger.Info("Ignoring as BMJ is live");
-            return;
-        }
-
-        if (TemporarilySuppressGambaMessages)
-        {
-            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
-            return;
-        }
-
-        // Only check once because the bot should be tracking the Twitch stream
-        // This is just in case he's already live while the bot starts
-        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
-        if (!_isBmjLiveSynced)
-        {
-            IsBmjLive = _twitch.IsStreamLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!).Result;
-            _isBmjLiveSynced = true;
-        }
-        if (IsBmjLive)
-        {
-            _logger.Info("Double checked and he is really online");
-            return;
-        }
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -822,5 +746,33 @@ public class BotServices
         _chatBot.SendChatMessage(
             $"@{user.KfUsername} is no longer live! :lossmanjack:", true);
         if (channel.ChannelSlug == "christopherdj") IsChrisDjLive = false;
+    }
+
+    public async Task<bool> CheckBmjIsLive(string bmjUsername)
+    {
+        if (IsBmjLive)
+        {
+            return true;
+        }
+        if (TemporarilySuppressGambaMessages)
+        {
+            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
+            return true;
+        }
+        // Only check once because the bot should be tracking the Twitch stream
+        // This is just in case he's already live while the bot starts
+        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
+        if (!_isBmjLiveSynced)
+        {
+            IsBmjLive = await _twitch.IsStreamLive(bmjUsername);
+            _isBmjLiveSynced = true;
+        }
+        if (IsBmjLive)
+        {
+            _logger.Info("Double checked and he is really online");
+            return true;
+        }
+
+        return false;
     }
 }
