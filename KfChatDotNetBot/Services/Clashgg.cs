@@ -178,7 +178,6 @@ public class Clashgg : IDisposable
                     Username = betPacket.User.Name,
                     Bet = betPacket.BetAmount,
                     Currency = betPacket.Currency == "REAL" ? ClashggCurrency.Real : ClashggCurrency.Fake,
-                    // ReSharper disable once PossibleLossOfFraction
                     Multiplier = (float)betPacket.Payout / betPacket.BetAmount,
                     Payout = betPacket.Payout
                 };
