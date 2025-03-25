@@ -18,8 +18,10 @@ public class Twitch : IDisposable
     private List<int> _channels;
     public delegate void OnStreamStateUpdateEventHandler(object sender, int channelId, bool isLive);
     public delegate void OnStreamCommercialEventHandler(object sender, int channelId, int length, bool scheduled);
+    public delegate void OnStreamTosStrikeEventHandler(object sender, int channelId);
     public event OnStreamStateUpdateEventHandler OnStreamStateUpdated;
     public event OnStreamCommercialEventHandler OnStreamCommercial;
+    public event OnStreamTosStrikeEventHandler OnStreamTosStrike;
     private CancellationToken _cancellationToken = CancellationToken.None;
     private Task? _pingTask = null;
     private CancellationTokenSource _pingCts = new();
@@ -161,6 +163,13 @@ public class Twitch : IDisposable
                     Time = DateTimeOffset.UtcNow
                 });
                 db.SaveChanges();
+                return;
+            }
+
+            if (twitchMessage.GetProperty("type").GetString() == "tos-strike")
+            {
+                _logger.Info("Received a TOS strike packet");
+                OnStreamTosStrike?.Invoke(this, channelId);
                 return;
             }
 

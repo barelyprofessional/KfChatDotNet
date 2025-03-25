@@ -175,6 +175,7 @@ public class BotServices
         _twitch = new Twitch([settings[BuiltIn.Keys.TwitchBossmanJackId].ToType<int>()], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
         _twitch.OnStreamCommercial += OnTwitchStreamCommercial;
+        _twitch.OnStreamTosStrike += OnTwitchStreamTosStrike;
         await _twitch.StartWsClient();
         _logger.Info("Built Twitch Websocket connection for livestream notifications");
     }
@@ -635,6 +636,12 @@ public class BotServices
             $"Did you just get a {length} second ad on Twitch? The Keno Kasino encourages Total Advertiser Death.[br]" +
             $"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} streams are being re-streamed in low latency, ad-free form thanks to @Kees H. Do not watch ads.[br]{settings[BuiltIn.Keys.TwitchCommercialRestreamShillMessage].Value}",
             true);
+    }
+    
+    private void OnTwitchStreamTosStrike(object sender, int channelId)
+    {
+        var username = Helpers.GetValue(BuiltIn.Keys.TwitchBossmanJackUsername).Result;
+        _chatBot.SendChatMessage($":!::!: {username.Value} was just banned from Twitch! :!::!:", true);
     }
     
     private void OnChipsggRecentBet(object sender, ChipsggBetModel bet)
