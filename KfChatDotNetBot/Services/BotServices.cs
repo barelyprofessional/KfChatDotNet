@@ -1,4 +1,5 @@
-﻿using Humanizer;
+﻿using System.Text.Json;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
@@ -440,7 +441,7 @@ public class BotServices
                                  $"[color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
     
-    private void OnClashggBet(object sender, ClashggBetModel bet)
+    private void OnClashggBet(object sender, ClashggBetModel bet, JsonElement jsonElement)
     {
         var settings = Helpers
             .GetMultipleValues([
@@ -457,6 +458,21 @@ public class BotServices
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Payout < bet.Bet) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        if (bet is { Game: ClashggGame.Mines, Multiplier: <= 1 })
+        {
+            var mineCount = jsonElement.GetProperty("mineCount").GetInt32();
+            _chatBot.SendChatMessage(
+                $"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money on {bet.Game.Humanize()} but instantly lost with {mineCount} mines on the board. RIP 💰💰",
+                true);
+            return;
+        }
+
+        if (bet.Game == ClashggGame.Mines)
+        {
+            _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which [b]maybe[/b] paid out " +
+                                     $"{bet.Payout / 100.0:N2} {bet.Currency.Humanize()} Money ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
+            return;
+        }
         _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which paid out " +
                                  $"[color={payoutColor}]{bet.Payout / 100.0:N2} {bet.Currency.Humanize()} Money[/color] ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
     }

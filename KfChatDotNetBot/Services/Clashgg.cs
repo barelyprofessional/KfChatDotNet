@@ -16,7 +16,7 @@ public class Clashgg : IDisposable
     // Ping interval is 30 seconds
     private int _reconnectTimeout = 60;
     private string? _proxy;
-    public delegate void OnClashBetEventHandler(object sender, ClashggBetModel data);
+    public delegate void OnClashBetEventHandler(object sender, ClashggBetModel data, JsonElement jsonElement);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
     public event OnClashBetEventHandler OnClashBet;
     public event OnWsDisconnectionEventHandler OnWsDisconnection;
@@ -159,7 +159,7 @@ public class Clashgg : IDisposable
                     Multiplier = betPacket.Multiplier,
                     Payout = betPacket.BetAmount * betPacket.Multiplier
                 };
-                OnClashBet?.Invoke(this, betData);
+                OnClashBet?.Invoke(this, betData, packet[1]);
                 return;
             }
             
@@ -181,7 +181,7 @@ public class Clashgg : IDisposable
                     Multiplier = (float)betPacket.Payout / betPacket.BetAmount,
                     Payout = betPacket.Payout
                 };
-                OnClashBet?.Invoke(this, betData);
+                OnClashBet?.Invoke(this, betData, packet[1]);
                 return;
             }
             
@@ -200,11 +200,10 @@ public class Clashgg : IDisposable
                     Username = betPacket.User.Name,
                     Bet = betPacket.BetAmount,
                     Currency = betPacket.Currency == "REAL" ? ClashggCurrency.Real : ClashggCurrency.Fake,
-                    // ReSharper disable once PossibleLossOfFraction
                     Multiplier = betPacket.Multiplier,
                     Payout = betPacket.Payout
                 };
-                OnClashBet?.Invoke(this, betData);
+                OnClashBet?.Invoke(this, betData, packet[1]);
                 return;
             }
             
