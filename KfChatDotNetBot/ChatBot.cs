@@ -32,7 +32,6 @@ public class ChatBot
     private Task _kfChatPing;
     private KfTokenService _kfTokenService;
     private int _joinFailures = 0;
-    private DateTimeOffset _yatsLastSeen = DateTimeOffset.UtcNow;
     
     public ChatBot()
     {
@@ -367,15 +366,6 @@ public class ChatBot
                 GambaSeshPresent = true;
             }
 
-            // Only notify if he has been away for a bit to avoid spamming chat if there's TTDs going on
-            if (user.Id == 160024 && (DateTimeOffset.UtcNow - _yatsLastSeen).TotalHours > 1)
-            {
-                SendChatMessage(
-                    $":!: :!: General Chat weirdo {user.Username} has joined. This means your messages are now being logged forever by his unofficial Sneedchat client :!: :!:",
-                    true);
-                _yatsLastSeen = DateTimeOffset.UtcNow;
-            }
-
             if (user.Id == 89776 && !settings[BuiltIn.Keys.BotKeesSeen].ToBoolean())
             {
                 _logger.Info("Kees has joined!");
@@ -412,7 +402,6 @@ public class ChatBot
             _logger.Info("GambaSesh is no longer present");
             GambaSeshPresent = false;
         }
-        if (userIds.Contains(160024)) _yatsLastSeen = DateTimeOffset.UtcNow;
     }
 
     private void OnKfWsDisconnected(object sender, DisconnectionInfo disconnectionInfo)
