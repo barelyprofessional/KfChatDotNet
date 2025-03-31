@@ -386,7 +386,6 @@ public class ChatBot
             {
                 _logger.Debug("Username has updated, updating DB");
                 userDb.KfUsername = user.Username;
-                db.SaveChanges();
             }
         }
 
