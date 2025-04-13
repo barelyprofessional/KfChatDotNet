@@ -483,13 +483,13 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel()
         {
-            Key = Keys.JackpotBmjUsername,
+            Key = Keys.JackpotBmjUsernames,
             Regex = ".+",
-            Description = "Bossman's username on Jackpot",
-            Default = "TheBossmanJack",
+            Description = "Bossman's usernames on Jackpot",
+            Default = "[\"TheBossmanJack\", \"Austingambless757\"]",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Text
+            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -964,7 +964,7 @@ public static class BuiltIn
         public static string HowlggBmjUserId = "Howlgg.BmjUserId";
         public static string KiwiFarmsGreenColor = "KiwiFarms.GreenColor";
         public static string KiwiFarmsRedColor = "KiwiFarms.RedColor";
-        public static string JackpotBmjUsername = "Jackpot.BmjUsername";
+        public static string JackpotBmjUsernames = "Jackpot.BmjUsernames";
         public static string RainbetBmjPublicIds = "Rainbet.BmjPublicIds";
         public static string FlareSolverrApiUrl = "FlareSolverr.ApiUrl";
         public static string FlareSolverrProxy = "FlareSolverr.Proxy";

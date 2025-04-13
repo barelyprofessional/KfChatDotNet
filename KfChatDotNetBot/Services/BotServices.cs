@@ -423,11 +423,11 @@ public class BotServices
     {
         var settings = Helpers
             .GetMultipleValues([
-                BuiltIn.Keys.JackpotBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.JackpotBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Jackpot bet has arrived");
-        if (bet.User != settings[BuiltIn.Keys.JackpotBmjUsername].Value)
+        if (!settings[BuiltIn.Keys.JackpotBmjUsernames].ToType<List<string>>().Contains(bet.User))
         {
             return;
         }
