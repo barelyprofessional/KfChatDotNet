@@ -122,7 +122,8 @@ public class KfTokenService
             new("_xfToken", csrf),
             new("login", username),
             new("password", password),
-            new("_xfRedirect", $"https://{_kfDomain}/")
+            new("_xfRedirect", $"https://{_kfDomain}/"),
+            new("remember", "1")
         });
         using var client = new HttpClient(GetHttpClientHandler());
         var postResponse = await client.PostAsync($"https://{_kfDomain}/login/login", formData, _ctx);
