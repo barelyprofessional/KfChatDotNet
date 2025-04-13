@@ -20,3 +20,19 @@ public enum UserRight
     Guest = 10,
     Loser = 0
 }
+
+public enum WhoWasActivityType
+{
+    Join,
+    Part,
+    Message
+}
+
+public class UserWhoWasDbModel
+{
+    public int Id { get; set; }
+    public required UserDbModel User { get; set; }
+    public required DateTimeOffset FirstOccurence { get; set; }
+    public required DateTimeOffset LatestOccurence { get; set; }
+    public required WhoWasActivityType ActivityType { get; set; }
+}

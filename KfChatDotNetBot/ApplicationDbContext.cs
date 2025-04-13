@@ -18,4 +18,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<TwitchViewCountDbModel> TwitchViewCounts { get; set; }
     public DbSet<ChipsggBetDbModel> ChipsggBets { get; set; }
     public DbSet<ImageDbModel> Images { get; set; }
+    public DbSet<UserWhoWasDbModel> UsersWhoWere { get; set; }
 }

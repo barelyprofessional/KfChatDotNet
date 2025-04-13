@@ -10,6 +10,8 @@ using KfChatDotNetWsClient;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IO;
 using NLog;
 using Websocket.Client;
 
@@ -243,6 +245,7 @@ public class ChatBot
             {
                 _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
+            UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
         }
         
         if (InitialStartCooldown) InitialStartCooldown = false;
@@ -379,6 +382,9 @@ public class ChatBot
             {
                 db.Users.Add(new UserDbModel { KfId = user.Id, KfUsername = user.Username });
                 _logger.Debug("Adding user to DB");
+                // Immediately add to DB so we can populate activity
+                db.SaveChanges();
+                UpdateUserLastActivityAsync(user.Id, WhoWasActivityType.Join).Wait(_cancellationToken);
                 continue;
             }
             // Detect a username change
@@ -387,6 +393,8 @@ public class ChatBot
                 _logger.Debug("Username has updated, updating DB");
                 userDb.KfUsername = user.Username;
             }
+
+            UpdateUserLastActivityAsync(user.Id, WhoWasActivityType.Join).Wait(_cancellationToken);
         }
 
         db.SaveChanges();
@@ -401,6 +409,39 @@ public class ChatBot
             _logger.Info("GambaSesh is no longer present");
             GambaSeshPresent = false;
         }
+
+        foreach (var user in userIds)
+        {
+            UpdateUserLastActivityAsync(user, WhoWasActivityType.Part).Wait(_cancellationToken);
+        }
+    }
+
+    private async Task UpdateUserLastActivityAsync(int kfId, WhoWasActivityType type)
+    {
+        await using var db = new ApplicationDbContext();
+        var user = await db.Users.FirstOrDefaultAsync(u => u.KfId == kfId, _cancellationToken);
+        if (user == null)
+        {
+            _logger.Error($"Failed to find user with KfId = {kfId} for the purposes of updating their last activity");
+            return;
+        }
+
+        var activity =
+            await db.UsersWhoWere.FirstOrDefaultAsync(u => u.User == user && u.ActivityType == type, _cancellationToken);
+        if (activity == null)
+        {
+            await db.UsersWhoWere.AddAsync(new UserWhoWasDbModel
+            {
+                User = user,
+                FirstOccurence = DateTimeOffset.UtcNow,
+                ActivityType = type,
+                LatestOccurence = DateTimeOffset.UtcNow
+            }, _cancellationToken);
+            await db.SaveChangesAsync(_cancellationToken);
+            return;
+        }
+        activity.LatestOccurence = DateTimeOffset.UtcNow;
+        await db.SaveChangesAsync(_cancellationToken);
     }
 
     private void OnKfWsDisconnected(object sender, DisconnectionInfo disconnectionInfo)
