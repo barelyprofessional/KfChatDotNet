@@ -17,8 +17,6 @@ namespace KfChatDotNetBot
             await BuiltIn.SyncSettingsWithDb();
             logger.Info("Migrating settings from config.json (if needed)");
             await BuiltIn.MigrateJsonSettingsToDb();
-            logger.Info("Migrating images over to the new system");
-            await BuiltIn.MigrateImages();
             logger.Info("Handing over to bot now");
             Console.OutputEncoding = Encoding.UTF8;
             new ChatBot();

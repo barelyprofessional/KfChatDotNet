@@ -82,7 +82,6 @@ public static class BuiltIn
         await Helpers.SetValue(Keys.KiwiFarmsDomain, oldConfig.KfDomain);
         await Helpers.SetValue(Keys.KiwiFarmsUsername, oldConfig.KfUsername);
         await Helpers.SetValue(Keys.KiwiFarmsPassword, oldConfig.KfPassword);
-        await Helpers.SetValue(Keys.KiwiFarmsChromiumPath, oldConfig.ChromiumPath);
         await Helpers.SetValue(Keys.TwitchBossmanJackId, oldConfig.BossmanJackTwitchId);
         await Helpers.SetValue(Keys.TwitchBossmanJackUsername, oldConfig.BossmanJackTwitchUsername);
         await Helpers.SetValueAsBoolean(Keys.KiwiFarmsSuppressChatMessages, oldConfig.SuppressChatMessages);
@@ -95,89 +94,6 @@ public static class BuiltIn
         Utils.SafelyRenameFile(oldConfigPath, $"{oldConfigPath}.migrated");
 
         logger.Info("File renamed");
-    }
-
-    public static async Task MigrateImages()
-    {
-        var logger = LogManager.GetCurrentClassLogger();
-        await using var db = new ApplicationDbContext();
-        logger.Info("Migrating images to the database table");
-        if (await db.Images.AnyAsync())
-        {
-            logger.Info("Not continuing as there's already images in the database");
-            return;
-        }
-
-        var imagesToMigrate = await Helpers.GetMultipleValues([
-            Keys.BotGmKasinoImageRotation, Keys.BotGnKasinoImageRotation, Keys.WinmanjackImgUrl, Keys.BotPraygeImgUrl,
-            Keys.BotCrackpipeImgUrl
-        ]);
-
-        logger.Info("Migrating gmkasino images");
-        foreach (var image in imagesToMigrate[Keys.BotGmKasinoImageRotation].JsonDeserialize<List<string>>() ?? [])
-        {
-            await db.Images.AddAsync(new ImageDbModel {Key = "gmkasino", LastSeen = DateTimeOffset.UtcNow, Url = image});
-        }
-        
-        logger.Info("Migrating gnkasino images");
-        foreach (var image in imagesToMigrate[Keys.BotGnKasinoImageRotation].JsonDeserialize<List<string>>() ?? [])
-        {
-            await db.Images.AddAsync(new ImageDbModel {Key = "gnkasino", LastSeen = DateTimeOffset.UtcNow, Url = image});
-        }
-
-        if (imagesToMigrate[Keys.WinmanjackImgUrl].Value != null)
-        {
-            logger.Info("Migrating winmanjack");
-            await db.Images.AddAsync(new ImageDbModel
-            {
-                Key = "winmanjack", LastSeen = DateTimeOffset.UtcNow,
-                Url = imagesToMigrate[Keys.WinmanjackImgUrl].Value!
-            });
-        }
-        
-        if (imagesToMigrate[Keys.BotPraygeImgUrl].Value != null)
-        {
-            logger.Info("Migrating prayge");
-            await db.Images.AddAsync(new ImageDbModel
-            {
-                Key = "prayge", LastSeen = DateTimeOffset.UtcNow,
-                Url = imagesToMigrate[Keys.BotPraygeImgUrl].Value!
-            });
-        }
-
-        if (imagesToMigrate[Keys.BotCrackpipeImgUrl].Value != null)
-        {
-            logger.Info("Migrating crackpipe");
-            await db.Images.AddAsync(new ImageDbModel
-            {
-                Key = "crackpipe", LastSeen = DateTimeOffset.UtcNow,
-                Url = imagesToMigrate[Keys.BotCrackpipeImgUrl].Value!
-            });
-        }
-        
-        logger.Info("Adding bassmanjack");
-        await db.Images.AddAsync(new ImageDbModel
-        {
-            Key = "bassmanjack", LastSeen = DateTimeOffset.UtcNow,
-            Url = "https://i.postimg.cc/SRstzMQt/boss-soy-koi.gif"
-        });
-        
-        logger.Info("Adding sent");
-        await db.Images.AddAsync(new ImageDbModel
-        {
-            Key = "sent", LastSeen = DateTimeOffset.UtcNow,
-            Url = "https://i.ibb.co/GHq7hb1/4373-g-N5-HEH2-Hkc.png"
-        });
-
-        logger.Info("Adding helpme");
-        await db.Images.AddAsync(new ImageDbModel
-        {
-            Key = "helpme", LastSeen = DateTimeOffset.UtcNow,
-            Url = "https://i.postimg.cc/fTw6tGWZ/ineedmoneydumbfuck.png"
-        });
-
-        await db.SaveChangesAsync();
-        logger.Info("Image migration complete");
     }
     
     public static List<BuiltInSettingsModel> BuiltInSettings =
@@ -322,17 +238,6 @@ public static class BuiltIn
                 "Password to use when authenticating with Kiwi Farms",
             Default = null,
             IsSecret = true,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
-            Key = Keys.KiwiFarmsChromiumPath,
-            Regex = @".+",
-            Description =
-                "Path to download the Chromium install used for the token grabber",
-            Default = "chromium_install",
-            IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
         },
@@ -650,16 +555,6 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.WinmanjackImgUrl,
-            Regex = ".+",
-            Description = "URL for the winmanjack image",
-            Default = "https://kiwifarms.st/attachments/winmanjack_bgr-png.6414050/",
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
             Key = Keys.BotDisconnectReplayLimit,
             Regex = @"\d+",
             Description = "Limit of messages which could not be sent while bot was disconnected to replay on connect",
@@ -690,26 +585,6 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.BotPraygeImgUrl,
-            Regex = ".+",
-            Description = "Image URL for the prayge command",
-            Default = "https://uploads.kiwifarms.st/data/attachments/5962/5962565-2485292e69a4ccc23505826f88ecdab1.jpg",
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
-            Key = Keys.BotCrackpipeImgUrl,
-            Regex = ".+",
-            Description = "Image URL for the crackpipe command",
-            Default = "https://kiwifarms.st/attachments/crack-smoke-gif.6449901/",
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
             Key = Keys.BotCleanStartTime,
             Regex = ".+",
             Description = "ISO8601 date of Bossman's sobriety",
@@ -734,16 +609,6 @@ public static class BuiltIn
             Regex = ".+",
             Description = "ISO8601 date of Bossman's next PO visit",
             Default = "2024-10-18T12:00:00-04:00",
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
-            Key = Keys.BotNextCourtHearing,
-            Regex = ".+",
-            Description = "ISO8601 date of Bossman's next court hearing",
-            Default = "2024-10-29T09:00:00-04:00",
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
@@ -948,7 +813,6 @@ public static class BuiltIn
         public static string KiwiFarmsDomain = "KiwiFarms.Domain";
         public static string KiwiFarmsUsername = "KiwiFarms.Username";
         public static string KiwiFarmsPassword = "KiwiFarms.Password";
-        public static string KiwiFarmsChromiumPath = "KiwiFarms.ChromiumPath";
         public static string TwitchBossmanJackId = "Twitch.BossmanJackId";
         public static string TwitchBossmanJackUsername = "Twitch.BossmanJackUsername";
         public static string KiwiFarmsSuppressChatMessages = "KiwiFarms.SuppressChatMessages";
@@ -979,16 +843,12 @@ public static class BuiltIn
         public static string JuiceLoserDivision = "Juice.LoserDivision";
         public static string CrackedZalgoFuckUpMode = "Cracked.ZalgoFuckUpMode";
         public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
-        public static string WinmanjackImgUrl = "Winmanjack.ImgUrl";
         public static string BotDisconnectReplayLimit = "Bot.DisconnectReplayLimit";
         public static string KiwiFarmsJoinFailLimit = "KiwiFarms.JoinFailLimit";
         public static string KickChannels = "Kick.Channels";
-        public static string BotPraygeImgUrl = "Bot.Prayge.ImgUrl";
-        public static string BotCrackpipeImgUrl = "Bot.Crackpipe.ImgUrl";
         public static string BotCleanStartTime = "Bot.Clean.StartTime";
         public static string BotRehabEndTime = "Bot.Rehab.EndTime";
         public static string BotPoNextVisit = "Bot.Po.NextVisit";
-        public static string BotNextCourtHearing = "Bot.Court.NextHearing";
         public static string BotJailStartTime = "Bot.Jail.StartTime";
         public static string BotCourtCalendar = "Bot.Court.Calendar";
         public static string HowlggEnabled = "Howlgg.Enabled";
