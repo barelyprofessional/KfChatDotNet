@@ -427,7 +427,7 @@ public class BotServices
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Jackpot bet has arrived");
-        if (!settings[BuiltIn.Keys.JackpotBmjUsernames].ToType<List<string>>().Contains(bet.User))
+        if (!settings[BuiltIn.Keys.JackpotBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.User))
         {
             return;
         }
