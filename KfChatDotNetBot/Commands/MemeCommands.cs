@@ -96,8 +96,15 @@ public class RehabCommand : ICommand
             await botInstance.SendChatMessageAsync("Austin's rehab end date was null", true);
             return;
         }
-        var timespan = DateTimeOffset.Parse(end.Value) - DateTimeOffset.UtcNow;
-        await botInstance.SendChatMessageAsync($"AustinGambles was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
+
+        var endDate = DateTimeOffset.Parse(end.Value);
+        var timespan = endDate - DateTimeOffset.UtcNow;
+        if (endDate > DateTimeOffset.UtcNow)
+        {
+            await botInstance.SendChatMessageAsync($"austingambles should finish rehab in {timespan.Humanize(precision:3)}", true);
+            return;
+        }
+        await botInstance.SendChatMessageAsync($"austingambles was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
     }
 }
 
