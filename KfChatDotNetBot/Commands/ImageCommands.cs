@@ -114,7 +114,7 @@ public class ListImageCommand : ICommand
         foreach (var image in images)
         {
             i++;
-            result += $"[br]{i}: {image.Url}";
+            result += $"[br]{i}: {image.Url} (Last seen {image.LastSeen:yyyy-MM-dd HH:mm:ss zz})";
         }
 
         await botInstance.SendChatMessagesAsync(result.FancySplitMessage(partSeparator: "[br]"),
