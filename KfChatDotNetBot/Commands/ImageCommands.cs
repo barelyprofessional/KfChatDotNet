@@ -1,4 +1,6 @@
 ﻿using System.Text.RegularExpressions;
+using Humanizer;
+using Humanizer.Localisation;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
@@ -114,7 +116,8 @@ public class ListImageCommand : ICommand
         foreach (var image in images)
         {
             i++;
-            result += $"[br]{i}: {image.Url} (Last seen {image.LastSeen:yyyy-MM-dd HH:mm:ss zz})";
+            var ts = DateTimeOffset.UtcNow - image.LastSeen;
+            result += $"[br]{i}: {image.Url} (Last seen {ts.TotalHours}h{ts.Minutes}m{ts.Seconds}s ago)";
         }
 
         await botInstance.SendChatMessagesAsync(result.FancySplitMessage(partSeparator: "[br]"),
