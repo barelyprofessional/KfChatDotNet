@@ -117,7 +117,7 @@ public class ListImageCommand : ICommand
         {
             i++;
             var ts = DateTimeOffset.UtcNow - image.LastSeen;
-            result += $"[br]{i}: {image.Url} (Last seen {ts.TotalHours}h{ts.Minutes}m{ts.Seconds}s ago)";
+            result += $"[br]{i}: {image.Url} (Last seen {ts.TotalHours:N0}h{ts.Minutes:N0}m{ts.Seconds:N0}s ago)";
         }
 
         await botInstance.SendChatMessagesAsync(result.FancySplitMessage(partSeparator: "[br]"),
