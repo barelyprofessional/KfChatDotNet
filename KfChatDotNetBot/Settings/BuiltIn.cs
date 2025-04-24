@@ -470,28 +470,6 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.BotGmKasinoImageRotation,
-            Regex = ".+",
-            Description = "Rotation of images for the !gmkasino command",
-            // It's a JSON array
-            Default = "[\"https://i.postimg.cc/QMzBRmH7/hiiiii.gif\"]",
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Array
-        },
-        new BuiltInSettingsModel
-        {
-            Key = Keys.BotGnKasinoImageRotation,
-            Regex = ".+",
-            Description = "Rotation of images for the !gnkasino command",
-            // It's a JSON array
-            Default = "[\"https://kiwifarms.st/attachments/sleepyjack-gif.5342620/\"]",
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Array
-        },
-        new BuiltInSettingsModel
-        {
             Key = Keys.TwitchShillRestreamOnCommercial,
             Regex = "(true|false)",
             Description = "Whether to shill the ad-free restream on commercial",
@@ -835,8 +813,6 @@ public static class BuiltIn
         public static string ChipsggBmjUserIds = "Chipsgg.BmjUserIds";
         public static string RestreamUrl = "RestreamUrl";
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
-        public static string BotGmKasinoImageRotation = "Bot.GmKasinoImageRotation";
-        public static string BotGnKasinoImageRotation = "Bot.GnKasino.ImageRotation";
         public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
         public static string KiwiFarmsInactivityTimeout = "KiwiFarms.InactivityTimeout";
         public static string KiwiFarmsPingInterval = "KiwiFarms.PingInterval";
