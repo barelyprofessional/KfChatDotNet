@@ -144,7 +144,8 @@ public class GetRandomImage : ICommand
         var images = db.Images.Where(i => i.Key == key);
         if (!await images.AnyAsync(ctx)) return;
         var settings = await Helpers.GetMultipleValues([
-            BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct
+            BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct,
+            BuiltIn.Keys.BotImageInvertedCubeUrl
         ]);
         var divideBy = settings[BuiltIn.Keys.BotImageRandomSliceDivideBy].ToType<int>();
         var limit = 1;
@@ -179,7 +180,10 @@ public class GetRandomImage : ICommand
             logger.Error($"Pig cube chat message ID was null even though status was {msg.Status}");
             return;
         }
-        var timeToDeletionMsec = new Random().Next(5 * 1000, 60 * 1000);
+
+        var timeToDeletionMsec = image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
+            ? 5000
+            : new Random().Next(5 * 1000, 60 * 1000);
         await Task.Delay(timeToDeletionMsec, ctx);
         await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
     }

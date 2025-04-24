@@ -783,6 +783,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImageInvertedCubeUrl,
+            Regex = ".+",
+            Description = "URL of the inverted pig cube for the special deletion logic",
+            Default = "https://kiwifarms.st/attachments/7226614-185d31e0b73350f2765b8051121a05d2-webp.7271720/",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -855,5 +865,6 @@ public static class BuiltIn
         public static string BotAlmanacInitialState = "Bot.Almanac.InitialState";
         public static string JuiceAllowedWhileStreaming = "Juice.AllowedWhileStreaming";
         public static string BotImagePigCubeSelfDestruct = "Bot.Image.PigCubeSelfDestruct";
+        public static string BotImageInvertedCubeUrl = "Bot.Image.InvertedCubeUrl";
     }
 }
