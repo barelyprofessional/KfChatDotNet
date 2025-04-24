@@ -1,11 +1,11 @@
 ﻿using System.Text.RegularExpressions;
-using Humanizer;
-using Humanizer.Localisation;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
+using NLog;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -133,16 +133,20 @@ public class GetRandomImage : ICommand
     ];
     public string? HelpText => "Get a random image";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public TimeSpan Timeout => TimeSpan.FromMinutes(10);
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
         var key = arguments["key"].Value.ToLower();
         var images = db.Images.Where(i => i.Key == key);
         if (!await images.AnyAsync(ctx)) return;
-        var divideBy = (await Helpers.GetValue(BuiltIn.Keys.BotImageRandomSliceDivideBy)).ToType<int>();
+        var settings = await Helpers.GetMultipleValues([
+            BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct
+        ]);
+        var divideBy = settings[BuiltIn.Keys.BotImageRandomSliceDivideBy].ToType<int>();
         var limit = 1;
         var count = await images.CountAsync(ctx);
         if (count > divideBy)
@@ -157,6 +161,26 @@ public class GetRandomImage : ICommand
         image.LastSeen = DateTimeOffset.UtcNow;
         db.Images.Update(image);
         await db.SaveChangesAsync(ctx);
-        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true);
+        var msg = await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true);
+        if (key != "pigcube" || !settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean()) return;
+        while (msg.Status is SentMessageTrackerStatus.WaitingForResponse or SentMessageTrackerStatus.ChatDisconnected)
+        {
+            await Task.Delay(500, ctx);
+        }
+
+        if (msg.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending)
+        {
+            logger.Error("Pig cube got lost");
+            return;
+        }
+
+        if (msg.ChatMessageId == null)
+        {
+            logger.Error($"Pig cube chat message ID was null even though status was {msg.Status}");
+            return;
+        }
+        var timeToDeletionMsec = new Random().Next(5 * 1000, 60 * 1000);
+        await Task.Delay(timeToDeletionMsec, ctx);
+        await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
     }
 }

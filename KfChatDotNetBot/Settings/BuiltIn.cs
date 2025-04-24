@@ -773,6 +773,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImagePigCubeSelfDestruct,
+            Regex = "(true|false)",
+            Description = "Whether the pigcube should self destruct after a random interval",
+            Default = "true",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
         }
     ];
     
@@ -844,5 +854,6 @@ public static class BuiltIn
         public static string BotAlmanacInterval = "Bot.Almanac.Interval";
         public static string BotAlmanacInitialState = "Bot.Almanac.InitialState";
         public static string JuiceAllowedWhileStreaming = "Juice.AllowedWhileStreaming";
+        public static string BotImagePigCubeSelfDestruct = "Bot.Image.PigCubeSelfDestruct";
     }
 }
