@@ -183,7 +183,8 @@ public class GetRandomImage : ICommand
 
         var timeToDeletionMsec = image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
             ? 5000
-            : new Random().Next(5 * 1000, 60 * 1000);
+            : new Random().Next(5 * 1000, 15 * 1000);
+        logger.Info($"Deleting pig cube in {timeToDeletionMsec}ms");
         await Task.Delay(timeToDeletionMsec, ctx);
         await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
     }
