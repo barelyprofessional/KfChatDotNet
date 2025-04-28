@@ -13,7 +13,9 @@ public class AddImageCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex(@"^admin image (?<key>\w+) add (?<url>.+)$"),
-        new Regex(@"^admin images (?<key>\w+) add (?<url>.+)$")
+        new Regex(@"^admin images (?<key>\w+) add (?<url>.+)$"),
+        new Regex(@"^admin image (?<key>\w+) add_nigger (?<url>.+)$"),
+        new Regex(@"^admin images (?<key>\w+) add_nigger (?<url>.+)$")
     ];
     public string? HelpText => "Add an image to the image rotation specified";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
@@ -27,6 +29,7 @@ public class AddImageCommand : ICommand
         if (imageKeys == null) throw new InvalidOperationException($"{BuiltIn.Keys.BotImageAcceptableKeys} was null");
         var key = arguments["key"].Value;
         var url = arguments["url"].Value;
+        var niggerMode = message.Message.Contains("add_nigger");
         if (!imageKeys.Contains(key))
         {
             await botInstance.SendChatMessageAsync(
@@ -34,7 +37,7 @@ public class AddImageCommand : ICommand
             return;
         }
 
-        if (await db.Images.AnyAsync(i => i.Key == key && i.Url == url, ctx))
+        if (!niggerMode && await db.Images.AnyAsync(i => i.Key == key && i.Url == url, ctx))
         {
             await botInstance.SendChatMessageAsync("This image already exists in the database with this key", true);
             return;
