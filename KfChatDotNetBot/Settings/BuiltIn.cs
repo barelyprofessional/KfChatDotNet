@@ -804,6 +804,36 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImagePigCubeSelfDestructMin,
+            Regex = @"\d+",
+            Description = "Min value for the Pig Cube self destruct Random.Next() in milliseconds",
+            Default = "5000",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImagePigCubeSelfDestructMax,
+            Regex = @"\d+",
+            Description = "Max value for the Pig Cube self destruct Random.Next() in milliseconds",
+            Default = "15000",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImageInvertedPigCubeSelfDestructDelay,
+            Regex = @"\d+",
+            Description = "Value in milliseconds for how long the bot should wait before self destructing the inverted pig cube",
+            Default = "5000",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -878,5 +908,8 @@ public static class BuiltIn
         public static string BotImagePigCubeSelfDestruct = "Bot.Image.PigCubeSelfDestruct";
         public static string BotImageInvertedCubeUrl = "Bot.Image.InvertedCubeUrl";
         public static string JuiceAutoDeleteMsgDelay = "Juice.AutoDeleteMsgDelay";
+        public static string BotImagePigCubeSelfDestructMin = "Bot.Image.PigCubeSelfDestructMin";
+        public static string BotImagePigCubeSelfDestructMax = "Bot.Image.PigCubeSelfDestructMax";
+        public static string BotImageInvertedPigCubeSelfDestructDelay = "Bot.Image.InvertedPigCubeSelfDestructDelay";
     }
 }
