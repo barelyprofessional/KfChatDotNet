@@ -51,7 +51,7 @@ public class JuiceCommand : ICommand
                 { Amount = amount, User = user, JuicedAt = DateTimeOffset.UtcNow }, ctx);
             await db.SaveChangesAsync(ctx);
             if (juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].Value == null) return;
-            var delay = int.Parse(juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].Value!);
+            var delay = juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].ToType<int>();
             if (delay <= 0) return;
             while (sentMsg.ChatMessageId == null)
             {
