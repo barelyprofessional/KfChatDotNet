@@ -108,7 +108,7 @@ public class RehabCommand : ICommand
             await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} should finish rehab in {timespan.Humanize(precision:3)}", true);
             return;
         }
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} left rehab {timespan.Humanize(precision:3)} ago", true);
     }
 }
 
