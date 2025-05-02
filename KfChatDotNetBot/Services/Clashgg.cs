@@ -93,7 +93,7 @@ public class Clashgg : IDisposable
 
             if (DateTime.Now - _lastBet <= _lastBetTolerance) continue;
             _logger.Error("Forcing a disconnect of Clash.gg so the connection can be rebuilt " +
-                          $"as there's been no gambling since {DateTime.Now:o}");
+                          $"as there's been no gambling since {_lastBet:o}");
             await _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closed due to lack of gamba");
         }
     }
