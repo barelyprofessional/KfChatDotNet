@@ -69,14 +69,16 @@ public class CleanCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var start = await Helpers.GetValue(BuiltIn.Keys.BotCleanStartTime);
+        var settings =
+            await Helpers.GetMultipleValues([BuiltIn.Keys.BotCleanStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
+        var start = settings[BuiltIn.Keys.BotCleanStartTime];
         if (start.Value == null)
         {
             await botInstance.SendChatMessageAsync("Austin's sobriety start date was null", true);
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"AustinGambles has been clean {timespan.Humanize(precision:5)}", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been clean {timespan.Humanize(precision:5)}", true);
     }
 }
 
@@ -90,7 +92,9 @@ public class RehabCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var end = await Helpers.GetValue(BuiltIn.Keys.BotRehabEndTime);
+        var settings =
+            await Helpers.GetMultipleValues([BuiltIn.Keys.BotRehabEndTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
+        var end = settings[BuiltIn.Keys.BotRehabEndTime];
         if (end.Value == null)
         {
             await botInstance.SendChatMessageAsync("Austin's rehab end date was null", true);
@@ -101,10 +105,10 @@ public class RehabCommand : ICommand
         var timespan = endDate - DateTimeOffset.UtcNow;
         if (endDate > DateTimeOffset.UtcNow)
         {
-            await botInstance.SendChatMessageAsync($"austingambles should finish rehab in {timespan.Humanize(precision:3)}", true);
+            await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} should finish rehab in {timespan.Humanize(precision:3)}", true);
             return;
         }
-        await botInstance.SendChatMessageAsync($"austingambles was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} was kicked out of rehab {timespan.Humanize(precision:3)} ago", true);
     }
 }
 
@@ -213,14 +217,15 @@ public class JailCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var start = await Helpers.GetValue(BuiltIn.Keys.BotJailStartTime);
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.BotJailStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
+        var start = settings[BuiltIn.Keys.BotJailStartTime];
         if (start.Value == null)
         {
             await botInstance.SendChatMessageAsync("He ain't in jail nigga", true);
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"AustinGambles has been in jail {timespan.Humanize(precision:5)}", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been in jail {timespan.Humanize(precision:5)}", true);
     }
 }
 
