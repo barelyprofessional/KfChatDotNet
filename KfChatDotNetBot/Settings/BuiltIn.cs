@@ -793,6 +793,17 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.JuiceAutoDeleteMsgDelay,
+            Regex = @"\d+",
+            Description = "Delay before deleting the !juice message in milliseconds, null or 0 to disable. " +
+                          "Don't set too high as the timeout for !juiceme is 60 seconds",
+            Default = "2500",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -866,5 +877,6 @@ public static class BuiltIn
         public static string JuiceAllowedWhileStreaming = "Juice.AllowedWhileStreaming";
         public static string BotImagePigCubeSelfDestruct = "Bot.Image.PigCubeSelfDestruct";
         public static string BotImageInvertedCubeUrl = "Bot.Image.InvertedCubeUrl";
+        public static string JuiceAutoDeleteMsgDelay = "Juice.AutoDeleteMsgDelay";
     }
 }

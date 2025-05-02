@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Humanizer;
 using Humanizer.Localisation;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -14,7 +15,7 @@ public class JuiceCommand : ICommand
     public string HelpText => "Get juice!";
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
@@ -24,7 +25,7 @@ public class JuiceCommand : ICommand
         var juicerSettings = await Helpers.GetMultipleValues([
             BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown, BuiltIn.Keys.JuiceLoserDivision,
             BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.JuiceAllowedWhileStreaming,
-            BuiltIn.Keys.TwitchBossmanJackUsername
+            BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.JuiceAutoDeleteMsgDelay
         ]);
         var cooldown = juicerSettings[BuiltIn.Keys.JuiceCooldown].ToType<int>();
         var amount = juicerSettings[BuiltIn.Keys.JuiceAmount].ToType<int>();
@@ -45,10 +46,21 @@ public class JuiceCommand : ICommand
         
         if (lastJuicer.Count == 0)
         {
-            await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
+            var sentMsg = await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
             await db.Juicers.AddAsync(new JuicerDbModel
                 { Amount = amount, User = user, JuicedAt = DateTimeOffset.UtcNow }, ctx);
             await db.SaveChangesAsync(ctx);
+            if (juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].Value == null) return;
+            var delay = int.Parse(juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].Value!);
+            if (delay <= 0) return;
+            while (sentMsg.ChatMessageId == null)
+            {
+                if (sentMsg.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending) return;
+                await Task.Delay(500, ctx);
+            }
+
+            await Task.Delay(delay, ctx);
+            await botInstance.KfClient.DeleteMessageAsync(sentMsg.ChatMessageId.Value);
             return;
         }
 
