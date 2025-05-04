@@ -29,6 +29,7 @@ public class BotServices
     private Rainbet _rainbet;
     private Chipsgg _chipsgg;
     private Clashgg _clashgg;
+    private BetBolt _betBolt;
     public AlmanacShill AlmanacShill;
     
     private Task? _websocketWatchdog;
@@ -74,7 +75,8 @@ public class BotServices
             BuildKick(),
             BuildTwitch(),
             BuildClashgg(),
-            BuildAlmanacShill()
+            BuildAlmanacShill(),
+            BuildBetBolt()
         ];
         try
         {
@@ -143,13 +145,27 @@ public class BotServices
     
     private async Task BuildJackpot()
     {
-        var proxy = Helpers.GetValue(BuiltIn.Keys.Proxy).Result.Value;
+        var proxy = (await Helpers.GetValue(BuiltIn.Keys.Proxy)).Value;
         _jackpot = new Jackpot(proxy, _cancellationToken);
         _jackpot.OnJackpotBet += OnJackpotBet;
         await _jackpot.StartWsClient();
         _logger.Info("Built Jackpot Websocket connection");
     }
     
+    private async Task BuildBetBolt()
+    {
+        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.BetBoltEnabled]);
+        if (!settings[BuiltIn.Keys.BetBoltEnabled].ToBoolean())
+        {
+            _logger.Debug("BetBolt is disabled");
+            return;
+        }
+        _betBolt = new BetBolt(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _betBolt.OnBetBoltBet += OnBetBoltBet;
+        await _betBolt.StartWsClient();
+        _logger.Info("Built BetBolt Websocket connection");
+    }
+
     private async Task BuildClashgg()
     {
         var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.ClashggEnabled]);
@@ -263,7 +279,10 @@ public class BotServices
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             if (_chatBot.InitialStartCooldown) continue;
-            var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled, BuiltIn.Keys.ClashggEnabled]);
+            var settings = await Helpers.GetMultipleValues([
+                BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
+                BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled
+            ]);
             try
             {
                 if (!_shuffle.IsConnected())
@@ -336,6 +355,14 @@ public class BotServices
                     _clashgg.Dispose();
                     _clashgg = null!;
                     await BuildClashgg();
+                }
+                
+                if (settings[BuiltIn.Keys.BetBoltEnabled].ToBoolean() && !_betBolt.IsConnected())
+                {
+                    _logger.Error("BetBolt died, recreating it");
+                    _betBolt.Dispose();
+                    _betBolt = null!;
+                    await BuildBetBolt();
                 }
             }
             catch (Exception e)
@@ -475,6 +502,26 @@ public class BotServices
         }
         _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which paid out " +
                                  $"[color={payoutColor}]{bet.Payout / 100.0:N2} {bet.Currency.Humanize()} Money[/color] ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
+    }
+    
+    private void OnBetBoltBet(object sender, BetBoltBetModel bet)
+    {
+        var settings = Helpers
+            .GetMultipleValues([
+                BuiltIn.Keys.BetBoltBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Trace("BetBolt bet has arrived");
+        if (!settings[BuiltIn.Keys.BetBoltBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.Username))
+        {
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING (on BetBolt)");
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        _chatBot.SendChatMessage($"🚨🚨 JEETBOLT BETTING 🚨🚨 {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just bet {bet.BetAmountFiat:C} ({bet.BetAmountCrypto:N2} {bet.Crypto}) and won " +
+                                 $"[color={payoutColor}]{bet.WinAmountFiat:C} ({bet.WinAmountCrypto:N2} {bet.Crypto})[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💰💰", true);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)

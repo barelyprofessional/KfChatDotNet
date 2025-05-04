@@ -834,6 +834,26 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BetBoltEnabled,
+            Regex = "(true|false)",
+            Description = "Whether to enable the BetBolt bet feed tracking",
+            Default = "true",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BetBoltBmjUsernames,
+            Regex = ".+",
+            Description = "Austin's usernames on BetBolt",
+            Default = "[\"AustinGambles\"]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         }
     ];
     
@@ -911,5 +931,7 @@ public static class BuiltIn
         public static string BotImagePigCubeSelfDestructMin = "Bot.Image.PigCubeSelfDestructMin";
         public static string BotImagePigCubeSelfDestructMax = "Bot.Image.PigCubeSelfDestructMax";
         public static string BotImageInvertedPigCubeSelfDestructDelay = "Bot.Image.InvertedPigCubeSelfDestructDelay";
+        public static string BetBoltEnabled = "BetBolt.Enabled";
+        public static string BetBoltBmjUsernames = "BetBolt.BmjUsernames";
     }
 }
