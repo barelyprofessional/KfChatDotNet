@@ -11,12 +11,12 @@ public class AlmanacShill(ChatBot kfChatBot) : IDisposable
     
     private async Task AlmanacShillTask()
     {
-        var interval = await Helpers.GetValue(BuiltIn.Keys.BotAlmanacInterval);
+        var interval = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacInterval);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Convert.ToInt32(interval.Value)));
         while (await timer.WaitForNextTickAsync(_almanacShillCts.Token))
         {
             _logger.Info("Time to shill the almanac in chat");
-            var text = await Helpers.GetValue(BuiltIn.Keys.BotAlmanacText);
+            var text = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacText);
             await kfChatBot.SendChatMessageAsync($":!: {text.Value}", true);
         }
     }

@@ -6,9 +6,9 @@ using NLog;
 
 namespace KfChatDotNetBot.Settings;
 
-public static class Helpers
+public static class SettingsProvider
 {
-    public static async Task<SettingValue> GetValue(string key, bool caseInsensitive = false, bool bypassCache = false)
+    public static async Task<Setting> GetValueAsync(string key, bool caseInsensitive = false, bool bypassCache = false)
     {
         var logger = LogManager.GetCurrentClassLogger();
         var cache = MemoryCache.Default;
@@ -17,7 +17,7 @@ public static class Helpers
             var cachedSetting = cache.Get(key) as SettingDbModel;
             var value = cachedSetting.Value;
             if (cachedSetting.Value == "null") value = null;
-            return new SettingValue(value, cachedSetting, true);
+            return new Setting(value, cachedSetting, true);
         }
         await using var db = new ApplicationDbContext();
         logger.Trace($"Retrieving value for {key}");
@@ -45,7 +45,7 @@ public static class Helpers
         if (setting.Value == "null")
         {
             logger.Debug($"{key}'s value is null so returning SettingValue(null)");
-            return new SettingValue(null, setting, false);
+            return new Setting(null, setting, false);
         }
 
         if (setting.IsSecret)
@@ -58,24 +58,24 @@ public static class Helpers
             logger.Info($"Cache Miss! Returning '{setting.Value}' for {key}");
 
         }
-        return new SettingValue(setting.Value, setting, false);
+        return new Setting(setting.Value, setting, false);
     }
 
-    public static async Task<Dictionary<string, SettingValue>> GetMultipleValues(string[] keys, bool caseInsensitive = false, bool bypassCache = false)
+    public static async Task<Dictionary<string, Setting>> GetMultipleValuesAsync(string[] keys, bool caseInsensitive = false, bool bypassCache = false)
     {
         var logger = LogManager.GetCurrentClassLogger();
         logger.Trace($"Getting values for keys {string.Join(", ", keys)}");
 
-        Dictionary<string, SettingValue> values = new Dictionary<string, SettingValue>();
+        var values = new Dictionary<string, Setting>();
         foreach (var key in keys)
         {
-            values.Add(key, await GetValue(key, caseInsensitive, bypassCache));
+            values.Add(key, await GetValueAsync(key, caseInsensitive, bypassCache));
         }
 
         return values;
     }
 
-    public static async Task SetValue(string key, object? value)
+    public static async Task SetValueAsync(string key, object? value)
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
@@ -107,28 +107,7 @@ public static class Helpers
         if (cache.Contains(key)) cache.Remove(key);
     }
 
-    public static async Task SetValueAsList<T>(string key, List<T> values, char separator = ',')
-    {
-        var logger = LogManager.GetCurrentClassLogger();
-        await using var db = new ApplicationDbContext();
-        List<string> stringValues = values.Select(val => (string)Convert.ChangeType(val, TypeCode.String)).ToList();
-        string joinedValue = string.Join(separator, stringValues);
-        logger.Debug($"Setting {key} to {joinedValue}");
-
-        var setting = await db.Settings.FirstOrDefaultAsync(s => s.Key == key);
-        if (setting == null)
-        {
-            logger.Debug($"{key} does not exist, throwing KeyNotFoundException()");
-            throw new KeyNotFoundException();
-        }
-
-        setting.Value = joinedValue;
-        await db.SaveChangesAsync();
-        var cache = MemoryCache.Default;
-        if (cache.Contains(key)) cache.Remove(key);
-    }
-
-    public static async Task SetValueAsJsonObject<T>(string key, T data)
+    public static async Task SetValueAsJsonObjectAsync<T>(string key, T data)
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
@@ -150,7 +129,7 @@ public static class Helpers
         if (cache.Contains(key)) cache.Remove(key);
     }
 
-    public static async Task SetValueAsBoolean(string key, bool value)
+    public static async Task SetValueAsBooleanAsync(string key, bool value)
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();

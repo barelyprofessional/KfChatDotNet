@@ -86,7 +86,7 @@ public class NewKickChannelCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var channels = (await Helpers.GetValue(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
+        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
         var channelId = Convert.ToInt32(arguments["channel_id"].Value);
         if (channels.Any(channel => channel.ChannelId == channelId))
         {
@@ -102,7 +102,7 @@ public class NewKickChannelCommand : ICommand
             ChannelSlug = arguments["slug"].Value
         });
         
-        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KickChannels, channels);
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KickChannels, channels);
         await botInstance.SendChatMessageAsync("Updated list of channels", true);
     }
 }
@@ -118,7 +118,7 @@ public class RemoveKickChannelCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var channels = (await Helpers.GetValue(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
+        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
         var channelId = Convert.ToInt32(arguments["channel_id"].Value);
         var channel = channels.FirstOrDefault(ch => ch.ChannelId == channelId);
         if (channel == null)
@@ -128,7 +128,7 @@ public class RemoveKickChannelCommand : ICommand
         }
         channels.Remove(channel);
         
-        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KickChannels, channels);
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KickChannels, channels);
         await botInstance.SendChatMessageAsync("Updated list of channels", true);
     }
 }
@@ -160,7 +160,7 @@ public class AddCourtHearingCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var hearings = (await Helpers.GetValue(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
+        var hearings = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
         if (hearings == null)
         {
             await botInstance.SendChatMessageAsync("Hearings list was null", true);
@@ -174,7 +174,7 @@ public class AddCourtHearingCommand : ICommand
         }
 
         hearings.Add(new CourtHearingModel {CaseNumber = caseNumber, Description = arguments["description"].Value, Time = date});
-        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotCourtCalendar, hearings);
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.BotCourtCalendar, hearings);
         await botInstance.SendChatMessageAsync("Updated list of hearings", true);
     }
 }
@@ -190,7 +190,7 @@ public class RemoveCourtHearingCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var hearings = (await Helpers.GetValue(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
+        var hearings = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
         if (hearings == null)
         {
             await botInstance.SendChatMessageAsync("Hearings list was null", true);
@@ -205,7 +205,7 @@ public class RemoveCourtHearingCommand : ICommand
         }
         
         hearings.RemoveAt(hearingIndex - 1);
-        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.BotCourtCalendar, hearings);
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.BotCourtCalendar, hearings);
         await botInstance.SendChatMessageAsync("Updated list of hearings", true);
     }
 }
@@ -340,7 +340,7 @@ public class SetAlmanacTextCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        await Helpers.SetValue(BuiltIn.Keys.BotAlmanacText, arguments["text"].Value);
+        await SettingsProvider.SetValueAsync(BuiltIn.Keys.BotAlmanacText, arguments["text"].Value);
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated text for the almanac shill", true);
     }
 }
@@ -364,7 +364,7 @@ public class SetAlmanacIntervalCommand : ICommand
             await botInstance.SendChatMessageAsync("Not going to let you use an interval below 300 seconds", true);
             return;
         }
-        await Helpers.SetValue(BuiltIn.Keys.BotAlmanacInterval, arguments["interval"].Value);
+        await SettingsProvider.SetValueAsync(BuiltIn.Keys.BotAlmanacInterval, arguments["interval"].Value);
         await botInstance.BotServices.AlmanacShill.StopShillTaskAsync();
         botInstance.BotServices.AlmanacShill.StartShillTask();
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated interval and restarted the shill task", true);

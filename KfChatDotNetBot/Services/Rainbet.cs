@@ -36,7 +36,7 @@ public class Rainbet : IDisposable
         using var timer = new PeriodicTimer(_gameHistoryInterval);
         while (await timer.WaitForNextTickAsync(_gameHistoryCts.Token))
         {
-            var enabled = await Helpers.GetValue(BuiltIn.Keys.RainbetEnabled);
+            var enabled = await SettingsProvider.GetValueAsync(BuiltIn.Keys.RainbetEnabled);
             if (!enabled.ToBoolean())
             {
                 _logger.Debug("Rainbet is disabled");
@@ -60,7 +60,7 @@ public class Rainbet : IDisposable
     private async Task RefreshCookies()
     {
         var settings =
-            await Helpers.GetMultipleValues([BuiltIn.Keys.FlareSolverrApiUrl, BuiltIn.Keys.FlareSolverrProxy]);
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.FlareSolverrApiUrl, BuiltIn.Keys.FlareSolverrProxy]);
         var flareSolverrUrl = settings[BuiltIn.Keys.FlareSolverrApiUrl];
         var flareSolverrProxy = settings[BuiltIn.Keys.FlareSolverrProxy];
         var handler = new ClearanceHandler(flareSolverrUrl.Value)
@@ -95,7 +95,7 @@ public class Rainbet : IDisposable
             _logger.Info("Retrieving cookies for Rainbet as they have not been retrieved yet");
             await RefreshCookies();
         }
-        var flareSolverrProxy = await Helpers.GetValue(BuiltIn.Keys.FlareSolverrProxy);
+        var flareSolverrProxy = await SettingsProvider.GetValueAsync(BuiltIn.Keys.FlareSolverrProxy);
         var gameHistoryUrl = "https://services.rainbet.com/v1/game-history";
         var jsonBody = new Dictionary<string, int> { {"take", take} };
         var postData = JsonContent.Create(jsonBody);

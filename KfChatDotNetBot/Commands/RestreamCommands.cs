@@ -19,7 +19,7 @@ public class GetRestreamCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var url = await Helpers.GetValue(BuiltIn.Keys.RestreamUrl);
+        var url = await SettingsProvider.GetValueAsync(BuiltIn.Keys.RestreamUrl);
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: {url.Value}", true);
     }
 }
@@ -37,7 +37,7 @@ public class SetRestreamCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        await Helpers.SetValue(BuiltIn.Keys.RestreamUrl, arguments["url"].Value);
+        await SettingsProvider.SetValueAsync(BuiltIn.Keys.RestreamUrl, arguments["url"].Value);
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated URL", true);
     }
 }
@@ -55,7 +55,7 @@ public class SetShillRestreamCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        await Helpers.SetValue(BuiltIn.Keys.TwitchCommercialRestreamShillMessage, arguments["url"].Value);
+        await SettingsProvider.SetValueAsync(BuiltIn.Keys.TwitchCommercialRestreamShillMessage, arguments["url"].Value);
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated URL for the commercial break restream shill", true);
     }
 }
@@ -73,7 +73,7 @@ public class SelfPromoCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var channels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        var channels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
         var channel = channels.FirstOrDefault(ch => ch.ForumId == user.KfId);
         if (channel == null)
         {
@@ -98,7 +98,7 @@ public class GetRestreamPlainCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var url = await Helpers.GetValue(BuiltIn.Keys.RestreamUrl);
+        var url = await SettingsProvider.GetValueAsync(BuiltIn.Keys.RestreamUrl);
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: [plain]{url.Value}", true);
     }
 }

@@ -19,7 +19,7 @@ public class HowlggStatsCommand : ICommand
     {
         var window = Convert.ToInt32(arguments["window"].Value);
         var start = DateTimeOffset.UtcNow.AddHours(-window);
-        var division = (await Helpers.GetValue(BuiltIn.Keys.HowlggDivisionAmount)).ToType<float>();
+        var division = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.HowlggDivisionAmount)).ToType<float>();
         await using var db = new ApplicationDbContext();
         // EF SQLite doesn't support filtering on dates :(
         var bets = (await db.HowlggBets.ToListAsync(ctx)).Where(b => b.Date.UtcDateTime > start).ToList();
@@ -44,7 +44,7 @@ public class HowlggRecentBetCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var settings = await Helpers.GetMultipleValues([
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor, BuiltIn.Keys.HowlggDivisionAmount
         ]);
         var division = settings[BuiltIn.Keys.HowlggDivisionAmount].ToType<float>();

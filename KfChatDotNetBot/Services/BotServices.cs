@@ -51,7 +51,7 @@ public class BotServices
         _chatBot = botInstance;
         _cancellationToken = ctx;
         TemporarilyBypassGambaSeshForDiscord =
-            Helpers.GetValue(BuiltIn.Keys.DiscordTemporarilyBypassGambaSeshInitialValue).Result.ToBoolean();
+            SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordTemporarilyBypassGambaSeshInitialValue).Result.ToBoolean();
         
         _logger.Info("Bot services ready to initialize!");
     }
@@ -98,14 +98,14 @@ public class BotServices
     private async Task BuildShuffle()
     {
         _logger.Debug("Building Shuffle");
-        _shuffle = new Shuffle((await Helpers.GetValue(BuiltIn.Keys.Proxy)).Value, _cancellationToken);
+        _shuffle = new Shuffle((await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy)).Value, _cancellationToken);
         _shuffle.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
         await _shuffle.StartWsClient();
     }
 
     private async Task BuildDiscord()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.DiscordToken, BuiltIn.Keys.Proxy]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.DiscordToken, BuiltIn.Keys.Proxy]);
         _logger.Debug("Building Discord");
         if (settings[BuiltIn.Keys.DiscordToken].Value == null)
         {
@@ -131,7 +131,7 @@ public class BotServices
     
     private async Task BuildChipsgg()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.ChipsggEnabled]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.ChipsggEnabled]);
         if (!settings[BuiltIn.Keys.ChipsggEnabled].ToBoolean())
         {
             _logger.Debug("Chips.gg is disabled");
@@ -145,7 +145,7 @@ public class BotServices
     
     private async Task BuildJackpot()
     {
-        var proxy = (await Helpers.GetValue(BuiltIn.Keys.Proxy)).Value;
+        var proxy = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy)).Value;
         _jackpot = new Jackpot(proxy, _cancellationToken);
         _jackpot.OnJackpotBet += OnJackpotBet;
         await _jackpot.StartWsClient();
@@ -154,7 +154,7 @@ public class BotServices
     
     private async Task BuildBetBolt()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.BetBoltEnabled]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.BetBoltEnabled]);
         if (!settings[BuiltIn.Keys.BetBoltEnabled].ToBoolean())
         {
             _logger.Debug("BetBolt is disabled");
@@ -168,7 +168,7 @@ public class BotServices
 
     private async Task BuildClashgg()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.ClashggEnabled]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.ClashggEnabled]);
         if (!settings[BuiltIn.Keys.ClashggEnabled].ToBoolean())
         {
             _logger.Debug("Clash.gg is disabled");
@@ -182,7 +182,7 @@ public class BotServices
     
     private async Task BuildTwitch()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]);
         if (settings[BuiltIn.Keys.TwitchBossmanJackId].Value == null)
         {
             _twitchDisabled = true;
@@ -199,7 +199,7 @@ public class BotServices
 
     private async Task BuildHowlgg()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.Proxy, BuiltIn.Keys.HowlggEnabled]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.HowlggEnabled]);
         if (!settings[BuiltIn.Keys.HowlggEnabled].ToBoolean())
         {
             _logger.Debug("Howlgg is disabled");
@@ -213,9 +213,9 @@ public class BotServices
 
     private async Task BuildKick()
     {
-        var settings = await Helpers.GetMultipleValues([
-            BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout, BuiltIn.Keys.KickEnabled,
-            BuiltIn.Keys.PusherChannels, BuiltIn.Keys.KickChannels
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout,
+            BuiltIn.Keys.KickEnabled, BuiltIn.Keys.KickChannels
         ]);
         KickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
             settings[BuiltIn.Keys.Proxy].Value, settings[BuiltIn.Keys.PusherReconnectTimeout].ToType<int>());
@@ -229,11 +229,6 @@ public class BotServices
         if (settings[BuiltIn.Keys.KickEnabled].ToBoolean())
         {
             await KickClient.StartWsClient();
-            // var pusherChannels = settings[BuiltIn.Keys.PusherChannels].ToList();
-            // foreach (var channel in pusherChannels)
-            // {
-            //     _kickClient.SendPusherSubscribe(channel);
-            // }
             var kickChannels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
             if (kickChannels == null) return;
             foreach (var channel in kickChannels)
@@ -245,7 +240,7 @@ public class BotServices
     
     private async Task BuildTwitchChat()
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.Proxy]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.Proxy]);
         _logger.Debug("Building Twitch Chat");
         if (settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value == null)
         {
@@ -263,7 +258,7 @@ public class BotServices
     private async Task BuildAlmanacShill()
     {
         AlmanacShill = new AlmanacShill(_chatBot);
-        var initialState = await Helpers.GetValue(BuiltIn.Keys.BotAlmanacInitialState);
+        var initialState = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacInitialState);
         if (!initialState.ToBoolean())
         {
             _logger.Info("Built the almanac service but not enabling as initial state is false");
@@ -279,7 +274,7 @@ public class BotServices
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             if (_chatBot.InitialStartCooldown) continue;
-            var settings = await Helpers.GetMultipleValues([
+            var settings = await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
                 BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled
             ]);
@@ -379,15 +374,15 @@ public class BotServices
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             if (_howlgg == null || !_howlgg.IsConnected()) continue;
-            var bmjUserId = await Helpers.GetValue(BuiltIn.Keys.HowlggBmjUserId);
+            var bmjUserId = await SettingsProvider.GetValueAsync(BuiltIn.Keys.HowlggBmjUserId);
             _howlgg.GetUserInfo(bmjUserId.Value!);
         }
     }
     
     private void OnRainbetBet(object sender, List<RainbetBetHistoryModel> bets)
     {
-        var settings = Helpers
-            .GetMultipleValues([
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.RainbetBmjPublicIds, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
@@ -448,8 +443,8 @@ public class BotServices
 
     private void OnJackpotBet(object sender, JackpotWsBetPayloadModel bet)
     {
-        var settings = Helpers
-            .GetMultipleValues([
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.JackpotBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
@@ -470,8 +465,8 @@ public class BotServices
     
     private void OnClashggBet(object sender, ClashggBetModel bet, JsonElement jsonElement)
     {
-        var settings = Helpers
-            .GetMultipleValues([
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.ClashggBmjIds, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
@@ -506,8 +501,8 @@ public class BotServices
     
     private void OnBetBoltBet(object sender, BetBoltBetModel bet)
     {
-        var settings = Helpers
-            .GetMultipleValues([
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.BetBoltBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
@@ -565,7 +560,7 @@ public class BotServices
         _logger.Info($"Received channel deletion event of type {channel.Type} with name {channel.Name}");
         if (channel.Type != DiscordChannelType.GuildText && channel.Type != DiscordChannelType.GuildVoice &&
             channel.Type != DiscordChannelType.GuildStageVoice) return;
-        var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
+        var discordIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
         _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] Discord {channel.Type.Humanize()} channel '{channelName}' was deleted 🚨🚨", true);
     }
@@ -575,7 +570,7 @@ public class BotServices
         _logger.Info($"Received channel creation event of type {channel.Type} with name {channel.Name}");
         if (channel.Type != DiscordChannelType.GuildText && channel.Type != DiscordChannelType.GuildVoice &&
             channel.Type != DiscordChannelType.GuildStageVoice) return;
-        var discordIcon = Helpers.GetValue(BuiltIn.Keys.DiscordIcon).Result;
+        var discordIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
         _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] New Discord {channel.Type.Humanize()} channel created: {channelName} 🚨🚨", true);
     }
@@ -587,13 +582,13 @@ public class BotServices
             return;
         }
         // Not caching this value as it won't harm it to have to look this up in even the worst spergout sesh
-        var twitchIcon = Helpers.GetValue(BuiltIn.Keys.TwitchIcon).Result.Value;
+        var twitchIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchIcon).Result.Value;
         _chatBot.SendChatMessage($"[img]{twitchIcon}[/img] {nick}: {message.TrimEnd('\r')}", true);
     }
 
     private void DiscordOnPresenceUpdated(object sender, DiscordPresenceUpdateModel presence)
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
         if (presence.User.Id != settings[BuiltIn.Keys.DiscordBmjId].Value)
         {
             return;
@@ -610,7 +605,7 @@ public class BotServices
 
     private void DiscordOnMessageReceived(object sender, DiscordMessageModel message)
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
         if (message.Author.Id != settings[BuiltIn.Keys.DiscordBmjId].Value)
         {
             return;
@@ -646,8 +641,8 @@ public class BotServices
 
     private void ShuffleOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet)
     {
-        var settings = Helpers
-            .GetMultipleValues([
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
@@ -668,7 +663,7 @@ public class BotServices
     private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.BotToyStoryImage]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.BotToyStoryImage]).Result;
 
         if (isLive)
         {
@@ -687,8 +682,8 @@ public class BotServices
     
     private void OnTwitchStreamCommercial(object sender, int channelId, int length, bool scheduled)
     {
-        var settings = Helpers
-            .GetMultipleValues([BuiltIn.Keys.TwitchShillRestreamOnCommercial, BuiltIn.Keys.TwitchCommercialRestreamShillMessage, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([BuiltIn.Keys.TwitchShillRestreamOnCommercial, BuiltIn.Keys.TwitchCommercialRestreamShillMessage, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
         if (!settings[BuiltIn.Keys.TwitchShillRestreamOnCommercial].ToBoolean())
         {
             _logger.Debug("Not shilling as it's disabled");
@@ -703,19 +698,19 @@ public class BotServices
     
     private void OnTwitchStreamTosStrike(object sender, int channelId)
     {
-        var username = Helpers.GetValue(BuiltIn.Keys.TwitchBossmanJackUsername).Result;
+        var username = SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchBossmanJackUsername).Result;
         _chatBot.SendChatMessage($":!::!: {username.Value} was just banned from Twitch! :!::!:", true);
     }
     
     private void OnChipsggRecentBet(object sender, ChipsggBetModel bet)
     {
-        var settings = Helpers
-            .GetMultipleValues([
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.ChipsggBmjUserIds, BuiltIn.Keys.TwitchBossmanJackUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Chips.gg bet has arrived");
-        if (!settings[BuiltIn.Keys.ChipsggBmjUserIds].ToList().Contains(bet.UserId))
+        if (!settings[BuiltIn.Keys.ChipsggBmjUserIds].JsonDeserialize<List<string>>()!.Contains(bet.UserId))
         {
             return;
         }
@@ -742,7 +737,7 @@ public class BotServices
     private void OnPusherWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
         _logger.Error($"Pusher reconnected due to {reconnectionInfo.Type}");
-        var kickChannels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        var kickChannels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
         if (kickChannels == null) return;
         foreach (var channel in kickChannels)
         {
@@ -761,7 +756,7 @@ public class BotServices
         _logger.Debug($"BB Code Translation: {e.Content.TranslateKickEmotes()}");
 
         if (e.Sender.Slug != "bossmanjack") return;
-        var kickIcon = Helpers.GetValue(BuiltIn.Keys.KickIcon).Result;
+        var kickIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickIcon).Result;
         
         _logger.Debug("Message from BossmanJack");
         _chatBot.SendChatMessage($"[img]{kickIcon.Value}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
@@ -770,7 +765,7 @@ public class BotServices
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
         if (e == null) return;
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotChrisDjLiveImage]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotChrisDjLiveImage]).Result;
         var channels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
         if (channels == null)
         {
@@ -806,7 +801,7 @@ public class BotServices
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
     {
         if (e == null) return;
-        var channels = Helpers.GetValue(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
+        var channels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
         if (channels == null)
         {
             _logger.Error("Caught null when grabbing Kick channels");

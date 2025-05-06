@@ -21,7 +21,7 @@ public class KfTokenService
         _kiwiFlare = new KiwiFlare(kfDomain, proxy, cancellationToken);
         _proxy = proxy;
         _kfDomain = kfDomain;
-        var cachedCookies = Helpers.GetValue(BuiltIn.Keys.KiwiFarmsCookies).Result
+        var cachedCookies = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsCookies).Result
             .JsonDeserialize<Dictionary<string, string>>();
         // This shouldn't happen as the setting's default value is {}, but I'm just doing it to shut the IDE up
         if (cachedCookies == null) return;
@@ -161,7 +161,7 @@ public class KfTokenService
     {
         _logger.Debug("Saving cookies");
         var cookiesToSave = _cookies.GetAllCookies().ToDictionary(cookie => cookie.Name, cookie => cookie.Value);
-        await Helpers.SetValueAsJsonObject(BuiltIn.Keys.KiwiFarmsCookies, cookiesToSave);
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KiwiFarmsCookies, cookiesToSave);
     }
 
     public void WipeCookies()

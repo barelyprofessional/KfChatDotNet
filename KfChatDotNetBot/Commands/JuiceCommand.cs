@@ -22,7 +22,7 @@ public class JuiceCommand : ICommand
         // Have to attach the entity because it is coming from another DB context
         // https://stackoverflow.com/questions/52718652/ef-core-sqlite-sqlite-error-19-unique-constraint-failed
         db.Users.Attach(user);
-        var juicerSettings = await Helpers.GetMultipleValues([
+        var juicerSettings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown, BuiltIn.Keys.JuiceLoserDivision,
             BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.JuiceAllowedWhileStreaming,
             BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.JuiceAutoDeleteMsgDelay

@@ -49,7 +49,7 @@ public class CrackedCommand : ICommand
     {
         var logger = LogManager.GetCurrentClassLogger();
         var msg = arguments["msg"].Value.TrimStart('/');
-        var settings = await Helpers.GetMultipleValues([
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.CrackedZalgoFuckUpMode, BuiltIn.Keys.CrackedZalgoFuckUpPosition
         ]);
         var zalgo = new ZalgoString(msg, (FuckUpMode)settings[BuiltIn.Keys.CrackedZalgoFuckUpMode].ToType<int>(),
@@ -70,7 +70,7 @@ public class CleanCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings =
-            await Helpers.GetMultipleValues([BuiltIn.Keys.BotCleanStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.BotCleanStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
         var start = settings[BuiltIn.Keys.BotCleanStartTime];
         if (start.Value == null)
         {
@@ -93,7 +93,7 @@ public class RehabCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings =
-            await Helpers.GetMultipleValues([BuiltIn.Keys.BotRehabEndTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.BotRehabEndTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
         var end = settings[BuiltIn.Keys.BotRehabEndTime];
         if (end.Value == null)
         {
@@ -123,7 +123,7 @@ public class NextPoVisitCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(120);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var time = await Helpers.GetValue(BuiltIn.Keys.BotPoNextVisit);
+        var time = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotPoNextVisit);
         if (time.Value == null)
         {
             await botInstance.SendChatMessageAsync("There is no next PO visit :(", true);
@@ -162,7 +162,7 @@ public class NextCourtHearingCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(120);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var hearings = (await Helpers.GetValue(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
+        var hearings = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
         if (hearings == null)
         {
             await botInstance.SendChatMessageAsync("Caught a null when grabbing hearings", true);
@@ -217,7 +217,7 @@ public class JailCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var settings = await Helpers.GetMultipleValues([BuiltIn.Keys.BotJailStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.BotJailStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
         var start = settings[BuiltIn.Keys.BotJailStartTime];
         if (start.Value == null)
         {
@@ -248,7 +248,7 @@ public class LastStreamCommand : ICommand
         var timespan = DateTimeOffset.UtcNow - latest.Time;
         var agt = TimeZoneInfo.ConvertTime(latest.Time, TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"));
         // The table doesn't contain the name of the person so we'll just have to assume it's his Twitch username
-        var username = await Helpers.GetValue(BuiltIn.Keys.TwitchBossmanJackUsername);
+        var username = await SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchBossmanJackUsername);
         await botInstance.SendChatMessageAsync($"{username.Value} last streamed on Twitch approximately {timespan.Humanize(precision: 2, minUnit: TimeUnit.Minute, maxUnit: TimeUnit.Hour)} ago at {agt:dddd h:mm tt} AGT", true);
     }
 }
@@ -263,7 +263,7 @@ public class AlmanacCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var text = await Helpers.GetValue(BuiltIn.Keys.BotAlmanacText);
+        var text = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacText);
         if (message.MessageRaw.Contains("almanac plain"))
         {
             await botInstance.SendChatMessageAsync($"@{user.KfUsername}, [plain]{text.Value}", true);

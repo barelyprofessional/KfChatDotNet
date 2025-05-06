@@ -39,7 +39,7 @@ public class ChatBot
     {
         _logger.Info("Bot starting!");
 
-        var settings = Helpers.GetMultipleValues([
+        var settings = SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
             BuiltIn.Keys.Proxy, BuiltIn.Keys.KiwiFarmsWsReconnectTimeout]).Result;
 
@@ -86,7 +86,7 @@ public class ChatBot
 
     private void OnFailedToJoinRoom(object sender, string message)
     {
-        var failureLimit = Helpers.GetValue(BuiltIn.Keys.KiwiFarmsJoinFailLimit).Result.ToType<int>();
+        var failureLimit = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsJoinFailLimit).Result.ToType<int>();
         _joinFailures++;
         _logger.Error($"Couldn't join the room, attempt {_joinFailures}. KF returned: {message}");
         _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
@@ -108,7 +108,7 @@ public class ChatBot
 
     private async Task KfPingTask()
     {
-        var interval = (await Helpers.GetValue(BuiltIn.Keys.KiwiFarmsPingInterval)).ToType<int>();
+        var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsPingInterval)).ToType<int>();
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
@@ -123,7 +123,7 @@ public class ChatBot
             }
             var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
             _logger.Debug($"Last KF event was {inactivityTime:g} ago");
-            var inactivityTimeout = (await Helpers.GetValue(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
+            var inactivityTimeout = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
             if (inactivityTime.TotalSeconds > inactivityTimeout)
             {
                 // Yeah, super dodgy
@@ -145,7 +145,7 @@ public class ChatBot
         }
 
         var settings =
-            await Helpers.GetMultipleValues([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
         await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
             settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
         _logger.Info("Successfully logged in");
@@ -155,7 +155,7 @@ public class ChatBot
     {
         // Reset value to 0 as we've now successfully joined
         if (_joinFailures > 0) _joinFailures = 0;
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshDetectEnabled,
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshDetectEnabled,
                 BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit])
             .Result;
         // Send messages if there are any to replay (Assuming we DC'd, and it's now the message flood)
@@ -255,8 +255,8 @@ public class ChatBot
     // https://github.com/jaw-sh/ruforo/blob/master/src/web/chat/connection.rs#L226
     public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023)
     {
-        var settings = await Helpers
-            .GetMultipleValues([
+        var settings = await SettingsProvider
+            .GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled
             ]);
         var reference = Guid.NewGuid().ToString();
@@ -357,7 +357,7 @@ public class ChatBot
     
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.BotKeesSeen])
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.BotKeesSeen])
             .Result;
         _logger.Debug($"Received {users.Count} user join events");
         using var db = new ApplicationDbContext();
@@ -373,7 +373,7 @@ public class ChatBot
             {
                 _logger.Info("Kees has joined!");
                 SendChatMessage($":!: :!: {user.Username} has appeared! :!: :!:", true);
-                Helpers.SetValueAsBoolean(BuiltIn.Keys.BotKeesSeen, true).Wait(_cancellationToken);
+                SettingsProvider.SetValueAsBooleanAsync(BuiltIn.Keys.BotKeesSeen, true).Wait(_cancellationToken);
             }
             _logger.Info($"{user.Username} joined!");
 
@@ -402,7 +402,7 @@ public class ChatBot
 
     private void OnUsersParted(object sender, List<int> userIds)
     {
-        var settings = Helpers.GetMultipleValues([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
         if (userIds.Contains(settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>()) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
         {
@@ -453,7 +453,7 @@ public class ChatBot
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
-        var roomId = Helpers.GetValue(BuiltIn.Keys.KiwiFarmsRoomId).Result.ToType<int>();
+        var roomId = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsRoomId).Result.ToType<int>();
         _logger.Error($"Sneedchat reconnected due to {reconnectionInfo.Type}");
         _logger.Info("Resetting GambaSesh presence so it can resync if he crashed while the bot was DC'd");
         GambaSeshPresent = false;

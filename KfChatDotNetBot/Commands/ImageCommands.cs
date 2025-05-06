@@ -25,7 +25,7 @@ public class AddImageCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var imageKeys = (await Helpers.GetValue(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
+        var imageKeys = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
         if (imageKeys == null) throw new InvalidOperationException($"{BuiltIn.Keys.BotImageAcceptableKeys} was null");
         var key = arguments["key"].Value;
         var url = arguments["url"].Value;
@@ -65,7 +65,7 @@ public class RemoveImageCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var imageKeys = (await Helpers.GetValue(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
+        var imageKeys = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
         if (imageKeys == null) throw new InvalidOperationException($"{BuiltIn.Keys.BotImageAcceptableKeys} was null");
         var key = arguments["key"].Value;
         var url = arguments["url"].Value;
@@ -103,7 +103,7 @@ public class ListImageCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var imageKeys = (await Helpers.GetValue(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
+        var imageKeys = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
         if (imageKeys == null) throw new InvalidOperationException($"{BuiltIn.Keys.BotImageAcceptableKeys} was null");
         var key = arguments["key"].Value;
         if (!imageKeys.Contains(key))
@@ -146,7 +146,7 @@ public class GetRandomImage : ICommand
         var key = arguments["key"].Value.ToLower();
         var images = db.Images.Where(i => i.Key == key);
         if (!await images.AnyAsync(ctx)) return;
-        var settings = await Helpers.GetMultipleValues([
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct,
             BuiltIn.Keys.BotImageInvertedCubeUrl, BuiltIn.Keys.BotImagePigCubeSelfDestructMin,
             BuiltIn.Keys.BotImagePigCubeSelfDestructMax, BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay

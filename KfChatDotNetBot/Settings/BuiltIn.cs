@@ -69,31 +69,45 @@ public static class BuiltIn
             return;
         }
 
-        await Helpers.SetValue(Keys.PusherEndpoint, oldConfig.PusherEndpoint.ToString());
-        await Helpers.SetValue(Keys.KiwiFarmsWsEndpoint, oldConfig.KfWsEndpoint.ToString());
-        await Helpers.SetValueAsList(Keys.PusherChannels, oldConfig.PusherChannels);
-        await Helpers.SetValue(Keys.KiwiFarmsRoomId, oldConfig.KfChatRoomId);
-        await Helpers.SetValue(Keys.Proxy, oldConfig.Proxy);
-        await Helpers.SetValue(Keys.KiwiFarmsWsReconnectTimeout, oldConfig.KfReconnectTimeout);
-        await Helpers.SetValue(Keys.PusherReconnectTimeout, oldConfig.PusherReconnectTimeout);
-        await Helpers.SetValueAsBoolean(Keys.GambaSeshDetectEnabled, oldConfig.EnableGambaSeshDetect);
-        await Helpers.SetValue(Keys.GambaSeshUserId, oldConfig.GambaSeshUserId);
-        await Helpers.SetValue(Keys.KickIcon, oldConfig.KickIcon);
-        await Helpers.SetValue(Keys.KiwiFarmsDomain, oldConfig.KfDomain);
-        await Helpers.SetValue(Keys.KiwiFarmsUsername, oldConfig.KfUsername);
-        await Helpers.SetValue(Keys.KiwiFarmsPassword, oldConfig.KfPassword);
-        await Helpers.SetValue(Keys.TwitchBossmanJackId, oldConfig.BossmanJackTwitchId);
-        await Helpers.SetValue(Keys.TwitchBossmanJackUsername, oldConfig.BossmanJackTwitchUsername);
-        await Helpers.SetValueAsBoolean(Keys.KiwiFarmsSuppressChatMessages, oldConfig.SuppressChatMessages);
-        await Helpers.SetValue(Keys.DiscordToken, oldConfig.DiscordToken);
-        await Helpers.SetValue(Keys.DiscordBmjId, oldConfig.DiscordBmjId);
+        await SettingsProvider.SetValueAsync(Keys.PusherEndpoint, oldConfig.PusherEndpoint.ToString());
+        await SettingsProvider.SetValueAsync(Keys.KiwiFarmsWsEndpoint, oldConfig.KfWsEndpoint.ToString());
+        await SettingsProvider.SetValueAsync(Keys.KiwiFarmsRoomId, oldConfig.KfChatRoomId);
+        await SettingsProvider.SetValueAsync(Keys.Proxy, oldConfig.Proxy);
+        await SettingsProvider.SetValueAsync(Keys.KiwiFarmsWsReconnectTimeout, oldConfig.KfReconnectTimeout);
+        await SettingsProvider.SetValueAsync(Keys.PusherReconnectTimeout, oldConfig.PusherReconnectTimeout);
+        await SettingsProvider.SetValueAsBooleanAsync(Keys.GambaSeshDetectEnabled, oldConfig.EnableGambaSeshDetect);
+        await SettingsProvider.SetValueAsync(Keys.GambaSeshUserId, oldConfig.GambaSeshUserId);
+        await SettingsProvider.SetValueAsync(Keys.KickIcon, oldConfig.KickIcon);
+        await SettingsProvider.SetValueAsync(Keys.KiwiFarmsDomain, oldConfig.KfDomain);
+        await SettingsProvider.SetValueAsync(Keys.KiwiFarmsUsername, oldConfig.KfUsername);
+        await SettingsProvider.SetValueAsync(Keys.KiwiFarmsPassword, oldConfig.KfPassword);
+        await SettingsProvider.SetValueAsync(Keys.TwitchBossmanJackId, oldConfig.BossmanJackTwitchId);
+        await SettingsProvider.SetValueAsync(Keys.TwitchBossmanJackUsername, oldConfig.BossmanJackTwitchUsername);
+        await SettingsProvider.SetValueAsBooleanAsync(Keys.KiwiFarmsSuppressChatMessages, oldConfig.SuppressChatMessages);
+        await SettingsProvider.SetValueAsync(Keys.DiscordToken, oldConfig.DiscordToken);
+        await SettingsProvider.SetValueAsync(Keys.DiscordBmjId, oldConfig.DiscordBmjId);
         logger.Info($"{oldConfigPath} migration done.");
 
         logger.Info("Renaming files no longer in use");
         // Utils.SafelyRenameFile will attempt to rename and swallow any exception (with logging) if it fails
-        Utils.SafelyRenameFile(oldConfigPath, $"{oldConfigPath}.migrated");
+        SafelyRenameFile(oldConfigPath, $"{oldConfigPath}.migrated");
 
         logger.Info("File renamed");
+    }
+    
+    private static void SafelyRenameFile(string oldName, string newName)
+    {
+        var logger = LogManager.GetCurrentClassLogger();
+        logger.Debug($"Renaming {oldName} to {newName}");
+        try
+        {
+            File.Move(oldName, newName);
+        }
+        catch (Exception e)
+        {
+            logger.Error($"Failed to rename {oldName} to {newName}");
+            logger.Error(e);
+        }
     }
     
     public static List<BuiltInSettingsModel> BuiltInSettings =
@@ -119,17 +133,6 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
-            Key = Keys.PusherChannels,
-            Regex = @".+",
-            Description =
-                "List of Pusher channels to subscribe to",
-            Default = null,
-            IsSecret = false,
-            CacheDuration = TimeSpan.FromHours(1),
-            ValueType = SettingValueType.Array
         },
         new BuiltInSettingsModel
         {
@@ -861,7 +864,6 @@ public static class BuiltIn
     {
         public static string PusherEndpoint = "Pusher.Endpoint";
         public static string KiwiFarmsWsEndpoint = "KiwiFarms.WsEndpoint";
-        public static string PusherChannels = "Pusher.Channels";
         public static string KiwiFarmsRoomId = "KiwiFarms.RoomId";
         public static string Proxy = "Proxy";
         public static string KiwiFarmsWsReconnectTimeout = "KiwiFarms.WsReconnectTimeout";
