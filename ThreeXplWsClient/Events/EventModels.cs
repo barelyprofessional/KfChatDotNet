@@ -30,7 +30,8 @@ public class ThreeXplDataModel
     [JsonPropertyName("sort_key")]
     public int? SortKey { get; set; }
     [JsonPropertyName("time")]
-    public DateTimeOffset? Time { get; set; }
+    [JsonConverter(typeof(ThreeXplDateTimeConverter))]
+    public DateTime Time { get; set; }
     [JsonPropertyName("currency")]
     public string? Currency { get; set; }
     [JsonPropertyName("effect")]
