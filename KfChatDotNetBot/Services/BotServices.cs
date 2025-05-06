@@ -516,7 +516,7 @@ public class BotServices
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage($"🚨🚨 JEETBOLT BETTING 🚨🚨 {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just bet {bet.BetAmountFiat:C} ({bet.BetAmountCrypto:N2} {bet.Crypto}) and won " +
-                                 $"[color={payoutColor}]{bet.WinAmountFiat:C} ({bet.WinAmountCrypto:N2} {bet.Crypto})[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💰💰", true);
+                                 $"[color={payoutColor}]{bet.WinAmountFiat:C} ({bet.WinAmountCrypto:N2} {bet.Crypto})[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩", true);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)
