@@ -170,13 +170,13 @@ public class BotServices
     
     private async Task BuildYeet()
     {
-        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.YeetEnabled]);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.YeetProxy, BuiltIn.Keys.YeetEnabled]);
         if (!settings[BuiltIn.Keys.YeetEnabled].ToBoolean())
         {
             _logger.Debug("Yeet is disabled");
             return;
         }
-        _yeet = new Yeet(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _yeet = new Yeet(settings[BuiltIn.Keys.YeetProxy].Value, _cancellationToken);
         _yeet.OnYeetBet += OnYeetBet;
         _yeet.OnYeetWin += OnYeetWin;
         await _yeet.StartWsClient();

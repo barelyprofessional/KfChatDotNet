@@ -877,6 +877,16 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Array
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.YeetProxy,
+            Regex = ".+",
+            Description = "Proxy to use for Yeet",
+            Default = "socks5://ca-van-wg-socks5-301.relays.mullvad.net:1080",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -957,5 +967,6 @@ public static class BuiltIn
         public static string BetBoltBmjUsernames = "BetBolt.BmjUsernames";
         public static string YeetEnabled = "Yeet.Enabled";
         public static string YeetBmjUsernames = "Yeet.BmjUsernames";
+        public static string YeetProxy = "Yeet.Proxy";
     }
 }
