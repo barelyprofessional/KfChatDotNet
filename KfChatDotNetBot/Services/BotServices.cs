@@ -177,7 +177,7 @@ public class BotServices
             return;
         }
         _yeet = new Yeet(settings[BuiltIn.Keys.YeetProxy].Value, _cancellationToken);
-        _yeet.OnYeetBet += OnYeetBet;
+        //_yeet.OnYeetBet += OnYeetBet;
         _yeet.OnYeetWin += OnYeetWin;
         await _yeet.StartWsClient();
         _logger.Info("Built Yeet Websocket connection");
