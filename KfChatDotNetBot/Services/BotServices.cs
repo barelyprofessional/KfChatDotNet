@@ -30,6 +30,7 @@ public class BotServices
     private Chipsgg _chipsgg;
     private Clashgg _clashgg;
     private BetBolt _betBolt;
+    private Yeet _yeet;
     public AlmanacShill AlmanacShill;
     
     private Task? _websocketWatchdog;
@@ -76,7 +77,8 @@ public class BotServices
             BuildTwitch(),
             BuildClashgg(),
             BuildAlmanacShill(),
-            BuildBetBolt()
+            BuildBetBolt(),
+            BuildYeet()
         ];
         try
         {
@@ -164,6 +166,21 @@ public class BotServices
         _betBolt.OnBetBoltBet += OnBetBoltBet;
         await _betBolt.StartWsClient();
         _logger.Info("Built BetBolt Websocket connection");
+    }
+    
+    private async Task BuildYeet()
+    {
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.YeetEnabled]);
+        if (!settings[BuiltIn.Keys.YeetEnabled].ToBoolean())
+        {
+            _logger.Debug("Yeet is disabled");
+            return;
+        }
+        _yeet = new Yeet(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _yeet.OnYeetBet += OnYeetBet;
+        _yeet.OnYeetWin += OnYeetWin;
+        await _yeet.StartWsClient();
+        _logger.Info("Built Yeet Websocket connection");
     }
 
     private async Task BuildClashgg()
@@ -276,7 +293,7 @@ public class BotServices
             if (_chatBot.InitialStartCooldown) continue;
             var settings = await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
-                BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled
+                BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled
             ]);
             try
             {
@@ -358,6 +375,14 @@ public class BotServices
                     _betBolt.Dispose();
                     _betBolt = null!;
                     await BuildBetBolt();
+                }
+                
+                if (settings[BuiltIn.Keys.YeetEnabled].ToBoolean() && !_yeet.IsConnected())
+                {
+                    _logger.Error("Yeet died, recreating it");
+                    _yeet.Dispose();
+                    _yeet = null!;
+                    await BuildYeet();
                 }
             }
             catch (Exception e)
@@ -515,8 +540,47 @@ public class BotServices
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        _chatBot.SendChatMessage($"🚨🚨 JEETBOLT BETTING 🚨🚨 {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just bet {bet.BetAmountFiat:C} ({bet.BetAmountCrypto:N2} {bet.Crypto}) and won " +
+        _chatBot.SendChatMessage($"🚨🚨 JEETBOLT BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmountFiat:C} ({bet.BetAmountCrypto:N2} {bet.Crypto}) and won " +
                                  $"[color={payoutColor}]{bet.WinAmountFiat:C} ({bet.WinAmountCrypto:N2} {bet.Crypto})[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩", true);
+    }
+    
+    private void OnYeetBet(object sender, YeetCasinoBetModel bet)
+    {
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
+                BuiltIn.Keys.YeetBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Trace("Yeet bet has arrived");
+        if (!settings[BuiltIn.Keys.YeetBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.Username))
+        {
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        //if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:N2} {bet.CurrencyCode} on {bet.GameName} 💩💩", true);
+    }
+    
+    private void OnYeetWin(object sender, YeetCasinoWinModel bet)
+    {
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
+                BuiltIn.Keys.YeetBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]).Result;
+        _logger.Trace("Yeet bet has arrived");
+        if (!settings[BuiltIn.Keys.YeetBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.Username))
+        {
+            return;
+        }
+        _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
+        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (bet.Multiplier < 1) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:N2} {bet.CurrencyCode} and got " +
+                                 $"[color={payoutColor}]{bet.WinAmount:N2} {bet.CurrencyCode}[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩", true);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)

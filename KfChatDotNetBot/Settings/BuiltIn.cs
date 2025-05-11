@@ -857,6 +857,26 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Array
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.YeetEnabled,
+            Regex = "(true|false)",
+            Description = "Whether to enable the Yeet bet feed tracking",
+            Default = "true",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.YeetBmjUsernames,
+            Regex = ".+",
+            Description = "Austin's usernames on Yeet",
+            Default = "[\"Bossmanjack\"]",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Array
         }
     ];
     
@@ -935,5 +955,7 @@ public static class BuiltIn
         public static string BotImageInvertedPigCubeSelfDestructDelay = "Bot.Image.InvertedPigCubeSelfDestructDelay";
         public static string BetBoltEnabled = "BetBolt.Enabled";
         public static string BetBoltBmjUsernames = "BetBolt.BmjUsernames";
+        public static string YeetEnabled = "Yeet.Enabled";
+        public static string YeetBmjUsernames = "Yeet.BmjUsernames";
     }
 }
