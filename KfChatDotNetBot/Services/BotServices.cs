@@ -579,8 +579,8 @@ public class BotServices
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Multiplier < 1) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:N2} {bet.CurrencyCode} and got " +
-                                 $"[color={payoutColor}]{bet.WinAmount:N2} {bet.CurrencyCode}[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩", true);
+        _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} and got " +
+                                 $"[color={payoutColor}]{bet.WinAmount:C}[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩", true);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)
