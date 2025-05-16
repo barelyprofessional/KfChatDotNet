@@ -128,6 +128,7 @@ public class BotServices
         var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.RainbetEnabled]);
         _rainbet = new RainbetWs(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _rainbet.OnRainbetBet += OnRainbetBet;
+        await _rainbet.RefreshCookies();
         await _rainbet.StartWsClient();
         _logger.Info("Built Rainbet Websocket");
     }
