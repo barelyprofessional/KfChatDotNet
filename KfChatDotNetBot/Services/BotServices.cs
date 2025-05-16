@@ -26,7 +26,7 @@ public class BotServices
     private TwitchChat _twitchChat;
     private Jackpot _jackpot;
     private Howlgg _howlgg;
-    private Rainbet _rainbet;
+    private RainbetWs _rainbet;
     private Chipsgg _chipsgg;
     private Clashgg _clashgg;
     private BetBolt _betBolt;
@@ -79,7 +79,8 @@ public class BotServices
             BuildClashgg(),
             BuildAlmanacShill(),
             BuildBetBolt(),
-            BuildYeet()
+            BuildYeet(),
+            BuildRainbet()
         ];
         try
         {
@@ -90,8 +91,6 @@ public class BotServices
             _logger.Error("A service failed, exception follows");
             _logger.Error(e);
         }
-
-        BuildRainbet();
         
         _logger.Info("Starting websocket watchdog and Howl.gg user stats timer");
         _websocketWatchdog = WebsocketWatchdog();
@@ -124,12 +123,12 @@ public class BotServices
         await _discord.StartWsClient();
     }
     
-    private void BuildRainbet()
+    private async Task BuildRainbet()
     {
-        _rainbet = new Rainbet(_cancellationToken);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.RainbetEnabled]);
+        _rainbet = new RainbetWs(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _rainbet.OnRainbetBet += OnRainbetBet;
-        _rainbet.StartGameHistoryTimer();
-        _logger.Info("Built Rainbet timer");
+        _logger.Info("Built Rainbet Websocket");
     }
     
     private async Task BuildChipsgg()
@@ -294,7 +293,8 @@ public class BotServices
             if (_chatBot.InitialStartCooldown) continue;
             var settings = await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
-                BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled
+                BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled,
+                BuiltIn.Keys.RainbetEnabled
             ]);
             try
             {
@@ -385,6 +385,14 @@ public class BotServices
                     _yeet = null!;
                     await BuildYeet();
                 }
+                
+                if (settings[BuiltIn.Keys.RainbetEnabled].ToBoolean() && !_rainbet.IsConnected())
+                {
+                    _logger.Error("Rainbet died, recreating it");
+                    _rainbet.Dispose();
+                    _rainbet = null!;
+                    await BuildRainbet();
+                }
             }
             catch (Exception e)
             {
@@ -405,7 +413,7 @@ public class BotServices
         }
     }
     
-    private void OnRainbetBet(object sender, List<RainbetBetHistoryModel> bets)
+    private void OnRainbetBet(object sender, RainbetWsBetModel bet)
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
@@ -414,57 +422,35 @@ public class BotServices
             ]).Result;
         _logger.Trace("Rainbet bet has arrived");
         using var db = new ApplicationDbContext();
-        var ids = settings[BuiltIn.Keys.RainbetBmjPublicIds].JsonDeserialize<List<string>>();
-        if (ids == null)
-        {
-            _logger.Error("BMJ Rainbet Public IDs were null");
-            return;
-        }
 
-        var bmjBets = bets.Where(b => b.User.PublicId != null && ids.Contains(b.User.PublicId));
-        if (!bmjBets.Any())
+        if (!settings[BuiltIn.Keys.RainbetBmjPublicIds].JsonDeserialize<List<string>>()!.Contains(bet.User.PublicId))
         {
             return;
         }
-        foreach (var bet in bmjBets)
+        db.RainbetBets.Add(new RainbetBetsDbModel
         {
-            if (db.RainbetBets.Any(b => b.BetId == bet.Id))
-            {
-                _logger.Trace($"Ignoring bet {bet.Id} as we've already logged it");
-                continue;
-            }
-
-            db.RainbetBets.Add(new RainbetBetsDbModel
-            {
-                PublicId = bet.User.PublicId,
-                RainbetUserId = bet.User.Id,
-                GameName = bet.Game.Name,
-                Value = bet.Value,
-                Payout = bet.Payout ?? 0,
-                Multiplier = bet.Multiplier ?? 0,
-                BetId = bet.Id,
-                UpdatedAt = bet.UpdatedAt,
-                BetSeenAt = DateTimeOffset.UtcNow
-            });
-            _logger.Info("Added a Bossman Rainbet bet to the database");
-        }
+            PublicId = bet.User.PublicId,
+            RainbetUserId = bet.User.Id,
+            GameName = bet.Game.Name,
+            Value = float.Parse(bet.Value),
+            Payout = float.Parse(bet.Payout),
+            Multiplier = float.Parse(bet.Multiplier),
+            BetId = bet.Id,
+            UpdatedAt = bet.UpdatedAt,
+            BetSeenAt = DateTimeOffset.UtcNow
+        });
+        _logger.Info("Added a Bossman Rainbet bet to the database");
         db.SaveChanges();
         
         _logger.Info("ALERT BMJ IS BETTING (on Rainbet)");
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
-        
-        var msg = $":!::!: {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is betting on Rainbet :!::!:";
 
-        foreach (var bet in bmjBets.GroupBy(b => b.Game.Name))
-        {
-            var wagered = bet.Sum(s => s.Value);
-            var payout = bet.Sum(s => s.Payout);
-            var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
-            if (payout < wagered) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-            msg += $"[br]{bet.Sum(s => s.Value):C} wagered on {bet.Key} which paid out [color={payoutColor}]{payout:C}[/color] over {bet.Count()} bets";
-        }
-
-        _chatBot.SendChatMessagesAsync(msg.FancySplitMessage(partSeparator: "[br]"), true).Wait(_cancellationToken);
+        var wagered = float.Parse(bet.Value);
+        var payout = float.Parse(bet.Payout);
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (payout < wagered) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        _chatBot.SendChatMessage($"🚨🚨 RAINBET BETTING 🚨🚨 {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just bet {wagered:C} {bet.CurrencyName} which paid out " +
+                                 $"[color={payoutColor}]{payout:C} {bet.CurrencyName}[/color] ({bet.Multiplier}x) on {bet.Game.Name} 💰💰", true);
     }
 
     private void OnJackpotBet(object sender, JackpotWsBetPayloadModel bet)
