@@ -123,8 +123,8 @@ public class Yeet : IDisposable
                     return;
 
                 }
-                _logger.Info($"Event {data[0].GetString()} from Yeet was not handled");
-                _logger.Info(message.Text);
+                //_logger.Info($"Event {data[0].GetString()} from Yeet was not handled");
+                //_logger.Info(message.Text);
                 return;
             }
 
