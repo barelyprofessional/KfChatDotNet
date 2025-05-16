@@ -11,7 +11,7 @@ public class Yeet : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
-    private Uri _wsUri = new("wss://api.yeet.com/room-service/socket/?EIO=4&transport=websocket\n");
+    private Uri _wsUri = new("wss://api.yeet.com/room-service/socket/?EIO=4&transport=websocket");
     private int _reconnectTimeout = 30;
     private string? _proxy;
     public delegate void OnYeetBetEventHandler(object sender, YeetCasinoBetModel data);
