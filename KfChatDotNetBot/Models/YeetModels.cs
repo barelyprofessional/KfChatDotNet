@@ -34,3 +34,9 @@ public class YeetCasinoWinModel : YeetCasinoBetModel
     [JsonPropertyName("multiplier")]
     public required double Multiplier { get; set; }
 }
+
+public class SeenYeetBet
+{
+    public required SentMessageTrackerModel Message { get; set; }
+    public required YeetCasinoBetModel Bet { get; set; }
+}

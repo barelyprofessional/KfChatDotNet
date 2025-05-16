@@ -42,6 +42,7 @@ public class BotServices
     internal bool IsBmjLive = false;
     private bool _isBmjLiveSynced = false;
     internal bool IsChrisDjLive = false;
+    private Dictionary<string, SeenYeetBet> _yeetBets = new();
     
     // lol
     internal bool TemporarilyBypassGambaSeshForDiscord;
@@ -177,7 +178,7 @@ public class BotServices
             return;
         }
         _yeet = new Yeet(settings[BuiltIn.Keys.YeetProxy].Value, _cancellationToken);
-        //_yeet.OnYeetBet += OnYeetBet;
+        _yeet.OnYeetBet += OnYeetBet;
         _yeet.OnYeetWin += OnYeetWin;
         await _yeet.StartWsClient();
         _logger.Info("Built Yeet Websocket connection");
@@ -560,7 +561,8 @@ public class BotServices
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         //if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:N2} {bet.CurrencyCode} on {bet.GameName} 💩💩", true);
+        var msg = _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} on {bet.GameName} 💩💩", true);
+        _yeetBets.Add(bet.BetIdentifier, new SeenYeetBet {Bet = bet, Message = msg});
     }
     
     private void OnYeetWin(object sender, YeetCasinoWinModel bet)
@@ -579,8 +581,44 @@ public class BotServices
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Multiplier < 1) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
-        _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} and got " +
-                                 $"[color={payoutColor}]{bet.WinAmount:C}[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩", true);
+        var newMsg =
+            $"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} and got " +
+            $"[color={payoutColor}]{bet.WinAmount:C}[/color] ({bet.Multiplier:N2}x) on {bet.GameName} 💩💩";
+        if (!_yeetBets.ContainsKey(bet.BetIdentifier) || (DateTimeOffset.UtcNow - _yeetBets[bet.BetIdentifier].Bet.CreatedAt).TotalSeconds > 30)
+        {
+            _logger.Error($"Could not correlate {bet.BetIdentifier} to a previously sent bet message (restarted?) or old bet message is old as hell (feach?). Sending win as-is");
+            _chatBot.SendChatMessage(newMsg, true);
+            return;
+        }
+
+        var oldMsg = _yeetBets[bet.BetIdentifier];
+        if (oldMsg.Message.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost)
+        {
+            _logger.Error($"{bet.BetIdentifier} was lost, sending as-is");
+            _chatBot.SendChatMessage(newMsg, true);
+            return;
+        }
+
+        // Can't block the event as otherwise it'll lag out the whole Yeet client
+        _ = OnYeetWinEditTaskAsync(oldMsg.Message, newMsg);
+    }
+
+    private async Task OnYeetWinEditTaskAsync(SentMessageTrackerModel oldMsg, string newMsg)
+    {
+        var i = 0;
+        while (oldMsg.ChatMessageId == null && i < 50)
+        {
+            await Task.Delay(100, _cancellationToken);
+            i++;
+        }
+
+        if (oldMsg.ChatMessageId == null)
+        {
+            _logger.Error($"Timed out waiting to figure out our message ID");
+            return;
+        }
+
+        await _chatBot.KfClient.EditMessageAsync(oldMsg.ChatMessageId.Value, newMsg);
     }
     
     private void OnHowlggBetHistory(object sender, HowlggBetHistoryResponseModel data)
