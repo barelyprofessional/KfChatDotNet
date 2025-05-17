@@ -12,7 +12,7 @@ namespace KfChatDotNetBot.Services;
 public class RainbetWs : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://socket.rainbet.com/socket.io/?EIO=4&transport=websocket");
     private int _reconnectTimeout = 30;
     private string? _proxy;
@@ -172,7 +172,7 @@ public class RainbetWs : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         GC.SuppressFinalize(this);
     }
 }
