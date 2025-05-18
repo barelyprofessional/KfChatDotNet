@@ -44,7 +44,7 @@ public class JuiceCommand : ICommand
             return;
         }
         
-        if (lastJuicer.Count == 0)
+        if (lastJuicer.Count == 0 || (lastJuicer[0].JuicedAt.AddSeconds(cooldown) - DateTimeOffset.UtcNow).TotalSeconds <= 0)
         {
             var sentMsg = await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
             await db.Juicers.AddAsync(new JuicerDbModel
@@ -65,14 +65,6 @@ public class JuiceCommand : ICommand
         }
 
         var secondsRemaining = lastJuicer[0].JuicedAt.AddSeconds(cooldown) - DateTimeOffset.UtcNow;
-        if (secondsRemaining.TotalSeconds <= 0)
-        {
-            await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
-            await db.Juicers.AddAsync(new JuicerDbModel
-                { Amount = amount, User = user, JuicedAt = DateTimeOffset.UtcNow }, ctx);
-            await db.SaveChangesAsync(ctx);
-            return;
-        }
 
         await botInstance.SendChatMessageAsync($"You gotta wait {secondsRemaining.Humanize(precision: 2, minUnit: TimeUnit.Second)} for another juicer", true);
     }
