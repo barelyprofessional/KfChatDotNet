@@ -19,4 +19,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ChipsggBetDbModel> ChipsggBets { get; set; }
     public DbSet<ImageDbModel> Images { get; set; }
     public DbSet<UserWhoWasDbModel> UsersWhoWere { get; set; }
+    // public DbSet<PocketWatchAddressDbModel> PocketWatchAddresses { get; set; }
+    // public DbSet<PocketWatchTransactionDbModel> PocketWatchTransactions { get; set; }
+    public DbSet<MomDbModel> Moms { get; set; }
 }

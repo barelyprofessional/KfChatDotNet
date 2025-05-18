@@ -887,7 +887,17 @@ public static class BuiltIn
             IsSecret = false,
             CacheDuration = TimeSpan.FromHours(1),
             ValueType = SettingValueType.Text
-        }
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MomCooldown,
+            Regex = @"\d+",
+            Description = "Cooldown in seconds for the mom command, 0 to disable",
+            Default = "30",
+            IsSecret = false,
+            CacheDuration = TimeSpan.FromHours(1),
+            ValueType = SettingValueType.Text
+        },
     ];
     
     public static class Keys
@@ -968,5 +978,6 @@ public static class BuiltIn
         public static string YeetEnabled = "Yeet.Enabled";
         public static string YeetBmjUsernames = "Yeet.BmjUsernames";
         public static string YeetProxy = "Yeet.Proxy";
+        public static string MomCooldown = "Mom.Cooldown";
     }
 }
