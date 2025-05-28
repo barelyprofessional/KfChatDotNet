@@ -12,7 +12,7 @@ public class Shuffle : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
-    private Uri _wsUri = new("wss://subscription-temp.shuffle.com/graphql");
+    private Uri _wsUri = new("wss://shuffle.com/main-api/bp-subscription/subscription/graphql");
     private int _reconnectTimeout = 60;
     private string? _proxy;
     public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet);
