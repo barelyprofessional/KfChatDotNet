@@ -2,19 +2,9 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetWsClient", "KfChatDotNetWsClient\KfChatDotNetWsClient.csproj", "{B3BC806A-7FFC-47BD-9C18-45CD2B99F9F8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetCli", "KfChatDotNetCli\KfChatDotNetCli.csproj", "{A4D19F8E-5A1F-4A66-BC42-214DB9D5429B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetGui", "KfChatDotNetGui\KfChatDotNetGui.csproj", "{B2A5D4EE-5EB6-4F0B-BB5E-2B87AAFBFB5B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KickWsClient", "KickWsClient\KickWsClient.csproj", "{DECBB95C-2C9F-44C2-AFA3-3741986FBA38}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KfChatDotNetBot", "KfChatDotNetBot\KfChatDotNetBot.csproj", "{4734E0A4-150E-4915-B905-928BB4BE3FF6}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreeXplWsClient", "ThreeXplWsClient\ThreeXplWsClient.csproj", "{3D72D70A-48AD-4EE8-89DC-C78153EEA879}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThreeXplCliClient", "ThreeXplCliClient\ThreeXplCliClient.csproj", "{D098E281-5535-4A07-9514-57AF78704B0C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CliDiscordPacketDump", "CliDiscordPacketDump\CliDiscordPacketDump.csproj", "{792ECCCD-FAC3-4CE5-A760-988080960BB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,14 +16,6 @@ Global
 		{B3BC806A-7FFC-47BD-9C18-45CD2B99F9F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3BC806A-7FFC-47BD-9C18-45CD2B99F9F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3BC806A-7FFC-47BD-9C18-45CD2B99F9F8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A4D19F8E-5A1F-4A66-BC42-214DB9D5429B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A4D19F8E-5A1F-4A66-BC42-214DB9D5429B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A4D19F8E-5A1F-4A66-BC42-214DB9D5429B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A4D19F8E-5A1F-4A66-BC42-214DB9D5429B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B2A5D4EE-5EB6-4F0B-BB5E-2B87AAFBFB5B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B2A5D4EE-5EB6-4F0B-BB5E-2B87AAFBFB5B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B2A5D4EE-5EB6-4F0B-BB5E-2B87AAFBFB5B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B2A5D4EE-5EB6-4F0B-BB5E-2B87AAFBFB5B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DECBB95C-2C9F-44C2-AFA3-3741986FBA38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DECBB95C-2C9F-44C2-AFA3-3741986FBA38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DECBB95C-2C9F-44C2-AFA3-3741986FBA38}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -42,17 +24,5 @@ Global
 		{4734E0A4-150E-4915-B905-928BB4BE3FF6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4734E0A4-150E-4915-B905-928BB4BE3FF6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4734E0A4-150E-4915-B905-928BB4BE3FF6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3D72D70A-48AD-4EE8-89DC-C78153EEA879}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D098E281-5535-4A07-9514-57AF78704B0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D098E281-5535-4A07-9514-57AF78704B0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D098E281-5535-4A07-9514-57AF78704B0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D098E281-5535-4A07-9514-57AF78704B0C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{792ECCCD-FAC3-4CE5-A760-988080960BB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{792ECCCD-FAC3-4CE5-A760-988080960BB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{792ECCCD-FAC3-4CE5-A760-988080960BB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{792ECCCD-FAC3-4CE5-A760-988080960BB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
