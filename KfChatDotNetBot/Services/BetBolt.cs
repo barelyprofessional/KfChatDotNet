@@ -11,7 +11,7 @@ public class BetBolt : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private WebsocketClient _wsClient;
-    private Uri _wsUri = new("wss://betbolt.io/api/ws");
+    private Uri _wsUri = new("wss://betbolt.com/api/ws");
     // Pings every 5 seconds so 15 seconds should be reasonable
     private int _reconnectTimeout = 15;
     private string? _proxy;
@@ -37,7 +37,7 @@ public class BetBolt : IDisposable
         var factory = new Func<ClientWebSocket>(() =>
         {
             var clientWs = new ClientWebSocket();
-            clientWs.Options.SetRequestHeader("Origin", "https://betbolt.io");
+            clientWs.Options.SetRequestHeader("Origin", "https://betbolt.com");
             clientWs.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0");
             if (_proxy == null) return clientWs;
             _logger.Debug($"Using proxy address {_proxy}");
