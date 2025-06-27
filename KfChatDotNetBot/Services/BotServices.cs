@@ -120,9 +120,10 @@ public class BotServices
         _discord.OnPresenceUpdated += DiscordOnPresenceUpdated;
         _discord.OnChannelCreated += DiscordOnChannelCreated;
         _discord.OnChannelDeleted += DiscordOnChannelDeleted;
+        _discord.OnConversationSummaryUpdate += DiscordOnConversationSummaryUpdate;
         await _discord.StartWsClient();
     }
-    
+
     private async Task BuildRainbet()
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.RainbetEnabled]);
@@ -644,6 +645,13 @@ public class BotServices
         }
 
         db.SaveChanges();
+    }
+    
+    private void DiscordOnConversationSummaryUpdate(object sender, DiscordConversationSummaryUpdateModel summary, string guildId)
+    {
+        _logger.Info($"Received a conversation summary update for guild {guildId}");
+        var discordIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordIcon).Result;
+        _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] {summary.Topic}: {summary.SummaryShort} 🤖🤖", true);
     }
     
     private void DiscordOnChannelDeleted(object sender, DiscordChannelDeletionModel channel)

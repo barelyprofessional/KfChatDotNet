@@ -26,6 +26,8 @@ public class DiscordService : IDisposable
     public delegate void InvalidCredentialsEventHandler(object sender, DiscordPacketReadModel packet);
     public delegate void ChannelCreatedEventHandler(object sender, DiscordChannelCreationModel channel);
     public delegate void ChannelDeletedEventHandler(object sender, DiscordChannelDeletionModel channel);
+    public delegate void ConversationSummaryUpdateEventHandler(object sender,
+        DiscordConversationSummaryUpdateModel summary, string guildId);
 
     public event MessageReceivedEventHandler OnMessageReceived;
     public event PresenceUpdateEventHandler OnPresenceUpdated;
@@ -33,6 +35,7 @@ public class DiscordService : IDisposable
     public event InvalidCredentialsEventHandler OnInvalidCredentials;
     public event ChannelCreatedEventHandler OnChannelCreated;
     public event ChannelDeletedEventHandler OnChannelDeleted;
+    public event ConversationSummaryUpdateEventHandler OnConversationSummaryUpdate;
 
     private readonly CancellationToken _cancellationToken = CancellationToken.None;
     private readonly CancellationTokenSource _pingCts = new();
@@ -202,6 +205,17 @@ public class DiscordService : IDisposable
                         packet.Data.Deserialize<DiscordChannelDeletionModel>() ??
                         throw new InvalidOperationException());
                     return;
+                case "CONVERSATION_SUMMARY_UPDATE":
+                    var guildId = packet.Data.GetProperty("guild_id").GetString();
+                    var summaries = packet.Data.GetProperty("summaries")
+                        .Deserialize<List<DiscordConversationSummaryUpdateModel>>();
+                    if (summaries == null) return;
+                    if (summaries.Count == 0) return;
+                    foreach (var summary in summaries)
+                    {
+                        OnConversationSummaryUpdate?.Invoke(this, summary, guildId ?? string.Empty);
+                    }
+                    return;
                 default:
                     _logger.Debug($"{packet.DispatchEvent} was unhandled. JSON follows");
                     _logger.Debug(message.Text);
@@ -292,6 +306,16 @@ public class DiscordChannelDeletionModel
     public required DiscordChannelType Type { get; set; }
     [JsonPropertyName("name")]
     public string? Name { get; set; }
+}
+
+public class DiscordConversationSummaryUpdateModel
+{
+    [JsonPropertyName("unsafe")]
+    public required bool Unsafe { get; set; }
+    [JsonPropertyName("topic")]
+    public required string Topic { get; set; }
+    [JsonPropertyName("summ_short")]
+    public required string SummaryShort { get; set; }
 }
 
 // https://discord.com/developers/docs/resources/channel#channel-object-channel-types
