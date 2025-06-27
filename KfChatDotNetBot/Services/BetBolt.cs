@@ -186,7 +186,7 @@ public class BetBolt : IDisposable
     
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         GC.SuppressFinalize(this);
     }
 }
