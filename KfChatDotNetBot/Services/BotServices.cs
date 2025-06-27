@@ -166,6 +166,7 @@ public class BotServices
         }
         _betBolt = new BetBolt(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _betBolt.OnBetBoltBet += OnBetBoltBet;
+        await _betBolt.RefreshCookies();
         await _betBolt.StartWsClient();
         _logger.Info("Built BetBolt Websocket connection");
     }

@@ -1,7 +1,9 @@
 ﻿using System.Net;
 using System.Net.WebSockets;
 using System.Text.Json;
+using FlareSolverrSharp;
 using KfChatDotNetBot.Models;
+using KfChatDotNetBot.Settings;
 using NLog;
 using Websocket.Client;
 
@@ -20,6 +22,8 @@ public class BetBolt : IDisposable
     public event OnBetBoltBetEventHandler OnBetBoltBet;
     public event OnWsDisconnectionEventHandler OnWsDisconnection;
     private CancellationToken _cancellationToken = CancellationToken.None;
+    private IEnumerable<string>? _cookies = null;
+    private string? _userAgent = null;
     public BetBolt(string? proxy = null, CancellationToken? cancellationToken = null)
     {
         _proxy = proxy;
@@ -38,7 +42,8 @@ public class BetBolt : IDisposable
         {
             var clientWs = new ClientWebSocket();
             clientWs.Options.SetRequestHeader("Origin", "https://betbolt.com");
-            clientWs.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:136.0) Gecko/20100101 Firefox/136.0");
+            clientWs.Options.SetRequestHeader("User-Agent", _userAgent);
+            clientWs.Options.SetRequestHeader("Cookie", string.Join("; ", _cookies!));
             if (_proxy == null) return clientWs;
             _logger.Debug($"Using proxy address {_proxy}");
             clientWs.Options.Proxy = new WebProxy(_proxy);
@@ -151,6 +156,32 @@ public class BetBolt : IDisposable
             _logger.Error(message.Text);
             _logger.Error("--- End of Payload ---");
         }
+    }
+    
+    public async Task RefreshCookies()
+    {
+        _logger.Info("Refreshing cookies for BetBolt");
+        var settings =
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.FlareSolverrApiUrl, BuiltIn.Keys.FlareSolverrProxy]);
+        var flareSolverrUrl = settings[BuiltIn.Keys.FlareSolverrApiUrl];
+        var flareSolverrProxy = settings[BuiltIn.Keys.FlareSolverrProxy];
+        var handler = new ClearanceHandler(flareSolverrUrl.Value)
+        {
+            // Generally takes <5 seconds
+            MaxTimeout = 30000,
+        };
+        _logger.Debug($"Configured clearance handler to use FlareSolverr endpoint: {flareSolverrUrl.Value}");
+        // I would suggest not using a proxy. It's pretty much a miracle this works at all.
+        if (flareSolverrProxy.Value != null)
+        {
+            handler.ProxyUrl = flareSolverrProxy.Value;
+            _logger.Debug($"Configured clearance handler to use {flareSolverrProxy.Value} for proxying the request");
+        }
+        var client = new HttpClient(handler);
+        // BetBolt seems to have relaxed CF settings since the .io move so should be no checkbox now
+        var getResponse = await client.GetAsync("https://betbolt.com/", _cancellationToken);
+        _cookies = getResponse.Headers.GetValues("Set-Cookie");
+        _userAgent = getResponse.RequestMessage!.Headers.UserAgent.ToString();
     }
     
     public void Dispose()
