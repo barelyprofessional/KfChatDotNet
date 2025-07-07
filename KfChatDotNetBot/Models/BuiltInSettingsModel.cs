@@ -10,7 +10,7 @@ public class BuiltInSettingsModel
     public required string Regex { get; set; }
     public required string Description { get; set; }
     public string? Default { get; set; }
-    public required bool IsSecret { get; set; }
-    public required TimeSpan CacheDuration { get; set; } = TimeSpan.Zero;
+    public bool IsSecret { get; set; } = false;
+    public TimeSpan CacheDuration { get; set; } = TimeSpan.FromHours(1);
     public required SettingValueType ValueType { get; set; }
 }
