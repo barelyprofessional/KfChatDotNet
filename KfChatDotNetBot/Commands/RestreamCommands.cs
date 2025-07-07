@@ -74,14 +74,32 @@ public class SelfPromoCommand : ICommand
         CancellationToken ctx)
     {
         var channels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
-        var channel = channels.FirstOrDefault(ch => ch.ForumId == user.KfId);
-        if (channel == null)
+        if (channels == null)
         {
-            await botInstance.SendChatMessageAsync("You have no stream.", true);
+            await botInstance.SendChatMessageAsync("For some reason the list of Kick channels deserialized to null", true);
+            return;
+        }
+        var userChannels = channels.Where(ch => ch.ForumId == user.KfId).ToList();
+        if (userChannels.Count == 0)
+        {
+            await botInstance.SendChatMessageAsync("You have no streams.", true);
             return;
         }
 
-        await botInstance.SendChatMessageAsync($"@{user.KfUsername} is a weirdo who streams. Come check out his channel at https://kick.com/{channel.ChannelSlug}", true);
+        if (userChannels.Count == 1)
+        {
+            await botInstance.SendChatMessageAsync($"@{user.KfUsername} is a weirdo who streams. Come check out his channel at https://kick.com/{userChannels[0].ChannelSlug}", true);
+            return;
+        }
+
+        var streamList = string.Empty;
+        foreach (var stream in userChannels)
+        {
+            streamList = $"[br]- https://kick.com/{stream.ChannelSlug}";
+        }
+
+        await botInstance.SendChatMessageAsync(
+            $"@{user.KfUsername} is a weirdo who streams a lot. His channels are at: {streamList}", true);
     }
 }
 
