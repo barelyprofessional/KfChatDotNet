@@ -115,7 +115,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.PusherEndpoint,
-            Regex = @".+",
             Description =
                 "Pusher WebSocket endpoint URL",
             Default = "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false",
@@ -124,7 +123,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsWsEndpoint,
-            Regex = @".+",
             Description =
                 "Kiwi Farms chat WebSocket endpoint",
             Default = "wss://kiwifarms.st:9443/chat.ws",
@@ -142,7 +140,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.Proxy,
-            Regex = @".+",
             Description =
                 "Proxy to use for all outgoing requests. Null to disable",
             Default = null,
@@ -188,7 +185,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KickIcon,
-            Regex = @".+",
             Description =
                 "Kick Icon to use for relaying chat messages",
             Default = "https://i.postimg.cc/Qtw4nCPG/kick16.png",
@@ -197,7 +193,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsDomain,
-            Regex = @".+",
             Description =
                 "Domain to use when retrieving a session token",
             Default = "kiwifarms.st",
@@ -206,7 +201,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsUsername,
-            Regex = @".+",
             Description =
                 "Username to use when authenticating with Kiwi Farms",
             Default = null,
@@ -216,7 +210,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsPassword,
-            Regex = @".+",
             Description =
                 "Password to use when authenticating with Kiwi Farms",
             Default = null,
@@ -235,7 +228,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.TwitchBossmanJackUsername,
-            Regex = @".+",
             Description =
                 "BossmanJack's Twitch channel username",
             Default = "thebossmanjack",
@@ -253,7 +245,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.DiscordToken,
-            Regex = @".+",
             Description =
                 "Token to use when authenticating with Discord. Set to null to disable.",
             Default = null,
@@ -272,7 +263,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.TwitchIcon,
-            Regex = ".+",
             Description = "URL for the 16px Twitch icon",
             Default = "https://i.postimg.cc/QMFVV2Xk/twitch16.png",
             ValueType = SettingValueType.Text
@@ -280,7 +270,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.DiscordIcon,
-            Regex = ".+",
             Description = "URL for the 16px Discord icon",
             Default = "https://i.postimg.cc/cLmQrp89/discord16.png",
             ValueType = SettingValueType.Text
@@ -288,7 +277,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.ShuffleBmjUsername,
-            Regex = ".+",
             Description = "Bossman's Shuffle Username",
             Default = "TheBossmanJack",
             ValueType = SettingValueType.Text
@@ -330,7 +318,6 @@ public static class BuiltIn
         new BuiltInSettingsModel()
         {
             Key = Keys.KiwiFarmsGreenColor,
-            Regex = ".+",
             Description = "Green color used for showing positive values in chat",
             Default = "#3dd179",
             ValueType = SettingValueType.Text
@@ -338,7 +325,6 @@ public static class BuiltIn
         new BuiltInSettingsModel()
         {
             Key = Keys.KiwiFarmsRedColor,
-            Regex = ".+",
             Description = "Red color used for showing negative values in chat",
             Default = "#f1323e",
             ValueType = SettingValueType.Text
@@ -346,7 +332,6 @@ public static class BuiltIn
         new BuiltInSettingsModel()
         {
             Key = Keys.JackpotBmjUsernames,
-            Regex = ".+",
             Description = "Bossman's usernames on Jackpot",
             Default = "[\"TheBossmanJack\", \"Austingambless757\"]",
             ValueType = SettingValueType.Array
@@ -354,7 +339,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.RainbetBmjPublicIds,
-            Regex = ".+",
             Description = "Bossman's rainbet public IDs",
             Default = "[\"Ir04170wLulcjtePCL7P6lmeOlepRaNp\", \"IA9RHFR1NLHL33AVOM9GL2G2CINM9I6P\"]",
             ValueType = SettingValueType.Array
@@ -362,7 +346,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.FlareSolverrApiUrl,
-            Regex = ".+",
             Description = "URL for your FlareSolverr service API",
             Default = "http://localhost:8191/",
             ValueType = SettingValueType.Text
@@ -370,7 +353,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.FlareSolverrProxy,
-            Regex = ".+",
             Description = "Proxy in use specifically for FlareSolverr",
             Default = null,
             ValueType = SettingValueType.Text
@@ -378,7 +360,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.ChipsggBmjUserIds,
-            Regex = ".+",
             Description = "Bossman's Chips.gg username",
             //Default = "[\"TheBossmanJack\", \"Yabuddy757\"]",
             Default = "[\"1af247cd-67e0-4029-8a93-b8d19c275072\", \"e97ebf3e-d5a8-4583-ab35-5095a05f282e\"]",
@@ -387,7 +368,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.RestreamUrl,
-            Regex = ".+",
             Description = "URL for the restream",
             Default = "No URL set",
             ValueType = SettingValueType.Text
@@ -403,7 +383,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsCookies,
-            Regex = ".+",
             Description = "Kiwi Farms cookies in key-value pair format",
             // Empty JSON object as it's a Dictionary<string, string> object
             Default = "{}",
@@ -480,7 +459,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KickChannels,
-            Regex = ".+",
             Description = "Kick channels the bot knows about for notifications",
             Default = "[]",
             ValueType = SettingValueType.Array
@@ -488,7 +466,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotCleanStartTime,
-            Regex = ".+",
             Description = "ISO8601 date of Bossman's sobriety",
             Default = "2024-09-19T13:33:00-04:00",
             ValueType = SettingValueType.Text
@@ -496,7 +473,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotRehabEndTime,
-            Regex = ".+",
             Description = "ISO8601 date of Bossman's rehab end",
             Default = "2024-10-24T09:00:00-04:00",
             ValueType = SettingValueType.Text
@@ -504,7 +480,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotPoNextVisit,
-            Regex = ".+",
             Description = "ISO8601 date of Bossman's next PO visit",
             Default = "2024-10-18T12:00:00-04:00",
             ValueType = SettingValueType.Text
@@ -512,7 +487,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotJailStartTime,
-            Regex = ".+",
             Description = "ISO8601 date of when Bossman's incarceration began",
             Default = "2024-10-27T03:25:00-05:00",
             ValueType = SettingValueType.Text
@@ -520,7 +494,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotCourtCalendar,
-            Regex = ".+",
             Description = "JSON array containing court hearings",
             Default = "[]",
             CacheDuration = TimeSpan.Zero,
@@ -553,7 +526,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImageAcceptableKeys,
-            Regex = ".+",
             Description = "List of valid keys for the image rotation feature",
             Default = "[\"gmkasino\", \"gnkasino\", \"winmanjack\", \"prayge\", \"crackpipe\", \"bassmanjack\", \"sent\", \"helpme\"]",
             ValueType = SettingValueType.Array
@@ -561,7 +533,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotToyStoryImage,
-            Regex = ".+",
             Description = "Image to use for the Toy Story joke",
             Default = "https://i.ibb.co/603dk32R/nonce-drop.png",
             ValueType = SettingValueType.Text
@@ -580,7 +551,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.TwitchCommercialRestreamShillMessage,
-            Regex = ".+",
             Description = "The specific restream to shill when a commercial is detected if shilling is enabled",
             Default = "No commercial restream shill message set",
             ValueType = SettingValueType.Text
@@ -588,7 +558,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotChrisDjLiveImage,
-            Regex = ".+",
             Description = "Image that the bot will send when ChrisDJ goes live",
             Default = "https://kiwifarms.st/attachments/nonce-live-png.7015533/",
             ValueType = SettingValueType.Text
@@ -620,7 +589,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.ClashggBmjIds,
-            Regex = ".+",
             Description = "List of IDs that austingambles is using",
             Default = "[]",
             ValueType = SettingValueType.Array
@@ -628,7 +596,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotAlmanacText,
-            Regex = ".+",
             Description = "Text to send when reminding people of the Almanac",
             Default = "Placeholder text for the Almanac",
             ValueType = SettingValueType.Text
@@ -668,7 +635,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImageInvertedCubeUrl,
-            Regex = ".+",
             Description = "URL of the inverted pig cube for the special deletion logic",
             Default = "https://kiwifarms.st/attachments/7226614-185d31e0b73350f2765b8051121a05d2-webp.7271720/",
             ValueType = SettingValueType.Text
@@ -717,7 +683,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BetBoltBmjUsernames,
-            Regex = ".+",
             Description = "Austin's usernames on BetBolt",
             Default = "[\"AustinGambles\"]",
             ValueType = SettingValueType.Array
@@ -733,7 +698,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.YeetBmjUsernames,
-            Regex = ".+",
             Description = "Austin's usernames on Yeet",
             Default = "[\"Bossmanjack\"]",
             ValueType = SettingValueType.Array
