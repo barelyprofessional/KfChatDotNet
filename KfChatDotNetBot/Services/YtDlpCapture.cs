@@ -102,7 +102,7 @@ public class YtDlpCapture(string streamUrl, CancellationToken ct = default)
         var ytDlpLine = $"{_settings[BuiltIn.Keys.CaptureYtDlpBinaryPath].Value} -o \"{_settings[BuiltIn.Keys.CaptureYtDlpOutputFormat].Value}\" " +
                         $"--user-agent \"{_settings[BuiltIn.Keys.CaptureYtDlpUserAgent].Value}\" " +
                         $"--cookies-from-browser {_settings[BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser].Value} " +
-                        $"--write-info-json {streamUrl}";
+                        $"--write-info-json --wait-for-video 15 {streamUrl}";
         string scriptContent;
 
         if (OperatingSystem.IsWindows())
