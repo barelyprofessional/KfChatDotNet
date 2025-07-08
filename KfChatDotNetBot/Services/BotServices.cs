@@ -864,7 +864,9 @@ public class BotServices
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
     {
         if (e == null) return;
-        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotChrisDjLiveImage]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotChrisDjLiveImage, BuiltIn.Keys.CaptureEnabled
+        ]).Result;
         var channels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
         if (channels == null)
         {
@@ -894,6 +896,12 @@ public class BotServices
         {
             IsChrisDjLive = true;
             _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotChrisDjLiveImage].Value}[/img]", true);
+        }
+
+        if (channel.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
+        {
+            _logger.Info($"{channel.ChannelSlug} is configured to auto capture");
+            _ = new YtDlpCapture($"https://kick.com/{channel.ChannelSlug}", _cancellationToken).CaptureAsync();
         }
     }
 

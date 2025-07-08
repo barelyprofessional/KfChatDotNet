@@ -718,6 +718,65 @@ public static class BuiltIn
             Default = "30",
             ValueType = SettingValueType.Text
         },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpOutputFormat,
+            Description = "Output format to pass to yt-dlp using -o",
+            Default = "%(title)s - %(uploader)s [%(id)s] %(upload_date)s %(timestamp)s.mp4",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpWorkingDirectory,
+            Description = "Working directory set when running yt-dlp",
+            Default = "/tmp/discord/",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpBinaryPath,
+            Description = "Path of the yt-dlp binary",
+            Default = "/usr/local/bin/yt-dlp",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpUserAgent,
+            Description = "User-Agent that gets passed to yt-dlp --user-agent",
+            Default = "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpCookiesFromBrowser,
+            Description = "What browser to pass to yt-dlp --cookies-from-browser",
+            Default = "firefox",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureEnabled,
+            Description = "Whether the auto-capture system is enabled",
+            Regex = "(true|false)",
+            Default = "true",
+            ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpParentTerminal,
+            Description = "Parent terminal to launch the capture inside of, e.g. xfce4-terminal, mate-terminal, etc. " +
+                          "Terminal must support -x. The process detaches from the bot so the bot can be freely restarted while a capture is running. " +
+                          "Not supported on Windows, the bot will use cmd /C + START on Windows.",
+            Default = "/usr/bin/mate-terminal",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureYtDlpScriptPath,
+            Description = "Path to store the temporary .sh script used to initiate the capture",
+            Default = "/tmp/",
+            ValueType = SettingValueType.Text
+        }
     ];
     
     public static class Keys
@@ -799,5 +858,13 @@ public static class BuiltIn
         public static string YeetBmjUsernames = "Yeet.BmjUsernames";
         public static string YeetProxy = "Yeet.Proxy";
         public static string MomCooldown = "Mom.Cooldown";
+        public static string CaptureYtDlpOutputFormat = "Capture.YtDlp.OutputFormat";
+        public static string CaptureYtDlpWorkingDirectory = "Capture.YtDlp.WorkingDirectory";
+        public static string CaptureYtDlpBinaryPath = "Capture.YtDlp.BinaryPath";
+        public static string CaptureYtDlpUserAgent = "Capture.YtDlp.UserAgent";
+        public static string CaptureYtDlpCookiesFromBrowser = "Capture.YtDlp.CookiesFromBrowser";
+        public static string CaptureEnabled = "Capture.Enabled";
+        public static string CaptureYtDlpParentTerminal = "Capture.YtDlp.ParentTerminal";
+        public static string CaptureYtDlpScriptPath = "Capture.YtDlp.ScriptPath";
     }
 }

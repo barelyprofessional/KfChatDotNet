@@ -5,6 +5,10 @@ public class KickChannelModel
     public required int ChannelId { get; set; }
     public required int ForumId { get; set; }
     public required string ChannelSlug { get; set; }
+    /// <summary>
+    /// Whether to automatically capture a stream when it goes live using yt-dlp
+    /// </summary>
+    public bool AutoCapture { get; set; } = false;
 }
 
 public class CourtHearingModel
