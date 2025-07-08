@@ -11,25 +11,25 @@ namespace KickWsClient;
 
 public class KickWsClient : IDisposable
 {
-    public event EventHandlers.OnPusherConnectionEstablishedEventHandler OnPusherConnectionEstablished;
-    public event EventHandlers.OnPusherSubscriptionSucceededEventHandler OnPusherSubscriptionSucceeded;
-    public event EventHandlers.OnPusherPongEventHandler OnPusherPong;
-    public event EventHandlers.OnFollowersUpdatedEventHandler OnFollowersUpdated;
-    public event EventHandlers.OnChatMessageEventHandler OnChatMessage;
-    public event EventHandlers.OnChannelSubscriptionEventHandler OnChannelSubscription;
-    public event EventHandlers.OnSubscriptionEventHandler OnSubscription;
-    public event EventHandlers.OnMessageDeletedEventHandler OnMessageDeleted;
-    public event EventHandlers.OnUserBannedEventHandler OnUserBanned;
-    public event EventHandlers.OnUserUnbannedEventHandler OnUserUnbanned;
-    public event EventHandlers.OnUpdatedLiveStreamEventHandler OnUpdatedLiveStream;
-    public event EventHandlers.OnStopStreamBroadcastEventHandler OnStopStreamBroadcast;
-    public event EventHandlers.OnStreamerIsLiveEventHandler OnStreamerIsLive;
-    public event EventHandlers.OnWsDisconnectionEventHandler OnWsDisconnection;
-    public event EventHandlers.OnWsReconnectEventHandler OnWsReconnect;
+    public event EventHandlers.OnPusherConnectionEstablishedEventHandler? OnPusherConnectionEstablished;
+    public event EventHandlers.OnPusherSubscriptionSucceededEventHandler? OnPusherSubscriptionSucceeded;
+    public event EventHandlers.OnPusherPongEventHandler? OnPusherPong;
+    public event EventHandlers.OnFollowersUpdatedEventHandler? OnFollowersUpdated;
+    public event EventHandlers.OnChatMessageEventHandler? OnChatMessage;
+    public event EventHandlers.OnChannelSubscriptionEventHandler? OnChannelSubscription;
+    public event EventHandlers.OnSubscriptionEventHandler? OnSubscription;
+    public event EventHandlers.OnMessageDeletedEventHandler? OnMessageDeleted;
+    public event EventHandlers.OnUserBannedEventHandler? OnUserBanned;
+    public event EventHandlers.OnUserUnbannedEventHandler? OnUserUnbanned;
+    public event EventHandlers.OnUpdatedLiveStreamEventHandler? OnUpdatedLiveStream;
+    public event EventHandlers.OnStopStreamBroadcastEventHandler? OnStopStreamBroadcast;
+    public event EventHandlers.OnStreamerIsLiveEventHandler? OnStreamerIsLive;
+    public event EventHandlers.OnWsDisconnectionEventHandler? OnWsDisconnection;
+    public event EventHandlers.OnWsReconnectEventHandler? OnWsReconnect;
     // You really shouldn't use this unless you're extending the functionality of the library, e.g. adding support for
     // not yet implemented message types.
-    public event EventHandlers.OnWsMessageReceivedEventHandler OnWsMessageReceived;
-    public event EventHandlers.OnPollUpdateEventHandler OnPollUpdate;
+    public event EventHandlers.OnWsMessageReceivedEventHandler? OnWsMessageReceived;
+    public event EventHandlers.OnPollUpdateEventHandler? OnPollUpdate;
 
     private WebsocketClient? _wsClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
