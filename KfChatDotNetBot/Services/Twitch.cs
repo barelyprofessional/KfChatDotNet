@@ -11,7 +11,7 @@ namespace KfChatDotNetBot.Services;
 public class Twitch : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://pubsub-edge.twitch.tv/v1");
     private int _reconnectTimeout = 300;
     private string? _proxy;
@@ -19,18 +19,18 @@ public class Twitch : IDisposable
     public delegate void OnStreamStateUpdateEventHandler(object sender, int channelId, bool isLive);
     public delegate void OnStreamCommercialEventHandler(object sender, int channelId, int length, bool scheduled);
     public delegate void OnStreamTosStrikeEventHandler(object sender, int channelId);
-    public event OnStreamStateUpdateEventHandler OnStreamStateUpdated;
-    public event OnStreamCommercialEventHandler OnStreamCommercial;
-    public event OnStreamTosStrikeEventHandler OnStreamTosStrike;
-    private CancellationToken _cancellationToken = CancellationToken.None;
-    private Task? _pingTask = null;
+    public event OnStreamStateUpdateEventHandler? OnStreamStateUpdated;
+    public event OnStreamCommercialEventHandler? OnStreamCommercial;
+    public event OnStreamTosStrikeEventHandler? OnStreamTosStrike;
+    private CancellationToken _cancellationToken;
+    private Task? _pingTask;
     private CancellationTokenSource _pingCts = new();
 
-    public Twitch(List<int> channels,  string? proxy = null, CancellationToken? cancellationToken = null)
+    public Twitch(List<int> channels,  string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
         _channels = channels;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
     }
     
     public async Task StartWsClient()
@@ -77,7 +77,7 @@ public class Twitch : IDisposable
     private void SendPing()
     {
         _logger.Info("Sending ping to Twitch");
-        _wsClient.Send("{\"type\":\"PING\"}");
+        _wsClient?.Send("{\"type\":\"PING\"}");
     }
 
     private async Task PeriodicPing()
@@ -107,7 +107,7 @@ public class Twitch : IDisposable
                           Guid.NewGuid() + "\",\"type\":\"LISTEN\"}";
             _logger.Debug("Sending the following JSON to Twitch");
             _logger.Debug(payload);
-            _wsClient.Send(payload);
+            _wsClient?.Send(payload);
         }
     }
 
@@ -131,13 +131,13 @@ public class Twitch : IDisposable
             var packet = JsonSerializer.Deserialize<JsonElement>(message.Text);
             if (packet.GetProperty("type").GetString() != "MESSAGE")
                 return;
-            var data = packet.GetProperty("data")!;
-            var topicString = data.GetProperty("topic")!.GetString()!;
+            var data = packet.GetProperty("data");
+            var topicString = data.GetProperty("topic").GetString()!;
             if (!topicString.StartsWith("video-playback-by-id."))
                 return;
             var topicParts = topicString.Split('.');
             var channelId = int.Parse(topicParts[^1]);
-            var twitchMessage = JsonSerializer.Deserialize<JsonElement>(data.GetProperty("message").GetString());
+            var twitchMessage = JsonSerializer.Deserialize<JsonElement>(data.GetProperty("message").GetString()!);
 
             if (twitchMessage.GetProperty("type").GetString() == "stream-up")
             {
@@ -242,7 +242,7 @@ public class Twitch : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         _pingCts.Cancel();
         _pingCts.Dispose();
         _pingTask?.Dispose();

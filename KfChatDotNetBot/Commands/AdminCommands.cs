@@ -88,6 +88,7 @@ public class NewKickChannelCommand : ICommand
     {
         var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
         var channelId = Convert.ToInt32(arguments["channel_id"].Value);
+        channels ??= [];
         if (channels.Any(channel => channel.ChannelId == channelId))
         {
             await botInstance.SendChatMessageAsync("Channel is already in the database", true);
@@ -119,6 +120,7 @@ public class RemoveKickChannelCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
+        if (channels == null) throw new Exception("Caught a null when deserializing Kick channels");
         var channelId = Convert.ToInt32(arguments["channel_id"].Value);
         var channel = channels.FirstOrDefault(ch => ch.ChannelId == channelId);
         if (channel == null)
@@ -144,6 +146,11 @@ public class ReconnectKickCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
+        if (botInstance.BotServices.KickClient == null)
+        {
+            await botInstance.SendChatMessageAsync("Kick client is not initialized", true);
+            return;
+        }
         botInstance.BotServices.KickClient.Disconnect();
         await botInstance.SendChatMessageAsync("Disconnected from Kick. Client should reconnect shortly.", true);
     }
@@ -365,6 +372,11 @@ public class SetAlmanacIntervalCommand : ICommand
             return;
         }
         await SettingsProvider.SetValueAsync(BuiltIn.Keys.BotAlmanacInterval, arguments["interval"].Value);
+        if (botInstance.BotServices.AlmanacShill == null)
+        {
+            await botInstance.SendChatMessageAsync("Value has been saved but almanac shill has not been initialized", true);
+            return;
+        }
         await botInstance.BotServices.AlmanacShill.StopShillTaskAsync();
         botInstance.BotServices.AlmanacShill.StartShillTask();
         await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated interval and restarted the shill task", true);
@@ -383,6 +395,11 @@ public class StopAlmanacCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        if (botInstance.BotServices.AlmanacShill == null)
+        {
+            await botInstance.SendChatMessageAsync("AlmanacShill is null", true);
+            return;
+        }
         if (!botInstance.BotServices.AlmanacShill.IsShillTaskRunning())
         {
             await botInstance.SendChatMessageAsync("Looks like the task isn't even running", true);
@@ -407,6 +424,11 @@ public class StartAlmanacCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        if (botInstance.BotServices.AlmanacShill == null)
+        {
+            await botInstance.SendChatMessageAsync("AlmanacShill is null", true);
+            return;
+        }
         if (botInstance.BotServices.AlmanacShill.IsShillTaskRunning())
         {
             await botInstance.SendChatMessageAsync("Looks like the task is already running", true);

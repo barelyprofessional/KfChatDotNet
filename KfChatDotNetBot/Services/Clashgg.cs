@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
 using KfChatDotNetBot.Models;
@@ -11,28 +10,28 @@ namespace KfChatDotNetBot.Services;
 public class Clashgg : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://ws.clash.gg/");
     // Ping interval is 30 seconds
     private int _reconnectTimeout = 60;
     private string? _proxy;
     public delegate void OnClashBetEventHandler(object sender, ClashggBetModel data, JsonElement jsonElement);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnClashBetEventHandler OnClashBet;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnClashBetEventHandler? OnClashBet;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
     private CancellationTokenSource _pingCts = new();
     private Task? _heartbeatTask;
     private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(60);
-    private bool _isOnline = false;
+    private bool _isOnline;
     private DateTime _lastBet = DateTime.Now;
     // How long we can go without any gambling activity until we go 'fuck it' and reconnect
     private TimeSpan _lastBetTolerance = TimeSpan.FromMinutes(5);
 
-    public Clashgg(string? proxy = null, CancellationToken? cancellationToken = null)
+    public Clashgg(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Clash.gg WebSocket client created");
     }
 
@@ -128,9 +127,9 @@ public class Clashgg : IDisposable
             if (packet[0].GetString() == "online" && !_isOnline)
             {
                 _logger.Info("Received online packet from Clash.gg. Subscribing to Plinko, Mines and Keno");
-                _wsClient.Send("[\"subscribe\",\"plinko\"]");
-                _wsClient.Send("[\"subscribe\",\"mines\"]");
-                _wsClient.Send("[\"subscribe\",\"keno\"]");
+                _wsClient?.Send("[\"subscribe\",\"plinko\"]");
+                _wsClient?.Send("[\"subscribe\",\"mines\"]");
+                _wsClient?.Send("[\"subscribe\",\"keno\"]");
                 _isOnline = true;
                 _heartbeatTask = Task.Run(HeartbeatTimer, _cancellationToken);
                 return;
@@ -221,7 +220,7 @@ public class Clashgg : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         _pingCts.Cancel();
         _pingCts.Dispose();
         _heartbeatTask?.Dispose();

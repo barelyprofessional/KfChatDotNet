@@ -19,29 +19,28 @@ public class BotServices
     private readonly CancellationToken _cancellationToken;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     
-    internal KickWsClient.KickWsClient KickClient;
-    private Twitch _twitch;
-    private Shuffle _shuffle;
-    private DiscordService _discord;
-    private TwitchChat _twitchChat;
-    private Jackpot _jackpot;
-    private Howlgg _howlgg;
-    private RainbetWs _rainbet;
-    private Chipsgg _chipsgg;
-    private Clashgg _clashgg;
-    private BetBolt _betBolt;
-    private Yeet _yeet;
-    public AlmanacShill AlmanacShill;
+    internal KickWsClient.KickWsClient? KickClient;
+    private Twitch? _twitch;
+    private Shuffle? _shuffle;
+    private DiscordService? _discord;
+    private TwitchChat? _twitchChat;
+    private Jackpot? _jackpot;
+    private Howlgg? _howlgg;
+    private RainbetWs? _rainbet;
+    private Chipsgg? _chipsgg;
+    private Clashgg? _clashgg;
+    private BetBolt? _betBolt;
+    private Yeet? _yeet;
+    public AlmanacShill? AlmanacShill;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
     
-    private string _bmjTwitchUsername;
-    private bool _twitchDisabled = false;
-    private string? _lastDiscordStatus;
-    internal bool IsBmjLive = false;
-    private bool _isBmjLiveSynced = false;
-    internal bool IsChrisDjLive = false;
+    private string? _bmjTwitchUsername;
+    private bool _twitchDisabled;
+    internal bool IsBmjLive;
+    private bool _isBmjLiveSynced;
+    internal bool IsChrisDjLive;
     private Dictionary<string, SeenYeetBet> _yeetBets = new();
     
     // lol
@@ -142,7 +141,7 @@ public class BotServices
             _logger.Debug("Chips.gg is disabled");
             return;
         }
-        _chipsgg = new Chipsgg(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _chipsgg = new Chipsgg(settings[BuiltIn.Keys.Proxy].Value);
         _chipsgg.OnChipsggRecentBet += OnChipsggRecentBet;
         await _chipsgg.StartWsClient();
         _logger.Info("Built Chips.gg Websocket connection");
@@ -302,7 +301,7 @@ public class BotServices
             ]);
             try
             {
-                if (!_shuffle.IsConnected())
+                if (_shuffle != null && !_shuffle.IsConnected())
                 {
                     _logger.Error("Shuffle died, recreating it");
                     _shuffle.Dispose();
@@ -310,7 +309,7 @@ public class BotServices
                     await BuildShuffle();
                 }
 
-                if (!_discord.IsConnected())
+                if (_discord != null && !_discord.IsConnected())
                 {
                     _logger.Error("Discord died, recreating it");
                     _discord.Dispose();
@@ -318,7 +317,7 @@ public class BotServices
                     await BuildDiscord();
                 }
 
-                if (!_twitchDisabled && !_twitch.IsConnected())
+                if (!_twitchDisabled && _twitch != null && !_twitch.IsConnected())
                 {
                     _logger.Error("Twitch died, recreating it");
                     _twitch.Dispose();
@@ -326,7 +325,7 @@ public class BotServices
                     await BuildTwitch();
                 }
 
-                if (!_twitchChat.IsConnected())
+                if (_twitchChat != null && !_twitchChat.IsConnected())
                 {
                     _logger.Error("Twitch chat died, recreating it");
                     _twitchChat.Dispose();
@@ -334,7 +333,7 @@ public class BotServices
                     await BuildTwitchChat();
                 }
 
-                if (settings[BuiltIn.Keys.HowlggEnabled].ToBoolean() && !_howlgg.IsConnected())
+                if (settings[BuiltIn.Keys.HowlggEnabled].ToBoolean() && _howlgg != null && !_howlgg.IsConnected())
                 {
                     _logger.Error("Howl.gg died, recreating it");
                     _howlgg.Dispose();
@@ -342,7 +341,7 @@ public class BotServices
                     await BuildHowlgg();
                 }
 
-                if (!_jackpot.IsConnected())
+                if (_jackpot != null && !_jackpot.IsConnected())
                 {
                     _logger.Error("Jackpot died, recreating it");
                     _jackpot.Dispose();
@@ -350,7 +349,7 @@ public class BotServices
                     await BuildJackpot();
                 }
 
-                if (settings[BuiltIn.Keys.ChipsggEnabled].ToBoolean() && !_chipsgg.IsConnected())
+                if (settings[BuiltIn.Keys.ChipsggEnabled].ToBoolean() && _chipsgg != null && !_chipsgg.IsConnected())
                 {
                     _logger.Error("Chips died, recreating it");
                     _chipsgg.Dispose();
@@ -358,7 +357,7 @@ public class BotServices
                     await BuildChipsgg();
                 }
 
-                if (settings[BuiltIn.Keys.KickEnabled].ToBoolean() && !KickClient.IsConnected())
+                if (settings[BuiltIn.Keys.KickEnabled].ToBoolean() && KickClient != null && !KickClient.IsConnected())
                 {
                     _logger.Error("Kick died, recreating it");
                     KickClient.Dispose();
@@ -366,7 +365,7 @@ public class BotServices
                     await BuildKick();
                 }
                 
-                if (settings[BuiltIn.Keys.ClashggEnabled].ToBoolean() && !_clashgg.IsConnected())
+                if (settings[BuiltIn.Keys.ClashggEnabled].ToBoolean() && _clashgg != null && !_clashgg.IsConnected())
                 {
                     _logger.Error("Clash.gg died, recreating it");
                     _clashgg.Dispose();
@@ -374,7 +373,7 @@ public class BotServices
                     await BuildClashgg();
                 }
                 
-                if (settings[BuiltIn.Keys.BetBoltEnabled].ToBoolean() && !_betBolt.IsConnected())
+                if (settings[BuiltIn.Keys.BetBoltEnabled].ToBoolean() && _betBolt != null && !_betBolt.IsConnected())
                 {
                     _logger.Error("BetBolt died, recreating it");
                     _betBolt.Dispose();
@@ -382,7 +381,7 @@ public class BotServices
                     await BuildBetBolt();
                 }
                 
-                if (settings[BuiltIn.Keys.YeetEnabled].ToBoolean() && !_yeet.IsConnected())
+                if (settings[BuiltIn.Keys.YeetEnabled].ToBoolean() && _yeet != null && !_yeet.IsConnected())
                 {
                     _logger.Error("Yeet died, recreating it");
                     _yeet.Dispose();
@@ -390,7 +389,7 @@ public class BotServices
                     await BuildYeet();
                 }
                 
-                if (settings[BuiltIn.Keys.RainbetEnabled].ToBoolean() && !_rainbet.IsConnected())
+                if (settings[BuiltIn.Keys.RainbetEnabled].ToBoolean() && _rainbet != null && !_rainbet.IsConnected())
                 {
                     _logger.Error("Rainbet died, recreating it");
                     _rainbet.Dispose();
@@ -549,7 +548,6 @@ public class BotServices
         }
         _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
-        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         //if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         var msg = _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} on {bet.GameName} 💩💩", true);
         _yeetBets.Add(bet.BetIdentifier, new SeenYeetBet {Bet = bet, Message = msg});
@@ -809,7 +807,7 @@ public class BotServices
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Chips.gg bet has arrived");
-        if (!settings[BuiltIn.Keys.ChipsggBmjUserIds].JsonDeserialize<List<string>>()!.Contains(bet.UserId))
+        if (!settings[BuiltIn.Keys.ChipsggBmjUserIds].JsonDeserialize<List<string>>()!.Contains(bet.UserId ?? "0"))
         {
             return;
         }
@@ -817,9 +815,9 @@ public class BotServices
         using var db = new ApplicationDbContext();
         db.ChipsggBets.Add(new ChipsggBetDbModel
         {
-            Created = bet.Created, Updated = bet.Updated, UserId = bet.UserId, Username = bet.Username ?? "Unknown", Win = bet.Win,
+            Created = bet.Created, Updated = bet.Updated, UserId = bet.UserId ?? "0", Username = bet.Username ?? "Unknown", Win = bet.Win,
             Winnings = bet.Winnings, GameTitle = bet.GameTitle!, Amount = bet.Amount, Multiplier = bet.Multiplier,
-            Currency = bet.Currency!, CurrencyPrice = bet.CurrencyPrice, BetId = bet.BetId
+            Currency = bet.Currency!, CurrencyPrice = bet.CurrencyPrice, BetId = bet.BetId ?? "0"
         });
         db.SaveChanges();
         if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
@@ -840,7 +838,7 @@ public class BotServices
         if (kickChannels == null) return;
         foreach (var channel in kickChannels)
         {
-            KickClient.SendPusherSubscribe($"channel.{channel.ChannelId}");
+            KickClient?.SendPusherSubscribe($"channel.{channel.ChannelId}");
         }
     }
 
@@ -951,6 +949,11 @@ public class BotServices
         // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
         if (!_isBmjLiveSynced)
         {
+            if (_twitch == null)
+            {
+                _logger.Error("Twitch client has not been built!");
+                throw new Exception("Twitch client not initialized");
+            }
             IsBmjLive = await _twitch.IsStreamLive(bmjUsername);
             _isBmjLiveSynced = true;
         }

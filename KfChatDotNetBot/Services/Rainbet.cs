@@ -11,8 +11,8 @@ public class Rainbet : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
     public delegate void OnRainbetBetEventHandler(object sender, List<RainbetBetHistoryModel> bets);
-    public event OnRainbetBetEventHandler OnRainbetBet;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnRainbetBetEventHandler? OnRainbetBet;
+    private CancellationToken _cancellationToken;
     private CancellationTokenSource _gameHistoryCts = new();
     private Task? _gameHistoryTask;
     private TimeSpan _gameHistoryInterval = TimeSpan.FromSeconds(60);
@@ -20,9 +20,9 @@ public class Rainbet : IDisposable
     private string? _userAgent = null;
     public DateTimeOffset LastSuccessfulRefresh = DateTimeOffset.MinValue;
 
-    public Rainbet(CancellationToken? cancellationToken = null)
+    public Rainbet(CancellationToken cancellationToken = default)
     {
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Rainbet client created");
     }
 
@@ -118,6 +118,7 @@ public class Rainbet : IDisposable
             throw new Exception("Cloudflare challenged");
         }
         var bets = await response.Content.ReadFromJsonAsync<List<RainbetBetHistoryModel>>(cancellationToken: _cancellationToken);
+        if (bets == null) throw new Exception("Caught a null when deserializing Rainbet bet history");
         return bets;
     }
 

@@ -79,7 +79,7 @@ public class ExceptionTestCommand : ICommand
     public UserRight RequiredRight => UserRight.Admin;
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         throw new Exception("Caused by the test exception command");
     }

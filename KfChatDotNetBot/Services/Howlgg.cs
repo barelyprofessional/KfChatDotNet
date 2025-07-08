@@ -10,25 +10,25 @@ namespace KfChatDotNetBot.Services;
 public class Howlgg : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://howl.gg/socket.io/?EIO=3&transport=websocket");
     // Howl will send its own timeout but seems it's always 30 seconds
     private int _reconnectTimeout = 30;
     private string? _proxy;
     public delegate void OnHowlggBetHistoryResponse(object sender, HowlggBetHistoryResponseModel data);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnHowlggBetHistoryResponse OnHowlggBetHistory;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnHowlggBetHistoryResponse? OnHowlggBetHistory;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
     private CancellationTokenSource _pingCts = new();
     private Task? _heartbeatTask;
     // Howl.gg tells us the heartbeat interval to use in the initial payload so this is just a placeholder
     private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(40);
 
-    public Howlgg(string? proxy = null, CancellationToken? cancellationToken = null)
+    public Howlgg(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Howlgg WebSocket client created");
     }
 
@@ -77,7 +77,7 @@ public class Howlgg : IDisposable
     {
         var packet = "42/main,0[\"getUserInfo\",{\"userOrSteamId\":\"" + userId + "\",\"interval\":\"lifetime\"}]";
         _logger.Debug($"Sending packet: {packet}");
-        _wsClient.Send(packet);
+        _wsClient?.Send(packet);
     }
 
     private async Task HeartbeatTimer()
@@ -141,7 +141,7 @@ public class Howlgg : IDisposable
             if (message.Text == "40")
             {
                 _logger.Trace("Ready to subscribe, sending main subscription");
-                _wsClient.Send("40/main,");
+                _wsClient?.Send("40/main,");
                 // To indicate successful subscription it echoes back the channel to you
                 return;
             }
@@ -152,7 +152,6 @@ public class Howlgg : IDisposable
                 var jsonPayload = message.Text.Replace("43/main,0[null,", string.Empty).TrimEnd(']');
                 var data = JsonSerializer.Deserialize<HowlggBetHistoryResponseModel>(jsonPayload);
                 if (data != null) OnHowlggBetHistory?.Invoke(this, data);
-                return;
             }
         }
         catch (Exception e)
@@ -167,7 +166,7 @@ public class Howlgg : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         _pingCts.Cancel();
         _pingCts.Dispose();
         _heartbeatTask?.Dispose();

@@ -19,13 +19,13 @@ public class UsersJsonModel
         [JsonPropertyName("id")]
         public int Id { get; set; }
         [JsonPropertyName("username")]
-        public string Username { get; set; }
+        public required string Username { get; set; }
         [JsonPropertyName("avatar_url")]
-        public Uri AvatarUrl { get; set; }
+        public Uri? AvatarUrl { get; set; }
         [JsonPropertyName("last_activity")]
         public int LastActivity { get; set; }
     }
-    
+
     [JsonPropertyName("users")]
-    public Dictionary<string, UserModel> Users { get; set; }
+    public Dictionary<string, UserModel> Users { get; set; } = new();
 }

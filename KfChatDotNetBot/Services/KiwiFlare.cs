@@ -75,7 +75,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         return true;
     }
 
-    private async Task<KiwiFlareChallengeSolutionModel> ChallengeWorker(KiwiFlareChallengeModel challenge)
+    private Task<KiwiFlareChallengeSolutionModel> ChallengeWorker(KiwiFlareChallengeModel challenge)
     {
         var nonce = _random.NextInt64();
         while (true)
@@ -84,11 +84,11 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             var input = Encoding.UTF8.GetBytes($"{challenge.Salt}{nonce}");
             if (!TestHash(SHA256.HashData(input), challenge.Difficulty)) continue;
             _logger.Debug($"Hash passed the test, nonce: {nonce}");
-            return new KiwiFlareChallengeSolutionModel
+            return Task.FromResult(new KiwiFlareChallengeSolutionModel
             {
                 Nonce = nonce,
                 Salt = challenge.Salt
-            };
+            });
         }
     }
 

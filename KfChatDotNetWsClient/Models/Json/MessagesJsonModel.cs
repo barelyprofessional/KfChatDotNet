@@ -30,17 +30,17 @@ public class MessagesJsonModel
         [JsonPropertyName("id")]
         public int Id { get; set; }
         [JsonPropertyName("username")]
-        public string Username { get; set; }
+        public required string Username { get; set; }
         [JsonPropertyName("avatar_url")]
-        public Uri AvatarUrl { get; set; }
+        public Uri? AvatarUrl { get; set; }
     }
 
     public class MessageModel
     {
         [JsonPropertyName("author")]
-        public AuthorModel Author { get; set; }
+        public required AuthorModel Author { get; set; }
         [JsonPropertyName("message")]
-        public string Message { get; set; }
+        public required string Message { get; set; }
         [JsonPropertyName("message_id")]
         public int MessageId { get; set; }
         [JsonPropertyName("message_edit_date")]
@@ -48,11 +48,10 @@ public class MessagesJsonModel
         [JsonPropertyName("message_date")]
         public int MessageDate { get; set; }
         [JsonPropertyName("message_raw")]
-        public string MessageRaw { get; set; }
+        public required string MessageRaw { get; set; }
         [JsonPropertyName("room_id")]
         public int RoomId { get; set; }
     }
-    
-    [JsonPropertyName("messages")]
-    public List<MessageModel> Messages { get; set; }
+
+    [JsonPropertyName("messages")] public List<MessageModel> Messages { get; set; } = [];
 }

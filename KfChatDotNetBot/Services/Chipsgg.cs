@@ -10,22 +10,20 @@ namespace KfChatDotNetBot.Services;
 public class Chipsgg : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://api.chips.gg/prod/socket");
     // Chips doesn't have a heartbeat packet
     private int _reconnectTimeout = 30;
     private string? _proxy;
     public delegate void OnChipsggRecentBetEventHandler(object sender, ChipsggBetModel bet);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnChipsggRecentBetEventHandler OnChipsggRecentBet;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnChipsggRecentBetEventHandler? OnChipsggRecentBet;
     private Dictionary<string, ChipsggCurrencyModel> _currencies = new();
-    private bool _authenticated = false;
+    private bool _authenticated;
 
-    public Chipsgg(string? proxy = null, CancellationToken? cancellationToken = null)
+    public Chipsgg(string? proxy = null)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
         _logger.Info("Chipsgg WebSocket client created");
     }
 
@@ -83,7 +81,7 @@ public class Chipsgg : IDisposable
         if (reconnectionInfo.Type == ReconnectionType.Initial)
         {
             _logger.Info("Sending auth payload to Chips.gg");
-            _wsClient.Send("[\"auth\",1,\"token\",[]]");
+            _wsClient?.Send("[\"auth\",1,\"token\",[]]");
         }
     }
     
@@ -121,7 +119,7 @@ public class Chipsgg : IDisposable
                 {
                     var guid = firstElement[2].GetString();
                     _logger.Info("Received auth packet, sending back GUID auth with " + guid);
-                    _wsClient.Send("[\"auth\",2,\"authenticate\",[\"" + guid+ "\"]]");
+                    _wsClient?.Send("[\"auth\",2,\"authenticate\",[\"" + guid+ "\"]]");
                     _authenticated = true;
                     return;
                 }
@@ -130,7 +128,7 @@ public class Chipsgg : IDisposable
                 {
                     _logger.Info("Chips.gg responded to our auth with: " + firstElement[2].GetString());
                     _logger.Info("Sending Chips.gg recent bets subscription packet");
-                    _wsClient.Send("[\"stats\",12,\"on\",[{\"game\":\"bets\",\"type\":\"recentBets\"}]]");
+                    _wsClient?.Send("[\"stats\",12,\"on\",[{\"game\":\"bets\",\"type\":\"recentBets\"}]]");
                     return;
                 }
 
@@ -157,7 +155,7 @@ public class Chipsgg : IDisposable
                     {
                         _logger.Info("Received currency payload without getting the auth response. Retarded inconsistent Chips.gg behavior again, sending a made-up GUID");
                         var guid = Guid.NewGuid().ToString();
-                        _wsClient.Send("[\"auth\",2,\"authenticate\",[\"" + guid+ "\"]]");
+                        _wsClient?.Send("[\"auth\",2,\"authenticate\",[\"" + guid+ "\"]]");
                     }
                     _logger.Info("Received initial currency payload as the path array was empty");
                     var currencyData = dataElement[1].Deserialize<Dictionary<string, JsonElement>>();
@@ -172,7 +170,8 @@ public class Chipsgg : IDisposable
                         {
                             _logger.Info("Ignoring already defined currency");
                             continue;
-                        };
+                        }
+
                         float? price = null;
                         // Where a price is not set, the element is simply missing
                         if (currencies[currency].TryGetProperty("price", out var priceElement))
@@ -206,7 +205,7 @@ public class Chipsgg : IDisposable
                     {
                         _logger.Debug("Ignoring packet as it contains koth");
                         return;
-                    };
+                    }
                     var currency = innerDataPath[1];
                     if (_currencies.TryGetValue(currency, out var updatedCurrency))
                     {
@@ -227,7 +226,7 @@ public class Chipsgg : IDisposable
                     {
                         _logger.Info("Ignoring replay of recent bets");
                         return;
-                    };
+                    }
                 }
                 // Currency data may not be known until after so hold it here til we're done parsing
                 var amount = string.Empty;
@@ -323,7 +322,7 @@ public class Chipsgg : IDisposable
                 {
                     _logger.Debug("Currency or GameTitle was null, ignoring");
                     return;
-                };
+                }
                 if (!_currencies.TryGetValue(bet.Currency, out var currencyData))
                 {
                     throw new Exception($"Unknown currency {bet.Currency}");
@@ -352,7 +351,7 @@ public class Chipsgg : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

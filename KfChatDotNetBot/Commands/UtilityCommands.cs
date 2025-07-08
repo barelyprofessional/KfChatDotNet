@@ -64,8 +64,14 @@ public class GetVersionCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var version = Assembly.GetEntryAssembly()
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+        var version = Assembly.GetEntryAssembly()?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (version == null)
+        {
+            await botInstance.SendChatMessageAsync($"Caught a null when trying to retrieve the bot's assembly version.",
+                true);
+            return;
+        }
         await botInstance.SendChatMessageAsync($"Bot compiled against {version.Split('+')[1]}", true);
     }
 }

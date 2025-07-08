@@ -15,6 +15,11 @@ public static class SettingsProvider
         if (!bypassCache && cache.Contains(key))
         {
             var cachedSetting = cache.Get(key) as SettingDbModel;
+            if (cachedSetting == null)
+            {
+                logger.Error($"Caught a null in spite of the cache supposedly containing {key}");
+                throw new Exception("Cached Setting entry was null");
+            }
             var value = cachedSetting.Value;
             if (cachedSetting.Value == "null") value = null;
             return new Setting(value, cachedSetting, true);

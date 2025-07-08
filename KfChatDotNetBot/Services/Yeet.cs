@@ -10,22 +10,22 @@ namespace KfChatDotNetBot.Services;
 public class Yeet : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://api.yeet.com/room-service/socket/?EIO=4&transport=websocket");
     private int _reconnectTimeout = 30;
     private string? _proxy;
     public delegate void OnYeetBetEventHandler(object sender, YeetCasinoBetModel data);
     public delegate void OnYeetWinEventHandler(object sender, YeetCasinoWinModel data);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnYeetBetEventHandler OnYeetBet;
-    public event OnYeetWinEventHandler OnYeetWin;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnYeetBetEventHandler? OnYeetBet;
+    public event OnYeetWinEventHandler? OnYeetWin;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
 
-    public Yeet(string? proxy = null, CancellationToken? cancellationToken = null)
+    public Yeet(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Yeet WebSocket client created");
     }
 
@@ -84,7 +84,7 @@ public class Yeet : IDisposable
         if (reconnectionInfo.Type == ReconnectionType.Initial)
         {
             _logger.Info("Sending subscribe payload to Yeet");
-            _wsClient.Send("40/public,");
+            _wsClient?.Send("40/public,");
 
         }
     }
@@ -104,7 +104,7 @@ public class Yeet : IDisposable
             if (packetType == "2")
             {
                 _logger.Info("Received ping from Yeet, replying with pong");
-                _wsClient.Send("3");
+                _wsClient?.Send("3");
                 return;
             }
             
@@ -112,14 +112,15 @@ public class Yeet : IDisposable
             {
                 var data = JsonSerializer.Deserialize<List<JsonElement>>(message.Text.Replace("42/public,",
                     string.Empty));
+                if (data == null) throw new Exception("Caught a null when deserializing the Yeet bet payload");
                 if (data[0].GetString() == "casino-bet")
                 {
-                    OnYeetBet?.Invoke(this, data[1].Deserialize<YeetCasinoBetModel>());
+                    OnYeetBet?.Invoke(this, data[1].Deserialize<YeetCasinoBetModel>()!);
                     return;
                 }
                 if (data[0].GetString() == "casino-win")
                 {
-                    OnYeetWin?.Invoke(this, data[1].Deserialize<YeetCasinoWinModel>());
+                    OnYeetWin?.Invoke(this, data[1].Deserialize<YeetCasinoWinModel>()!);
                     return;
 
                 }
@@ -146,7 +147,7 @@ public class Yeet : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

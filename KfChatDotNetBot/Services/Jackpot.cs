@@ -11,25 +11,25 @@ namespace KfChatDotNetBot.Services;
 public class Jackpot : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://api.jackpot.bet/feeds/websocket");
     // Ping interval is 30 seconds
     private int _reconnectTimeout = 60;
     private string? _proxy;
     public delegate void OnJackpotBetEventHandler(object sender, JackpotWsBetPayloadModel data);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnJackpotBetEventHandler OnJackpotBet;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnJackpotBetEventHandler? OnJackpotBet;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
     private CancellationTokenSource _pingCts = new();
     private Task? _heartbeatTask;
     // There's no smarts, it just does 30-second pings
     private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(30);
 
-    public Jackpot(string? proxy = null, CancellationToken? cancellationToken = null)
+    public Jackpot(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Jackpot WebSocket client created");
     }
 
@@ -103,7 +103,7 @@ public class Jackpot : IDisposable
         if (reconnectionInfo.Type == ReconnectionType.Initial)
         {
             _logger.Debug("Sending initial payload");
-            _wsClient.Send("{\"id\":\"lfgkenokasinoinit\",\"type\":\"connection_init\"}");
+            _wsClient?.Send("{\"id\":\"lfgkenokasinoinit\",\"type\":\"connection_init\"}");
         }
     }
     
@@ -129,7 +129,7 @@ public class Jackpot : IDisposable
             if (packet.Type == "connection_ack")
             {
                 _logger.Debug("Received ack from Jackpot. Sending subscription");
-                _wsClient.Send(
+                _wsClient?.Send(
                     "{\"id\":\"lfgkenokasinoallbets\",\"type\":\"subscribe\",\"payload\":{\"feed\":\"all_bets\"}}\n");
                 _logger.Debug("Setting up heartbeat timer");
                 if (_heartbeatTask != null) return;
@@ -178,7 +178,7 @@ public class Jackpot : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         _pingCts.Cancel();
         _pingCts.Dispose();
         _heartbeatTask?.Dispose();

@@ -10,7 +10,7 @@ namespace KfChatDotNetBot.Services;
 public class TwitchChat : IDisposable
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private readonly Uri _wsUri = new("wss://irc-ws.chat.twitch.tv/");
     private const int ReconnectTimeout = 600;
     private readonly string? _proxy;
@@ -19,15 +19,15 @@ public class TwitchChat : IDisposable
 
     public delegate void MessageReceivedEventHandler(object sender, string nick, string target, string message);
     public delegate void WsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event MessageReceivedEventHandler OnMessageReceived;
-    public event WsDisconnectionEventHandler OnWsDisconnection;
+    public event MessageReceivedEventHandler? OnMessageReceived;
+    public event WsDisconnectionEventHandler? OnWsDisconnection;
 
-    private readonly CancellationToken _cancellationToken = CancellationToken.None;
+    private readonly CancellationToken _cancellationToken;
 
-    public TwitchChat(string channel, string? proxy = null, CancellationToken? cancellationToken = null)
+    public TwitchChat(string channel, string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _channel = channel;
         var justinFan = new Random().Next(10000, 99999);
         _nick = $"justinfan{justinFan}";
@@ -87,13 +87,13 @@ public class TwitchChat : IDisposable
         _logger.Error($"Websocket connection dropped and reconnected. Reconnection type is {reconnectionInfo.Type}");
         _logger.Info("Sending registration info to Twitch IRC");
         // I've found if you use the message queue then things come out of order, hence using SendInstant
-        _wsClient.SendInstant("CAP REQ :twitch.tv/tags twitch.tv/commands").Wait(_cancellationToken);
+        _wsClient?.SendInstant("CAP REQ :twitch.tv/tags twitch.tv/commands").Wait(_cancellationToken);
         // Would be an oauth token if you were signed in, but this is just guest access
-        _wsClient.SendInstant("PASS SCHMOOPIIE").Wait(_cancellationToken);
+        _wsClient?.SendInstant("PASS SCHMOOPIIE").Wait(_cancellationToken);
         // Guest users are just justinfan12345 where the 5 digits are random
-        _wsClient.SendInstant($"NICK {_nick}").Wait(_cancellationToken);
+        _wsClient?.SendInstant($"NICK {_nick}").Wait(_cancellationToken);
         // I'm ashamed I've forgotten so much IRC protocol shit that I can't remember what the USER params mean :(
-        _wsClient.SendInstant($"USER {_nick} 8 * :{_nick}").Wait(_cancellationToken);
+        _wsClient?.SendInstant($"USER {_nick} 8 * :{_nick}").Wait(_cancellationToken);
     }
     
     private void WsMessageReceived(ResponseMessage message)
@@ -147,7 +147,7 @@ public class TwitchChat : IDisposable
             {
                 case "PING":
                     _logger.Info("Received PING, sending PONG");
-                    _wsClient.Send("PONG");
+                    _wsClient?.Send("PONG");
                     return;
                 case "JOIN":
                     _logger.Debug("Received JOIN response");
@@ -155,7 +155,7 @@ public class TwitchChat : IDisposable
                 // MOTD
                 case "001":
                     _logger.Debug("Received MOTD. Sending JOIN");
-                    _wsClient.Send($"JOIN {_channel}");
+                    _wsClient?.Send($"JOIN {_channel}");
                     return;
                 default:
                     _logger.Debug($"Command {command} was not handled");
@@ -174,7 +174,7 @@ public class TwitchChat : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

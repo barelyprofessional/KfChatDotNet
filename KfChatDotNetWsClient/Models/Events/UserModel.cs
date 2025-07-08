@@ -6,8 +6,8 @@ public class UserModel
     /// <summary>
     /// Forum display name. Note that it'll be HTML encoded
     /// </summary>
-    public string Username { get; set; }
-    public Uri AvatarUrl { get; set; }
+    public required string Username { get; set; }
+    public Uri? AvatarUrl { get; set; }
     // Unset if it's related to a chat message
     public DateTimeOffset? LastActivity { get; set; }
 }

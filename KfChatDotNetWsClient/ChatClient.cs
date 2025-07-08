@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Xml;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
@@ -14,15 +13,15 @@ namespace KfChatDotNetWsClient;
 
 public class ChatClient
 {
-    public event EventHandlers.OnMessagesEventHandler OnMessages;
-    public event EventHandlers.OnUsersPartedEventHandler OnUsersParted;
-    public event EventHandlers.OnUsersJoinedEventHandler OnUsersJoined;
-    public event EventHandlers.OnWsReconnectEventHandler OnWsReconnect;
-    public event EventHandlers.OnDeleteMessagesEventHandler OnDeleteMessages;
-    public event EventHandlers.OnWsDisconnectionEventHandler OnWsDisconnection;
-    public event EventHandlers.OnFailedToJoinRoom OnFailedToJoinRoom;
-    public event EventHandlers.OnUnknownCommand OnUnknownCommand;
-    private WebsocketClient _wsClient;
+    public event EventHandlers.OnMessagesEventHandler? OnMessages;
+    public event EventHandlers.OnUsersPartedEventHandler? OnUsersParted;
+    public event EventHandlers.OnUsersJoinedEventHandler? OnUsersJoined;
+    public event EventHandlers.OnWsReconnectEventHandler? OnWsReconnect;
+    public event EventHandlers.OnDeleteMessagesEventHandler? OnDeleteMessages;
+    public event EventHandlers.OnWsDisconnectionEventHandler? OnWsDisconnection;
+    public event EventHandlers.OnFailedToJoinRoom? OnFailedToJoinRoom;
+    public event EventHandlers.OnUnknownCommand? OnUnknownCommand;
+    private WebsocketClient? _wsClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private ChatClientConfigModel _config;
     public DateTime LastPacketReceived = DateTime.UtcNow;
@@ -49,6 +48,7 @@ public class ChatClient
 
     public void Disconnect()
     {
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket").Wait();
     }
 
@@ -57,11 +57,13 @@ public class ChatClient
     // none for reconnect.
     public async Task DisconnectAsync()
     {
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket");
     }
 
     public async Task Reconnect()
     {
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.Reconnect();
     }
 
@@ -144,7 +146,7 @@ public class ChatClient
             return;
         }
 
-        Dictionary<string, object> packetType = new Dictionary<string, object>();
+        Dictionary<string, object> packetType;
         try
         {
             packetType = JsonSerializer.Deserialize<Dictionary<string, object>>(message.Text)!;
@@ -193,30 +195,35 @@ public class ChatClient
     public void JoinRoom(int roomId)
     {
         _logger.Debug($"Joining {roomId}");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         _wsClient.Send($"/join {roomId}");
     }
     
     public void SendMessage(string message)
     {
         _logger.Debug($"Sending '{message}'");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         _wsClient.Send(message);
     }
 
     public async Task SendMessageInstantAsync(string message)
     {
         _logger.Debug($"Sending '{message}', bypassing the queue");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.SendInstant(message);
     }
 
     public void DeleteMessage(int messageId)
     {
         _logger.Debug($"Deleting {messageId}");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         _wsClient.Send($"/delete {messageId}");
     }
 
     public async Task DeleteMessageAsync(int messageId)
     {
         _logger.Debug($"Deleting {messageId}");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.SendInstant($"/delete {messageId}");
     }
     
@@ -224,6 +231,7 @@ public class ChatClient
     {
         var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         _wsClient.Send($"/edit {payload}");
     }
 
@@ -231,21 +239,22 @@ public class ChatClient
     {
         var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.SendInstant($"/edit {payload}");
     }
 
     private void WsDeleteMessagesReceived(ResponseMessage message)
     {
-        var data = JsonSerializer.Deserialize<DeleteMessagesJsonModel>(message.Text);
-        _logger.Debug($"Received delete packet for messages: {string.Join(',', data.MessageIdsToDelete)}");
+        var data = JsonSerializer.Deserialize<DeleteMessagesJsonModel>(message.Text!);
+        _logger.Debug($"Received delete packet for messages: {string.Join(',', data!.MessageIdsToDelete)}");
         OnDeleteMessages?.Invoke(this, data.MessageIdsToDelete);
     }
 
     private void WsChatMessagesReceived(ResponseMessage message)
     {
-        var data = JsonSerializer.Deserialize<MessagesJsonModel>(message.Text);
+        var data = JsonSerializer.Deserialize<MessagesJsonModel>(message.Text!);
         var messages = new List<MessageModel>();
-        foreach (var chatMessage in data.Messages)
+        foreach (var chatMessage in data!.Messages)
         {
             var model = new MessageModel
             {
@@ -260,10 +269,12 @@ public class ChatClient
                 Message = chatMessage.Message,
                 MessageId = chatMessage.MessageId,
                 MessageRaw = chatMessage.MessageRaw,
-                RoomId = chatMessage.RoomId
+                RoomId = chatMessage.RoomId,
+                MessageRawHtmlDecoded = WebUtility.HtmlDecode(chatMessage.MessageRaw),
+                MessageDate = DateTimeOffset.FromUnixTimeSeconds(chatMessage.MessageDate)
             };
             
-            if(chatMessage.MessageEditDate == 0)
+            if (chatMessage.MessageEditDate == 0)
             {
                 model.MessageEditDate = null;
             }
@@ -271,8 +282,6 @@ public class ChatClient
             {
                 model.MessageEditDate = DateTimeOffset.FromUnixTimeSeconds(chatMessage.MessageEditDate);
             }
-
-            model.MessageDate = DateTimeOffset.FromUnixTimeSeconds(chatMessage.MessageDate);
 
             messages.Add(model);
         }
@@ -286,9 +295,9 @@ public class ChatClient
 
     private void WsChatUsersJoined(ResponseMessage message)
     {
-        var data = JsonSerializer.Deserialize<UsersJsonModel>(message.Text);
+        var data = JsonSerializer.Deserialize<UsersJsonModel>(message.Text!);
         var users = new List<UserModel>();
-        foreach (var user in data.Users.Keys)
+        foreach (var user in data!.Users.Keys)
         {
             users.Add(new UserModel
             {
@@ -306,9 +315,11 @@ public class ChatClient
     private void WsChatUsersParted(ResponseMessage message)
     {
         // {"user":{"1337":false}}
-        var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, bool>>>(message.Text);
+        var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, bool>>>(message.Text!);
         var usersParted = data!["user"].Select(user => int.Parse(user.Key)).ToList();
         _logger.Debug($"Following users have parted: {string.Join(',', usersParted)}");
         OnUsersParted?.Invoke(this, usersParted);
     }
 }
+
+public class WebSocketNotInitializedException : Exception;

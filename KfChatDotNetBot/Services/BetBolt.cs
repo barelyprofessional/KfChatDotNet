@@ -12,22 +12,22 @@ namespace KfChatDotNetBot.Services;
 public class BetBolt : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://betbolt.com/api/ws");
     // Pings every 5 seconds so 15 seconds should be reasonable
     private int _reconnectTimeout = 15;
     private string? _proxy;
     public delegate void OnBetBoltBetEventHandler(object sender, BetBoltBetModel bet);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnBetBoltBetEventHandler OnBetBoltBet;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
-    private IEnumerable<string>? _cookies = null;
-    private string? _userAgent = null;
-    public BetBolt(string? proxy = null, CancellationToken? cancellationToken = null)
+    public event OnBetBoltBetEventHandler? OnBetBoltBet;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
+    private IEnumerable<string>? _cookies;
+    private string? _userAgent;
+    public BetBolt(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Clash.gg WebSocket client created");
     }
     public async Task StartWsClient()
@@ -86,7 +86,7 @@ public class BetBolt : IDisposable
         if (reconnectionInfo.Type == ReconnectionType.Initial)
         {
             _logger.Info("Sending subscribe payload to BetBolt");
-            _wsClient.Send("{\"topic\":\"system/EN\",\"action\":\"subscribe\"}");
+            _wsClient?.Send("{\"topic\":\"system/EN\",\"action\":\"subscribe\"}");
 
         }
     }

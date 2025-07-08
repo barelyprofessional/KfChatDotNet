@@ -12,15 +12,17 @@ public class ThreeXplPocketWatch
     private Logger _logger = LogManager.GetCurrentClassLogger();
     private string _3xplToken = "3A0_t3st3xplor3rpub11cb3t4efcd21748a5e";
     private string? _proxy;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    private CancellationToken _cancellationToken;
     public delegate void OnPocketWatchEventHandler(object sender, PocketWatchTransactionDbModel e);
-    public event OnPocketWatchEventHandler OnPocketWatchEvent;
+#pragma warning disable CS0067 // Event is never used
+    public event OnPocketWatchEventHandler? OnPocketWatchEvent;
+#pragma warning restore CS0067 // Event is never used
 
-    public ThreeXplPocketWatch(string? proxy = null, CancellationToken? cancellationToken = null)
+    public ThreeXplPocketWatch(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _logger.Info("Starting the pocket watch");
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
     }
 
     private async Task CheckAddress(PocketWatchAddressDbModel addy)

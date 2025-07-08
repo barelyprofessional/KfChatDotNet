@@ -11,7 +11,7 @@ namespace KfChatDotNetBot.Services;
 public class DiscordService : IDisposable
 {
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private readonly Uri _wsUri = new Uri("wss://gateway.discord.gg/?encoding=json&v=9");
     // Not sure what a good value for this would be
     private const int ReconnectTimeout = 60;
@@ -29,24 +29,24 @@ public class DiscordService : IDisposable
     public delegate void ConversationSummaryUpdateEventHandler(object sender,
         DiscordConversationSummaryUpdateModel summary, string guildId);
 
-    public event MessageReceivedEventHandler OnMessageReceived;
-    public event PresenceUpdateEventHandler OnPresenceUpdated;
-    public event WsDisconnectionEventHandler OnWsDisconnection;
-    public event InvalidCredentialsEventHandler OnInvalidCredentials;
-    public event ChannelCreatedEventHandler OnChannelCreated;
-    public event ChannelDeletedEventHandler OnChannelDeleted;
-    public event ConversationSummaryUpdateEventHandler OnConversationSummaryUpdate;
+    public event MessageReceivedEventHandler? OnMessageReceived;
+    public event PresenceUpdateEventHandler? OnPresenceUpdated;
+    public event WsDisconnectionEventHandler? OnWsDisconnection;
+    public event InvalidCredentialsEventHandler? OnInvalidCredentials;
+    public event ChannelCreatedEventHandler? OnChannelCreated;
+    public event ChannelDeletedEventHandler? OnChannelDeleted;
+    public event ConversationSummaryUpdateEventHandler? OnConversationSummaryUpdate;
 
-    private readonly CancellationToken _cancellationToken = CancellationToken.None;
+    private readonly CancellationToken _cancellationToken;
     private readonly CancellationTokenSource _pingCts = new();
     private Task? _heartbeatTask;
     // Discord tells us the heartbeat interval to use in the op 10 response so this is just a placeholder
     private TimeSpan _heartbeatInterval = TimeSpan.FromSeconds(40);
 
-    public DiscordService(string authorization, string? proxy = null, CancellationToken? cancellationToken = null)
+    public DiscordService(string authorization, string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _authorization = authorization;
         _logger.Info("Discord Service created");
     }
@@ -159,7 +159,7 @@ public class DiscordService : IDisposable
                     "\"client_build_number\":306208,\"client_event_source\":null,\"design_id\":0},\"presence\":{\"status\":\"unknown\"," +
                     "\"since\":0,\"activities\":[],\"afk\":false},\"compress\":false,\"client_state\":{\"guild_versions\":{}}}}";
                 _logger.Debug(initPayload);
-                _wsClient.SendInstant(initPayload).Wait(_cancellationToken);
+                _wsClient?.SendInstant(initPayload).Wait(_cancellationToken);
                 _heartbeatInterval =
                     TimeSpan.FromMilliseconds(packet.Data.GetProperty("heartbeat_interval").GetInt32());
                 if (_heartbeatTask != null) return;
@@ -235,7 +235,7 @@ public class DiscordService : IDisposable
     public void Dispose()
     {
         _logger.Info("Disposing of the Discord service");
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         _pingCts.Cancel();
         _pingCts.Dispose();
         _heartbeatTask?.Dispose();

@@ -5,7 +5,7 @@ public class ChipsggBetModel
     public DateTimeOffset Created { get; set; }
     // Can actually get the duration of a game from this
     public DateTimeOffset Updated { get; set; }
-    public string UserId { get; set; }
+    public string? UserId { get; set; }
     // Sometimes null for no discernible reason
     public string? Username { get; set; }
     // Win of any amount even if it's less than a 1x multi
@@ -16,7 +16,7 @@ public class ChipsggBetModel
     public float Multiplier { get; set; }
     public string? Currency { get; set; }
     public float CurrencyPrice { get; set; }
-    public string BetId { get; set; }
+    public string? BetId { get; set; }
 }
 
 public class ChipsggCurrencyModel

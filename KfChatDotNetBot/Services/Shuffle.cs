@@ -11,22 +11,22 @@ namespace KfChatDotNetBot.Services;
 public class Shuffle : IDisposable
 {
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private WebsocketClient _wsClient;
+    private WebsocketClient? _wsClient;
     private Uri _wsUri = new("wss://shuffle.com/main-api/bp-subscription/subscription/graphql");
     private int _reconnectTimeout = 60;
     private string? _proxy;
     public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnLatestBetUpdatedEventHandler OnLatestBetUpdated;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
+    public event OnLatestBetUpdatedEventHandler? OnLatestBetUpdated;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
     private CancellationTokenSource _pingCts = new();
     private Task _pingTask;
 
-    public Shuffle(string? proxy = null, CancellationToken? cancellationToken = null)
+    public Shuffle(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         // Moved it up here as I'm concerned about the possibility of reconnections creating multiple ping tasks
         _pingTask = PeriodicPing();
     }
@@ -103,7 +103,7 @@ public class Shuffle : IDisposable
         var initPayload =
             "{\"type\":\"connection_init\",\"payload\":{\"x-correlation-id\":\"pdvlnd9tej-di27abvq19-1.30.2-1i0nef1m7-g::anon\",\"authorization\":\"\"}}";
         _logger.Debug(initPayload);
-        _wsClient.Send(initPayload);
+        _wsClient?.Send(initPayload);
     }
     
     private void WsMessageReceived(ResponseMessage message)
@@ -128,7 +128,7 @@ public class Shuffle : IDisposable
                 var payload = "{\"id\":\"" + Guid.NewGuid() +
                               "\",\"type\":\"subscribe\",\"payload\":{\"variables\":{},\"extensions\":{},\"operationName\":\"LatestBetUpdated\",\"query\":\"subscription LatestBetUpdated {\\n  latestBetUpdated {\\n    ...BetActivityFields\\n    __typename\\n  }\\n}\\n\\nfragment BetActivityFields on BetActivityPayload {\\n  id\\n  username\\n  vipLevel\\n  currency\\n  amount\\n  payout\\n  multiplier\\n  gameName\\n  gameCategory\\n  gameSlug\\n  __typename\\n}\"}}";
                 _logger.Debug(payload);
-                _wsClient.SendInstant(payload).Wait(_cancellationToken);
+                _wsClient?.SendInstant(payload).Wait(_cancellationToken);
                 return;
             }
 
@@ -206,7 +206,7 @@ public class Shuffle : IDisposable
 
     public void Dispose()
     {
-        _wsClient.Dispose();
+        _wsClient?.Dispose();
         // Rare bug but has happened at least once
         try
         {

@@ -18,16 +18,16 @@ public class RainbetWs : IDisposable
     private string? _proxy;
     public delegate void OnRainbetBetEventHandler(object sender, RainbetWsBetModel bet);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
-    public event OnRainbetBetEventHandler OnRainbetBet;
-    public event OnWsDisconnectionEventHandler OnWsDisconnection;
-    private CancellationToken _cancellationToken = CancellationToken.None;
-    private IEnumerable<string>? _cookies = null;
-    private string? _userAgent = null;
+    public event OnRainbetBetEventHandler? OnRainbetBet;
+    public event OnWsDisconnectionEventHandler? OnWsDisconnection;
+    private CancellationToken _cancellationToken;
+    private IEnumerable<string>? _cookies;
+    private string? _userAgent;
 
-    public RainbetWs(string? proxy = null, CancellationToken? cancellationToken = null)
+    public RainbetWs(string? proxy = null, CancellationToken cancellationToken = default)
     {
         _proxy = proxy;
-        if (cancellationToken != null) _cancellationToken = cancellationToken.Value;
+        _cancellationToken = cancellationToken;
         _logger.Info("Rainbet WebSocket client created");
     }
 
@@ -101,14 +101,14 @@ public class RainbetWs : IDisposable
             {
                 // 0{"sid":"Pf940zhaAqb6BHBiSgLa","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":100000000}
                 _logger.Info("Received initial connection message from Rainbet, sending subscribe");
-                _wsClient.Send("40/game-history,{}");
+                _wsClient?.Send("40/game-history,{}");
                 return;
             }
             var packetType = message.Text.Split('/')[0];
             if (packetType == "2")
             {
                 _logger.Info("Received ping from Rainbet, replying with pong");
-                _wsClient.Send("3");
+                _wsClient?.Send("3");
                 return;
             }
             
@@ -124,14 +124,14 @@ public class RainbetWs : IDisposable
             {
                 var data = JsonSerializer.Deserialize<List<JsonElement>>(message.Text.Replace("42/game-history,",
                     string.Empty));
+                if (data == null) throw new Exception("Caught a null when deserializing game history");
                 if (data[0].GetString() == "new-history")
                 {
-                    OnRainbetBet?.Invoke(this, data[1].Deserialize<RainbetWsBetModel>());
+                    OnRainbetBet?.Invoke(this, data[1].Deserialize<RainbetWsBetModel>()!);
                     return;
                 }
                 _logger.Info($"Event {data[0].GetString()} from Rainbet was not handled");
                 _logger.Info(message.Text);
-                return;
             }
         }
         catch (Exception e)
