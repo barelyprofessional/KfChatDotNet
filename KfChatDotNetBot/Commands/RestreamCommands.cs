@@ -92,11 +92,7 @@ public class SelfPromoCommand : ICommand
             return;
         }
 
-        var streamList = string.Empty;
-        foreach (var stream in userChannels)
-        {
-            streamList = $"[br]- https://kick.com/{stream.ChannelSlug}";
-        }
+        var streamList = userChannels.Aggregate(string.Empty, (current, stream) => current + $"[br]- https://kick.com/{stream.ChannelSlug}");
 
         await botInstance.SendChatMessageAsync(
             $"@{user.KfUsername} is a weirdo who streams a lot. His channels are at: {streamList}", true);
