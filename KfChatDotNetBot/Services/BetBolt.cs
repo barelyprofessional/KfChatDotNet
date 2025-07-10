@@ -28,7 +28,7 @@ public class BetBolt : IDisposable
     {
         _proxy = proxy;
         _cancellationToken = cancellationToken;
-        _logger.Info("Clash.gg WebSocket client created");
+        _logger.Info("BetBolt WebSocket client created");
     }
     public async Task StartWsClient()
     {
