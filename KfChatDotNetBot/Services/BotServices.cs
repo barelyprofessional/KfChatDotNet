@@ -303,7 +303,7 @@ public class BotServices
             _logger.Debug("Parti is disabled");
             return;
         }
-        _parti = new Parti(settings[BuiltIn.Keys.YeetProxy].Value, _cancellationToken);
+        _parti = new Parti(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _parti.OnPartiChannelLiveNotification += OnPartiChannelLiveNotification;
         await _parti.StartWsClient();
         _logger.Info("Built Parti Websocket connection");
