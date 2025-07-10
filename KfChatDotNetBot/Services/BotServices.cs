@@ -80,7 +80,8 @@ public class BotServices
             BuildAlmanacShill(),
             BuildBetBolt(),
             BuildYeet(),
-            BuildRainbet()
+            BuildRainbet(),
+            BuildParti()
         ];
         try
         {
@@ -317,7 +318,7 @@ public class BotServices
             var settings = await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
                 BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled,
-                BuiltIn.Keys.RainbetEnabled
+                BuiltIn.Keys.RainbetEnabled, BuiltIn.Keys.PartiEnabled
             ]);
             try
             {
@@ -415,6 +416,14 @@ public class BotServices
                     _rainbet.Dispose();
                     _rainbet = null!;
                     await BuildRainbet();
+                }
+                
+                if (settings[BuiltIn.Keys.PartiEnabled].ToBoolean() && _parti != null && !_parti.IsConnected())
+                {
+                    _logger.Error("Parti died, recreating it");
+                    _parti.Dispose();
+                    _parti = null!;
+                    await BuildParti();
                 }
             }
             catch (Exception e)
