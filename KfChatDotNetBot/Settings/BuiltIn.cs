@@ -776,6 +776,21 @@ public static class BuiltIn
             Description = "Path to store the temporary .sh script used to initiate the capture",
             Default = "/tmp/",
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.PartiEnabled,
+            Regex = "(true|false)",
+            Description = "Whether the Parti stream notification service is enabled",
+            Default = "true",
+            ValueType = SettingValueType.Boolean
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.PartiChannels,
+            Description = "JSON of all the Parti channels to listen to",
+            Default = "[]",
+            ValueType = SettingValueType.Complex
         }
     ];
     
@@ -866,5 +881,7 @@ public static class BuiltIn
         public static string CaptureEnabled = "Capture.Enabled";
         public static string CaptureYtDlpParentTerminal = "Capture.YtDlp.ParentTerminal";
         public static string CaptureYtDlpScriptPath = "Capture.YtDlp.ScriptPath";
+        public static string PartiEnabled = "Parti.Enabled";
+        public static string PartiChannels = "Parti.Channels";
     }
 }

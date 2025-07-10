@@ -17,3 +17,11 @@ public class CourtHearingModel
     public required DateTimeOffset Time { get; set; }
     public required string CaseNumber { get; set; }
 }
+
+public class PartiChannelModel
+{
+    public required string Username { get; set; }
+    public required int ForumId { get; set; }
+    public bool AutoCapture { get; set; } = false;
+    public required string SocialMedia { get; set; }
+}

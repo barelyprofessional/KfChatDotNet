@@ -74,25 +74,33 @@ public class SelfPromoCommand : ICommand
         CancellationToken ctx)
     {
         var channels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
-        if (channels == null)
+        var partiChannels = SettingsProvider.GetValueAsync(BuiltIn.Keys.PartiChannels).Result
+            .JsonDeserialize<List<PartiChannelModel>>();
+        if (channels == null || partiChannels == null)
         {
-            await botInstance.SendChatMessageAsync("For some reason the list of Kick channels deserialized to null", true);
+            await botInstance.SendChatMessageAsync("For some reason the list of Kick or Parti channels deserialized to null", true);
             return;
         }
+        
         var userChannels = channels.Where(ch => ch.ForumId == user.KfId).ToList();
-        if (userChannels.Count == 0)
+        var userPartiChannels = partiChannels.Where(ch => ch.ForumId == user.KfId).ToList();
+        
+        if (userChannels.Count == 0 && userPartiChannels.Count == 0)
         {
             await botInstance.SendChatMessageAsync("You have no streams.", true);
             return;
         }
-
-        if (userChannels.Count == 1)
-        {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername} is a weirdo who streams. Come check out his channel at https://kick.com/{userChannels[0].ChannelSlug}", true);
-            return;
-        }
-
         var streamList = userChannels.Aggregate(string.Empty, (current, stream) => current + $"[br]- https://kick.com/{stream.ChannelSlug}");
+        foreach (var stream in userPartiChannels)
+        {
+            var url = $"https://parti.com/creator/{stream.SocialMedia}/{stream.Username}/";
+            if (stream.SocialMedia == "discord")
+            {
+                url += "0";
+            }
+
+            streamList += $"[br]- {url}";
+        }
 
         await botInstance.SendChatMessageAsync(
             $"@{user.KfUsername} is a weirdo who streams a lot. His channels are at: {streamList}", true);

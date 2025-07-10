@@ -156,6 +156,74 @@ public class ReconnectKickCommand : ICommand
     }
 }
 
+public class NewPartiChannelCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin parti add (?<forum_id>\d+) (?<social>\S+) (?<username>\S+) (?<auto_capture>true|false)$"),
+        new Regex(@"^admin parti add (?<forum_id>\d+) (?<social>\S+) (?<username>\S+)$")
+
+    ];
+
+    public string? HelpText => "Add a Parti channel to the bot's database";
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var autoCapture = false;
+        if (arguments.TryGetValue("auto_capture", out var argument))
+        {
+            autoCapture = argument.Value == "true";
+        }
+        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.PartiChannels)).JsonDeserialize<List<PartiChannelModel>>();
+        var username = arguments["username"].Value;
+        channels ??= [];
+        if (channels.Any(channel => channel.Username == username))
+        {
+            await botInstance.SendChatMessageAsync("Channel is already in the database", true);
+            return;
+        }
+
+        var forumId = Convert.ToInt32(arguments["forum_id"].Value);
+        channels.Add(new PartiChannelModel
+        {
+            Username = username,
+            ForumId = forumId,
+            AutoCapture = autoCapture,
+            SocialMedia = arguments["social"].Value
+        });
+        
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.PartiChannels, channels);
+        await botInstance.SendChatMessageAsync("Updated list of channels", true);
+    }
+}
+
+public class RemovePartiChannelCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin parti remove (?<username>\S+)$")
+    ];
+
+    public string? HelpText => "Remove a Parti channel from the bot's database";
+    public UserRight RequiredRight => UserRight.Admin;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.PartiChannels)).JsonDeserialize<List<PartiChannelModel>>();
+        if (channels == null) throw new Exception("Caught a null when deserializing Parti channels");
+        var username = arguments["username"].Value;
+        var channel = channels.FirstOrDefault(ch => ch.Username == username);
+        if (channel == null)
+        {
+            await botInstance.SendChatMessageAsync("Channel is not in the database", true);
+            return;
+        }
+        channels.Remove(channel);
+        
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.PartiChannels, channels);
+        await botInstance.SendChatMessageAsync("Updated list of channels", true);
+    }
+}
+
 public class AddCourtHearingCommand : ICommand
 {
     public List<Regex> Patterns => [

@@ -32,6 +32,7 @@ public class BotServices
     private BetBolt? _betBolt;
     private Yeet? _yeet;
     public AlmanacShill? AlmanacShill;
+    private Parti? _parti;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -293,6 +294,20 @@ public class BotServices
         _logger.Info("Built the almanac shill task");
     }
     
+    private async Task BuildParti()
+    {
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.PartiEnabled]);
+        if (!settings[BuiltIn.Keys.PartiEnabled].ToBoolean())
+        {
+            _logger.Debug("Parti is disabled");
+            return;
+        }
+        _parti = new Parti(settings[BuiltIn.Keys.YeetProxy].Value, _cancellationToken);
+        _parti.OnPartiChannelLiveNotification += OnPartiChannelLiveNotification;
+        await _parti.StartWsClient();
+        _logger.Info("Built Parti Websocket connection");
+    }
+
     private async Task WebsocketWatchdog()
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(10));
@@ -905,6 +920,45 @@ public class BotServices
         {
             _logger.Info($"{channel.ChannelSlug} is configured to auto capture");
             _ = new YtDlpCapture($"https://kick.com/{channel.ChannelSlug}", _cancellationToken).CaptureAsync();
+        }
+    }
+    
+    private void OnPartiChannelLiveNotification(object sender, PartiChannelLiveNotificationModel data)
+    {
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([BuiltIn.Keys.PartiChannels, BuiltIn.Keys.CaptureEnabled]).Result;
+        var channels = settings[BuiltIn.Keys.PartiChannels].JsonDeserialize<List<PartiChannelModel>>();
+        if (channels == null)
+        {
+            _logger.Error("Caught a null when deserializing Parti channels");
+            return;
+        }
+
+        var channel = channels.FirstOrDefault(ch => ch.Username == data.Username);
+        if (channel == null)
+        {
+            _logger.Debug($"Got a Parti live notification for a channel we don't care about: {data.Username}");
+            return;
+        }
+
+        using var db = new ApplicationDbContext();
+        var user = db.Users.FirstOrDefault(u => u.KfId == channel.ForumId);
+        if (user == null)
+        {
+            _logger.Error($"Caught a null when retrieving forum ID {channel.ForumId}");
+            return;
+        }
+
+        var url = $"https://parti.com/creator/{data.SocialMedia}/{data.Username}/";
+        if (data.SocialMedia == "discord")
+        {
+            url += "0";
+        }
+        _chatBot.SendChatMessage($"@{user.KfUsername} is live! {data.EventTitle} {url}", true);
+        if (channel.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
+        {
+            _logger.Info($"{channel.Username} is configured to auto capture");
+            _ = new YtDlpCapture(url, _cancellationToken).CaptureAsync();
         }
     }
 
