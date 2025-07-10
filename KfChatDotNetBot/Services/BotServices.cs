@@ -126,6 +126,11 @@ public class BotServices
     private async Task BuildRainbet()
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.RainbetEnabled]);
+        if (!settings[BuiltIn.Keys.RainbetEnabled].ToBoolean())
+        {
+            _logger.Debug("Rainbet is disabled");
+            return;
+        }
         _rainbet = new RainbetWs(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _rainbet.OnRainbetBet += OnRainbetBet;
         await _rainbet.RefreshCookies();
