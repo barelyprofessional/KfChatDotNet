@@ -78,7 +78,8 @@ public class CacheClearAdminCommand : ICommand
 public class NewKickChannelCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^admin kick add (?<forum_id>\d+) (?<channel_id>\d+) (?<slug>\S+)$")
+        new Regex(@"^admin kick add (?<forum_id>\d+) (?<channel_id>\d+) (?<slug>\S+)$"),
+        new Regex(@"^admin kick add (?<forum_id>\d+) (?<channel_id>\d+) (?<slug>\S+) (?<auto_capture>true|false)$")
     ];
 
     public string? HelpText => "Add a Kick channel to the bot's database";
@@ -86,6 +87,11 @@ public class NewKickChannelCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
+        var autoCapture = false;
+        if (arguments.TryGetValue("auto_capture", out var argument))
+        {
+            autoCapture = argument.Value == "true";
+        }
         var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
         var channelId = Convert.ToInt32(arguments["channel_id"].Value);
         channels ??= [];
@@ -100,7 +106,8 @@ public class NewKickChannelCommand : ICommand
         {
             ChannelId = channelId,
             ForumId = forumId,
-            ChannelSlug = arguments["slug"].Value
+            ChannelSlug = arguments["slug"].Value,
+            AutoCapture = autoCapture
         });
         
         await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KickChannels, channels);
