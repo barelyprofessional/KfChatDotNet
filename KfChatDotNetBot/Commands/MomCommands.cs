@@ -27,8 +27,11 @@ public class MomCommand : ICommand
         var lastMom = (await db.Moms.ToListAsync(ctx)).OrderByDescending(j => j.Time).Take(1).ToList();
         if (lastMom.Count == 0 || (lastMom[0].Time.AddSeconds(cooldown) - DateTimeOffset.UtcNow).TotalSeconds <= 0)
         {
-            await db.Moms.AddAsync(new MomDbModel { User = user, Time = DateTimeOffset.UtcNow }, ctx);
-            await db.SaveChangesAsync(ctx);
+            if (user.UserRight > UserRight.Loser)
+            {
+                await db.Moms.AddAsync(new MomDbModel { User = user, Time = DateTimeOffset.UtcNow }, ctx);
+                await db.SaveChangesAsync(ctx);
+            }
             var count = await db.Moms.CountAsync(ctx);
             await botInstance.SendChatMessageAsync(
                 $"[b][color={momSettings[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DTPN![/color][/b] - {momSettings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has fucked {count:N0} MILFs!",
