@@ -739,8 +739,21 @@ public class BotServices
 
         if (message.Type == DiscordMessageType.StageStart)
         {
-            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username} just started a stage called {message.Content} 🚨🚨" +
-                                     $"[br]🚨🚨 {message.Author.GlobalName ?? message.Author.Username} is [b]LIVE[/b] on Discord! 🚨🚨",
+            var db = new ApplicationDbContext();
+            var winman = db.Images.Where(i => i.Key == "winmanjack").ToList().OrderBy(i => i.LastSeen).Take(1)
+                .ToList();
+            var liveMessage =
+                $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username} just started a stage called {message.Content} 🚨🚨" +
+                $"[br]🚨🚨 {message.Author.GlobalName ?? message.Author.Username} is [b]LIVE[/b] on Discord! 🚨🚨";
+            if (winman.Count > 0)
+            {
+                liveMessage += $"[br][img]{winman[0].Url}[/img]";
+            }
+            var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")), TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").BaseUtcOffset);
+
+            liveMessage += $"[br]Verified [b]True and Honest[/b] by @KenoGPT at {bmt:dddd h:mm:ss tt} BMT";
+            _chatBot.SendChatMessage(liveMessage,
                 true);
             return;
         }
