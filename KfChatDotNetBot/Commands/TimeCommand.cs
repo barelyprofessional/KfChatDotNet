@@ -12,8 +12,8 @@ public class TimeCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var agt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+        var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
             TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")), TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").BaseUtcOffset);
-        await botInstance.SendChatMessageAsync($"It's currently {agt:dddd h:mm:ss tt} AGT", true);
+        await botInstance.SendChatMessageAsync($"It's currently {bmt:dddd h:mm:ss tt} BMT");
     }
 }
