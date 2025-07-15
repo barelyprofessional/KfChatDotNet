@@ -246,6 +246,12 @@ public class ChatBot
                 _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
             UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
+            if (message.Author.Id is 70029 or 142504 &&
+                (message.MessageRawHtmlDecoded.Contains("discord16.png") ||
+                 message.MessageRawHtmlDecoded.Contains("TwitchBossmanJack:", StringComparison.CurrentCultureIgnoreCase)))
+            {
+                SendChatMessage($"☝️ {message.Author.Username} is a faggot", true);
+            }
         }
         
         if (InitialStartCooldown) InitialStartCooldown = false;
