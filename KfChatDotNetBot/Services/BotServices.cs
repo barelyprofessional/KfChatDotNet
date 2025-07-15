@@ -752,9 +752,12 @@ public class BotServices
             var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
                 TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time")), TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time").BaseUtcOffset);
 
-            liveMessage += $"[br]Verified [b]True and Honest[/b] by @KenoGPT at {bmt:dddd h:mm:ss tt} BMT";
             _chatBot.SendChatMessage(liveMessage,
                 true);
+            var flashMsg =
+                _chatBot.SendChatMessage($"Verified [b]True and Honest[/b] by @KenoGPT at {bmt:dddd h:mm:ss tt} BMT",
+                    true);
+            _ = DiscordFlashText(flashMsg);
             return;
         }
         if (message.Type == DiscordMessageType.StageEnd)
@@ -771,6 +774,42 @@ public class BotServices
         }
         
         _chatBot.SendChatMessage(result, TemporarilyBypassGambaSeshForDiscord);
+    }
+
+    private async Task DiscordFlashText(SentMessageTrackerModel msg)
+    {
+        var settings =
+            await SettingsProvider.GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsRedColor, BuiltIn.Keys.KiwiFarmsGreenColor
+            ]);
+        var patience = 0;
+        while (msg.ChatMessageId == null)
+        {
+            patience++;
+            if (msg.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending || patience > 50)
+            {
+                _logger.Error($"Message '{msg.Message}' got lost/blackholed or we gave up waiting");
+                return;
+            }
+
+            await Task.Delay(125, _cancellationToken);
+        }
+
+        var seconds = 0;
+        while (seconds < 60)
+        {
+            if (seconds % 2 == 0)
+            {
+                await _chatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"[color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}[/color]{msg.Message}[/color]");
+            }
+            else
+            {
+                await _chatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"[color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}[/color]{msg.Message}[/color]");
+            }
+
+            await Task.Delay(1000, _cancellationToken);
+            seconds++;
+        }
     }
 
     private void DiscordOnInvalidCredentials(object sender, DiscordPacketReadModel packet)
