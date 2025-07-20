@@ -828,11 +828,11 @@ public class BotServices
         {
             if (seconds % 2 == 0)
             {
-                await _chatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"[color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}[/color]{msg.Message}[/color]");
+                await _chatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"[color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]{msg.Message}[/color]");
             }
             else
             {
-                await _chatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"[color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}[/color]{msg.Message}[/color]");
+                await _chatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"[color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}]{msg.Message}[/color]");
             }
 
             await Task.Delay(1000, _cancellationToken);
