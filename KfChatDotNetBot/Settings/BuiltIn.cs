@@ -863,7 +863,7 @@ public static class BuiltIn
         {
             Key = Keys.CaptureStreamlinkRemuxScript,
             Description = "Path of the remux script to convert .ts to .mp4",
-            Default = "/root/BMJ/Convert-TsToMp4.ps1",
+            Default = "pwsh /root/BMJ/Convert-TsToMp4.ps1",
             ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
