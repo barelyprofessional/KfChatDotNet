@@ -316,11 +316,12 @@ public class BotServices
         _logger.Info("Built the almanac shill task");
     }
 
-    private async Task BuildDLiveStatusCheck()
+    private Task BuildDLiveStatusCheck()
     {
         _dliveStatusCheck = new DLive(_chatBot);
         _dliveStatusCheck.StartLiveStatusCheck();
         _logger.Info("Built the DLive livestream status check task");
+        return Task.CompletedTask;
     }
     
     private async Task BuildParti()
