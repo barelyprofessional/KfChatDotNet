@@ -11,8 +11,8 @@ public class AlmanacShill(ChatBot kfChatBot) : IDisposable
     
     private async Task AlmanacShillTask()
     {
-        var interval = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacInterval);
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(Convert.ToInt32(interval.Value)));
+        var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacInterval)).ToType<int>();
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(_almanacShillCts.Token))
         {
             _logger.Info("Time to shill the almanac in chat");
