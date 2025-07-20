@@ -849,7 +849,7 @@ public static class BuiltIn
         {
             Key = Keys.CaptureStreamlinkOutputFormat,
             Description = "Output format to pass to streamlink using --output",
-            Default = "%(title)s - %(uploader)s [%(id)s] %(upload_date)s %(timestamp)s.ts",
+            Default = "{author}-{id}-{title}-{time:%Y-%m-%d_%Hh%Mm%Ss}.ts",
             ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
