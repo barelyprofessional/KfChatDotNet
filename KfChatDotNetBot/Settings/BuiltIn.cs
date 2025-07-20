@@ -94,6 +94,55 @@ public static class BuiltIn
 
         logger.Info("File renamed");
     }
+#pragma warning disable CS0612 // Type or member is obsolete
+    public static async Task MigrateStreamChannelsToDatabase()
+    {
+        var logger = LogManager.GetCurrentClassLogger();
+        await using var db = new ApplicationDbContext();
+        if (await db.Streams.AnyAsync())
+        {
+            logger.Info("Streams already migrated as there are rows in the table");
+            return;
+        }
+        var channels =
+            await SettingsProvider.GetMultipleValuesAsync([Keys.KickChannels, Keys.PartiChannels]);
+        var kickChannels = channels[Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
+        foreach (var channel in kickChannels ?? [])
+        {
+            var user = await db.Users.FirstAsync(u => u.KfId == channel.ForumId);
+            await db.Streams.AddAsync(new StreamDbModel
+            {
+                StreamUrl = $"https://kick.com/{channel.ChannelSlug}",
+                User = user,
+                AutoCapture = channel.AutoCapture,
+                Metadata = JsonSerializer.Serialize(new KickStreamMetaModel { ChannelId = channel.ChannelId } ),
+                Service = StreamService.Kick
+            });
+            logger.Info($"Migrated {channel.ChannelSlug} Kick channel");
+        }
+
+        var partiChannels = channels[Keys.PartiChannels].JsonDeserialize<List<PartiChannelModel>>();
+#pragma warning restore CS0612 // Type or member is obsolete
+        foreach (var channel in partiChannels ?? [])
+        {
+            var user = await db.Users.FirstAsync(u => u.KfId == channel.ForumId);
+            var streamUrl = $"https://parti.com/creator/{channel.SocialMedia}/{channel.Username}/";
+            if (channel.SocialMedia == "discord")
+            {
+                streamUrl += "0";
+            }
+            await db.Streams.AddAsync(new StreamDbModel
+            {
+                StreamUrl = streamUrl,
+                AutoCapture = channel.AutoCapture,
+                Service = StreamService.Parti,
+                User = user
+            });
+            logger.Info($"Migrated {channel.Username} Parti channel");
+        }
+
+        await db.SaveChangesAsync();
+    }
     
     private static void SafelyRenameFile(string oldName, string newName)
     {
@@ -458,7 +507,9 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
+#pragma warning disable CS0612 // Type or member is obsolete
             Key = Keys.KickChannels,
+#pragma warning restore CS0612 // Type or member is obsolete
             Description = "Kick channels the bot knows about for notifications",
             Default = "[]",
             ValueType = SettingValueType.Array
@@ -787,8 +838,46 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
+#pragma warning disable CS0612 // Type or member is obsolete
             Key = Keys.PartiChannels,
+#pragma warning restore CS0612 // Type or member is obsolete
             Description = "JSON of all the Parti channels to listen to",
+            Default = "[]",
+            ValueType = SettingValueType.Complex
+        },       
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureStreamlinkOutputFormat,
+            Description = "Output format to pass to streamlink using --output",
+            Default = "%(title)s - %(uploader)s [%(id)s] %(upload_date)s %(timestamp)s.ts",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureStreamlinkBinaryPath,
+            Description = "Path of the streamlink binary",
+            Default = "/usr/local/bin/streamlink",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureStreamlinkRemuxScript,
+            Description = "Path of the remux script to convert .ts to .mp4",
+            Default = "/root/BMJ/Convert-TsToMp4.ps1",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.DLiveCheckInterval,
+            Description = "How often (in seconds) to check if a DLive streamer is live",
+            Default = "15",
+            Regex = @"\d+",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.DLivePersistedCurrentlyLiveStreams,
+            Description = "Array of DLive streamers who are currently live for persistence between bot restarts",
             Default = "[]",
             ValueType = SettingValueType.Complex
         }
@@ -838,6 +927,7 @@ public static class BuiltIn
         public static string CrackedZalgoFuckUpPosition = "Cracked.ZalgoFuckUpPosition";
         public static string BotDisconnectReplayLimit = "Bot.DisconnectReplayLimit";
         public static string KiwiFarmsJoinFailLimit = "KiwiFarms.JoinFailLimit";
+        [Obsolete]
         public static string KickChannels = "Kick.Channels";
         public static string BotCleanStartTime = "Bot.Clean.StartTime";
         public static string BotRehabEndTime = "Bot.Rehab.EndTime";
@@ -882,6 +972,12 @@ public static class BuiltIn
         public static string CaptureYtDlpParentTerminal = "Capture.YtDlp.ParentTerminal";
         public static string CaptureYtDlpScriptPath = "Capture.YtDlp.ScriptPath";
         public static string PartiEnabled = "Parti.Enabled";
+        [Obsolete]
         public static string PartiChannels = "Parti.Channels";
+        public static string CaptureStreamlinkBinaryPath = "Capture.Streamlink.BinaryPath";
+        public static string CaptureStreamlinkOutputFormat = "Capture.Streamlink.OutputFormat";
+        public static string CaptureStreamlinkRemuxScript = "Capture.Streamlink.RemuxScript";
+        public static string DLiveCheckInterval = "DLive.CheckInterval";
+        public static string DLivePersistedCurrentlyLiveStreams = "DLive.PersistedCurrentlyLiveStreams";
     }
 }

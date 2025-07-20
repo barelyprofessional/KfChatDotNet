@@ -9,12 +9,13 @@ namespace KfChatDotNetBot.Services;
 /// </summary>
 /// <param name="streamUrl">Streamer URL</param>
 /// <param name="ct">Cancellation token</param>
-public class YtDlpCapture(string streamUrl, CancellationToken ct = default)
+public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod, CancellationToken ct = default)
 {
     private readonly Dictionary<string, Setting> _settings = SettingsProvider
         .GetMultipleValuesAsync([BuiltIn.Keys.CaptureYtDlpBinaryPath, BuiltIn.Keys.CaptureYtDlpWorkingDirectory,
             BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser, BuiltIn.Keys.CaptureYtDlpOutputFormat, BuiltIn.Keys.CaptureYtDlpParentTerminal,
-            BuiltIn.Keys.CaptureYtDlpScriptPath, BuiltIn.Keys.CaptureYtDlpUserAgent]).Result;
+            BuiltIn.Keys.CaptureYtDlpScriptPath, BuiltIn.Keys.CaptureYtDlpUserAgent, BuiltIn.Keys.CaptureStreamlinkBinaryPath,
+            BuiltIn.Keys.CaptureStreamlinkOutputFormat, BuiltIn.Keys.CaptureStreamlinkRemuxScript]).Result;
 
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -82,6 +83,7 @@ public class YtDlpCapture(string streamUrl, CancellationToken ct = default)
             _logger.Error("Capture process task faulted");
             _logger.Error(task.Exception);
         }
+        _logger.Info($"Script {pStartInfoExecuteScript} launched and yielded to us!");
     }
 
     /// <summary>
@@ -99,10 +101,31 @@ public class YtDlpCapture(string streamUrl, CancellationToken ct = default)
         }
         _logger.Info($"Generated script path: {scriptPath}");
 
-        var ytDlpLine = $"{_settings[BuiltIn.Keys.CaptureYtDlpBinaryPath].Value} -o \"{_settings[BuiltIn.Keys.CaptureYtDlpOutputFormat].Value}\" " +
-                        $"--user-agent \"{_settings[BuiltIn.Keys.CaptureYtDlpUserAgent].Value}\" " +
-                        $"--cookies-from-browser {_settings[BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser].Value} " +
-                        $"--write-info-json --wait-for-video 15 {streamUrl}";
+        string captureLine;
+        if (captureMethod == StreamCaptureMethods.YtDlp)
+        {
+            captureLine = $"{_settings[BuiltIn.Keys.CaptureYtDlpBinaryPath].Value} -o \"{_settings[BuiltIn.Keys.CaptureYtDlpOutputFormat].Value}\" " +
+                          $"--user-agent \"{_settings[BuiltIn.Keys.CaptureYtDlpUserAgent].Value}\" " +
+                          $"--cookies-from-browser {_settings[BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser].Value} " +
+                          $"--write-info-json --wait-for-video 15 {streamUrl}";
+        }
+        else if (captureMethod == StreamCaptureMethods.Streamlink)
+        {
+            captureLine = $"{_settings[BuiltIn.Keys.CaptureStreamlinkBinaryPath].Value} --output \"{_settings[BuiltIn.Keys.CaptureStreamlinkOutputFormat].Value}\" " +
+                          $"--retry-streams 15 --retry-max 10 {streamUrl} best";
+        }
+        else
+        {
+            _logger.Error($"We were given a straem capture method that doesn't exist: {captureMethod}");
+            throw new UnsupportedStreamCaptureMethodException();
+        }
+
+        var remuxLine = string.Empty;
+        if (captureMethod == StreamCaptureMethods.Streamlink)
+        {
+            remuxLine = _settings[BuiltIn.Keys.CaptureStreamlinkRemuxScript].Value;
+        }
+        
         string scriptContent;
 
         if (OperatingSystem.IsWindows())
@@ -111,14 +134,16 @@ public class YtDlpCapture(string streamUrl, CancellationToken ct = default)
             // we'll need to swap to that drive letter, so this just trims off the \ to transform it to D: or whatever. UNC paths not supported
             scriptContent = $"{Path.GetPathRoot(_settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value)?.TrimEnd('\\')}{Environment.NewLine}" +
                             $"CD {_settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
-                            $"{ytDlpLine}{Environment.NewLine}" +
+                            $"{captureLine}{Environment.NewLine}" +
+                            $"{remuxLine}{Environment.NewLine}" +
                             $"PAUSE";
         }
         else if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
         {
             scriptContent = $"#!/bin/bash{Environment.NewLine}" +
                             $"cd {_settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
-                            $"{ytDlpLine}{Environment.NewLine}" +
+                            $"{captureLine}{Environment.NewLine}" +
+                            $"{remuxLine}{Environment.NewLine}" +
                             $"read -p \"Press enter to exit\"";
         }
         else
@@ -141,3 +166,11 @@ public class YtDlpCapture(string streamUrl, CancellationToken ct = default)
 }
 
 public class UnsupportedOperatingSystemException : Exception;
+
+public class UnsupportedStreamCaptureMethodException : Exception;
+
+public enum StreamCaptureMethods
+{
+    YtDlp,
+    Streamlink
+}

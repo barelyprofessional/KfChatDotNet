@@ -1,8 +1,8 @@
 ﻿using System.Text.RegularExpressions;
-using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
+using Microsoft.EntityFrameworkCore;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -73,34 +73,16 @@ public class SelfPromoCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var channels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
-        var partiChannels = SettingsProvider.GetValueAsync(BuiltIn.Keys.PartiChannels).Result
-            .JsonDeserialize<List<PartiChannelModel>>();
-        if (channels == null || partiChannels == null)
+        await using var db = new ApplicationDbContext();
+        db.Users.Attach(user);
+        var streams = await db.Streams.Where(s => s.User == user).ToListAsync(ctx);
+        if (streams.Count == 0)
         {
-            await botInstance.SendChatMessageAsync("For some reason the list of Kick or Parti channels deserialized to null", true);
+            await botInstance.SendChatMessageAsync("You have no streams", true);
             return;
         }
         
-        var userChannels = channels.Where(ch => ch.ForumId == user.KfId).ToList();
-        var userPartiChannels = partiChannels.Where(ch => ch.ForumId == user.KfId).ToList();
-        
-        if (userChannels.Count == 0 && userPartiChannels.Count == 0)
-        {
-            await botInstance.SendChatMessageAsync("You have no streams.", true);
-            return;
-        }
-        var streamList = userChannels.Aggregate(string.Empty, (current, stream) => current + $"[br]- https://kick.com/{stream.ChannelSlug}");
-        foreach (var stream in userPartiChannels)
-        {
-            var url = $"https://parti.com/creator/{stream.SocialMedia}/{stream.Username}/";
-            if (stream.SocialMedia == "discord")
-            {
-                url += "0";
-            }
-
-            streamList += $"[br]- {url}";
-        }
+        var streamList = streams.Aggregate(string.Empty, (current, stream) => current + $"[br]- {stream.StreamUrl}");
 
         await botInstance.SendChatMessageAsync(
             $"@{user.KfUsername} is a weirdo who streams a lot. His channels are at: {streamList}", true);

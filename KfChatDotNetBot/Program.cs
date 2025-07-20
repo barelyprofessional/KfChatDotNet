@@ -38,6 +38,8 @@ namespace KfChatDotNetBot
             await BuiltIn.SyncSettingsWithDb();
             logger.Info("Migrating settings from config.json (if needed)");
             await BuiltIn.MigrateJsonSettingsToDb();
+            logger.Info("Migrating streams from settings API to their own table");
+            await BuiltIn.MigrateStreamChannelsToDatabase();
             logger.Info("Handing over to bot now");
             Console.OutputEncoding = Encoding.UTF8;
             new ChatBot();

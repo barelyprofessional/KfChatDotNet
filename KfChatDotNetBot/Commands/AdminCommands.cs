@@ -6,6 +6,7 @@ using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -92,33 +93,40 @@ public class NewKickChannelCommand : ICommand
         {
             autoCapture = argument.Value == "true";
         }
-        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
-        var channelId = Convert.ToInt32(arguments["channel_id"].Value);
-        channels ??= [];
-        if (channels.Any(channel => channel.ChannelId == channelId))
+
+        await using var db = new ApplicationDbContext();
+        var url = $"https://kick.com/{arguments["slug"].Value}";
+        if (await db.Streams.AnyAsync(s => s.StreamUrl == url, cancellationToken: ctx))
         {
             await botInstance.SendChatMessageAsync("Channel is already in the database", true);
             return;
         }
 
-        var forumId = Convert.ToInt32(arguments["forum_id"].Value);
-        channels.Add(new KickChannelModel
+        var forumUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == Convert.ToInt32(arguments["forum_id"].Value), cancellationToken: ctx);
+
+        var meta = JsonConvert.SerializeObject(new KickStreamMetaModel
         {
-            ChannelId = channelId,
-            ForumId = forumId,
-            ChannelSlug = arguments["slug"].Value,
+            ChannelId = Convert.ToInt32(arguments["channel_id"].Value)
+        });
+
+        db.Streams.Add(new StreamDbModel
+        {
+            Service = StreamService.Kick,
+            User = forumUser,
+            Metadata = meta,
+            StreamUrl = url,
             AutoCapture = autoCapture
         });
-        
-        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KickChannels, channels);
+
+        await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync("Updated list of channels", true);
     }
 }
 
-public class RemoveKickChannelCommand : ICommand
+public class RemoveStreamChannelCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^admin kick remove (?<channel_id>\d+)$")
+        new Regex(@"^admin stream remove (?<id>\d+)$")
     ];
 
     public string? HelpText => "Remove a Kick channel from the bot's database";
@@ -126,19 +134,17 @@ public class RemoveKickChannelCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels)).JsonDeserialize<List<KickChannelModel>>();
-        if (channels == null) throw new Exception("Caught a null when deserializing Kick channels");
-        var channelId = Convert.ToInt32(arguments["channel_id"].Value);
-        var channel = channels.FirstOrDefault(ch => ch.ChannelId == channelId);
+        await using var db = new ApplicationDbContext();
+        var rowId = Convert.ToInt32(arguments["id"].Value);
+        var channel = db.Streams.FirstOrDefault(ch => ch.Id == rowId);
         if (channel == null)
         {
-            await botInstance.SendChatMessageAsync("Channel is not in the database", true);
+            await botInstance.SendChatMessageAsync("Could not find this row in the database", true);
             return;
         }
-        channels.Remove(channel);
-        
-        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KickChannels, channels);
-        await botInstance.SendChatMessageAsync("Updated list of channels", true);
+        db.Streams.Remove(channel);
+        await db.SaveChangesAsync(ctx);
+        await botInstance.SendChatMessageAsync("Updated list of streams", true);
     }
 }
 
@@ -181,52 +187,74 @@ public class NewPartiChannelCommand : ICommand
         {
             autoCapture = argument.Value == "true";
         }
-        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.PartiChannels)).JsonDeserialize<List<PartiChannelModel>>();
-        var username = arguments["username"].Value;
-        channels ??= [];
-        if (channels.Any(channel => channel.Username == username))
+
+        await using var db = new ApplicationDbContext();
+        var url = $"https://parti.com/creator/{arguments["social"].Value}/{arguments["username"].Value}/";
+        if (arguments["social"].Value == "discord")
+        {
+            url += "0";
+        }
+        if (await db.Streams.AnyAsync(s => s.StreamUrl == url, cancellationToken: ctx))
         {
             await botInstance.SendChatMessageAsync("Channel is already in the database", true);
             return;
         }
 
-        var forumId = Convert.ToInt32(arguments["forum_id"].Value);
-        channels.Add(new PartiChannelModel
+        var forumUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == Convert.ToInt32(arguments["forum_id"].Value),
+            cancellationToken: ctx);
+
+        db.Streams.Add(new StreamDbModel
         {
-            Username = username,
-            ForumId = forumId,
-            AutoCapture = autoCapture,
-            SocialMedia = arguments["social"].Value
+            Service = StreamService.Parti,
+            User = forumUser,
+            StreamUrl = url,
+            AutoCapture = autoCapture
         });
-        
-        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.PartiChannels, channels);
+
+        await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync("Updated list of channels", true);
     }
 }
 
-public class RemovePartiChannelCommand : ICommand
+public class NewDLiveChannelCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^admin parti remove (?<username>\S+)$")
+        new Regex(@"^admin dlive add (?<forum_id>\d+) (?<username>\S+) (?<auto_capture>true|false)$"),
+        new Regex(@"^admin dlive add (?<forum_id>\d+) (?<username>\S+)$")
+
     ];
 
-    public string? HelpText => "Remove a Parti channel from the bot's database";
+    public string? HelpText => "Add a DLive channel to the bot's database";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        var channels = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.PartiChannels)).JsonDeserialize<List<PartiChannelModel>>();
-        if (channels == null) throw new Exception("Caught a null when deserializing Parti channels");
-        var username = arguments["username"].Value;
-        var channel = channels.FirstOrDefault(ch => ch.Username == username);
-        if (channel == null)
+        var autoCapture = false;
+        if (arguments.TryGetValue("auto_capture", out var argument))
         {
-            await botInstance.SendChatMessageAsync("Channel is not in the database", true);
+            autoCapture = argument.Value == "true";
+        }
+
+        await using var db = new ApplicationDbContext();
+        var url = $"https://dlive.tv/{arguments["username"].Value}";
+        if (await db.Streams.AnyAsync(s => s.StreamUrl == url, cancellationToken: ctx))
+        {
+            await botInstance.SendChatMessageAsync("Channel is already in the database", true);
             return;
         }
-        channels.Remove(channel);
-        
-        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.PartiChannels, channels);
+
+        var forumUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == Convert.ToInt32(arguments["forum_id"].Value),
+            cancellationToken: ctx);
+
+        db.Streams.Add(new StreamDbModel
+        {
+            Service = StreamService.DLive,
+            User = forumUser,
+            StreamUrl = url,
+            AutoCapture = autoCapture
+        });
+
+        await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync("Updated list of channels", true);
     }
 }
@@ -289,22 +317,6 @@ public class RemoveCourtHearingCommand : ICommand
         hearings.RemoveAt(hearingIndex - 1);
         await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.BotCourtCalendar, hearings);
         await botInstance.SendChatMessageAsync("Updated list of hearings", true);
-    }
-}
-
-public class NonceLiveCommand : ICommand
-{
-    public List<Regex> Patterns => [
-        new Regex(@"^admin togglenonce$")
-    ];
-
-    public string? HelpText => "Toggle IsChrisDjLive";
-    public UserRight RequiredRight => UserRight.TrueAndHonest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        botInstance.BotServices.IsChrisDjLive = !botInstance.BotServices.IsChrisDjLive;
-        await botInstance.SendChatMessageAsync($"IsChrisDjLive => {botInstance.BotServices.IsChrisDjLive}", true);
     }
 }
 

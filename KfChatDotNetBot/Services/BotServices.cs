@@ -4,6 +4,7 @@ using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KickWsClient.Models;
+using Microsoft.EntityFrameworkCore;
 using NLog;
 using Websocket.Client;
 
@@ -33,6 +34,7 @@ public class BotServices
     private Yeet? _yeet;
     public AlmanacShill? AlmanacShill;
     private Parti? _parti;
+    private DLive? _dliveStatusCheck;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -41,7 +43,6 @@ public class BotServices
     private bool _twitchDisabled;
     internal bool IsBmjLive;
     private bool _isBmjLiveSynced;
-    internal bool IsChrisDjLive;
     private Dictionary<string, SeenYeetBet> _yeetBets = new();
     
     // lol
@@ -81,7 +82,8 @@ public class BotServices
             BuildBetBolt(),
             BuildYeet(),
             BuildRainbet(),
-            BuildParti()
+            BuildParti(),
+            BuildDLiveStatusCheck()
         ];
         try
         {
@@ -240,9 +242,10 @@ public class BotServices
 
     private async Task BuildKick()
     {
+        await using var db = new ApplicationDbContext();
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.PusherEndpoint, BuiltIn.Keys.Proxy, BuiltIn.Keys.PusherReconnectTimeout,
-            BuiltIn.Keys.KickEnabled, BuiltIn.Keys.KickChannels
+            BuiltIn.Keys.KickEnabled
         ]);
         KickClient = new KickWsClient.KickWsClient(settings[BuiltIn.Keys.PusherEndpoint].Value!,
             settings[BuiltIn.Keys.Proxy].Value, settings[BuiltIn.Keys.PusherReconnectTimeout].ToType<int>());
@@ -256,11 +259,29 @@ public class BotServices
         if (settings[BuiltIn.Keys.KickEnabled].ToBoolean())
         {
             await KickClient.StartWsClient();
-            var kickChannels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
-            if (kickChannels == null) return;
+            var kickChannels = db.Streams.Where(s => s.Service == StreamService.Kick);
             foreach (var channel in kickChannels)
             {
-                KickClient.SendPusherSubscribe($"channel.{channel.ChannelId}");
+                if (channel.Metadata == null)
+                {
+                    _logger.Error($"Row ID {channel.Id} in the Streams table has null Metadata when it is required for Kick");
+                    continue;
+                }
+
+                KickStreamMetaModel meta;
+                try
+                {
+                    meta = JsonSerializer.Deserialize<KickStreamMetaModel>(channel.Metadata) ??
+                           throw new InvalidOperationException(
+                               $"Caught a null when attempting to deserialize metadata for {channel.Id} in the Streams table");
+                }
+                catch (Exception e)
+                {
+                    _logger.Error($"Failed to deserialize the metadata for {channel.Id} in the Streams table");
+                    _logger.Error(e);
+                    continue;
+                }
+                KickClient.SendPusherSubscribe($"channel.{meta.ChannelId}");
             }
         }
     }
@@ -293,6 +314,13 @@ public class BotServices
         }
         AlmanacShill.StartShillTask();
         _logger.Info("Built the almanac shill task");
+    }
+
+    private async Task BuildDLiveStatusCheck()
+    {
+        _dliveStatusCheck = new DLive(_chatBot);
+        _dliveStatusCheck.StartLiveStatusCheck();
+        _logger.Info("Built the DLive livestream status check task");
     }
     
     private async Task BuildParti()
@@ -841,16 +869,12 @@ public class BotServices
     private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
-        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.BotToyStoryImage]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
 
         if (isLive)
         {
             _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just went live on Twitch! https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}\r\n" +
                                      settings[BuiltIn.Keys.RestreamUrl].Value);
-            if (IsChrisDjLive)
-            {
-                _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotToyStoryImage].Value}[/img]", true);
-            }
             IsBmjLive = true;
             return;
         }
@@ -915,11 +939,30 @@ public class BotServices
     private void OnPusherWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
         _logger.Error($"Pusher reconnected due to {reconnectionInfo.Type}");
-        var kickChannels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
-        if (kickChannels == null) return;
+        using var db = new ApplicationDbContext();
+        var kickChannels = db.Streams.Where(s => s.Service == StreamService.Kick);
         foreach (var channel in kickChannels)
         {
-            KickClient?.SendPusherSubscribe($"channel.{channel.ChannelId}");
+            if (channel.Metadata == null)
+            {
+                _logger.Error($"Row ID {channel.Id} in the Streams table has null Metadata when it is required for Kick");
+                continue;
+            }
+
+            KickStreamMetaModel meta;
+            try
+            {
+                meta = JsonSerializer.Deserialize<KickStreamMetaModel>(channel.Metadata) ??
+                       throw new InvalidOperationException(
+                           $"Caught a null when attempting to deserialize metadata for {channel.Id} in the Streams table");
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Failed to deserialize the metadata for {channel.Id} in the Streams table");
+                _logger.Error(e);
+                continue;
+            }
+            KickClient?.SendPusherSubscribe($"channel.{meta.ChannelId}");
         }
     }
 
@@ -944,113 +987,142 @@ public class BotServices
     {
         if (e == null) return;
         var settings = SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KickChannels, BuiltIn.Keys.BotChrisDjLiveImage, BuiltIn.Keys.CaptureEnabled
+            BuiltIn.Keys.CaptureEnabled
         ]).Result;
-        var channels = settings[BuiltIn.Keys.KickChannels].JsonDeserialize<List<KickChannelModel>>();
-        if (channels == null)
+        using var db = new ApplicationDbContext();
+        var channels = db.Streams.Where(s => s.Service == StreamService.Kick).Include(s => s.User);
+        StreamDbModel? channel = null;
+        foreach (var ch in channels)
         {
-            _logger.Error("Caught null when grabbing Kick channels");
-            return;
+            if (ch.Metadata == null)
+            {
+                _logger.Error($"Row ID {ch.Id} in the Streams table has null Metadata when it is required for Kick");
+                continue;
+            }
+
+            KickStreamMetaModel meta;
+            try
+            {
+                meta = JsonSerializer.Deserialize<KickStreamMetaModel>(ch.Metadata) ??
+                       throw new InvalidOperationException(
+                           $"Caught a null when attempting to deserialize metadata for {ch.Id} in the Streams table");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to deserialize the metadata for {ch.Id} in the Streams table");
+                _logger.Error(ex);
+                continue;
+            }
+
+            if (meta.ChannelId != e.Livestream.ChannelId) continue;
+            
+            channel = ch;
+            break;
         }
 
-        var channel = channels.FirstOrDefault(ch => ch.ChannelId == e.Livestream.ChannelId);
         if (channel == null)
         {
-            _logger.Error($"Caught null when grabbing channel data for {e.Livestream.ChannelId}");
+            _logger.Error($"Failed to find a Kick stream in the database for {e.Livestream.ChannelId} which we got notified is live");
+            _logger.Error("This really should never happen, but could happen if the metadata for a stream gets screwed up at runtime");
             return;
         }
 
-        using var db = new ApplicationDbContext();
-        var user = db.Users.FirstOrDefault(u => u.KfId == channel.ForumId);
-        if (user == null)
+        var identity = "A streamer";
+        if (channel.User != null)
         {
-            _logger.Error($"Caught null when retrieving forum user {channel.ForumId}");
-            return;
+            identity = "@" + channel.User.KfUsername;
         }
-
         _chatBot.SendChatMessage(
-            $"@{user.KfUsername} is live! {e.Livestream.SessionTitle} https://kick.com/{channel.ChannelSlug}", true);
-        
-        if (channel.ChannelSlug == "christopherdj")
-        {
-            IsChrisDjLive = true;
-            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.BotChrisDjLiveImage].Value}[/img]", true);
-        }
+            $"{identity} is live! {e.Livestream.SessionTitle} {channel.StreamUrl}", true);
 
         if (channel.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
         {
-            _logger.Info($"{channel.ChannelSlug} is configured to auto capture");
-            _ = new YtDlpCapture($"https://kick.com/{channel.ChannelSlug}", _cancellationToken).CaptureAsync();
+            _logger.Info($"{channel.StreamUrl} is configured to auto capture");
+            _ = new StreamCapture(channel.StreamUrl, StreamCaptureMethods.YtDlp, _cancellationToken).CaptureAsync();
         }
     }
     
     private void OnPartiChannelLiveNotification(object sender, PartiChannelLiveNotificationModel data)
     {
         var settings = SettingsProvider
-            .GetMultipleValuesAsync([BuiltIn.Keys.PartiChannels, BuiltIn.Keys.CaptureEnabled]).Result;
-        var channels = settings[BuiltIn.Keys.PartiChannels].JsonDeserialize<List<PartiChannelModel>>();
-        if (channels == null)
-        {
-            _logger.Error("Caught a null when deserializing Parti channels");
-            return;
-        }
-
-        var channel = channels.FirstOrDefault(ch => ch.Username == data.Username);
-        if (channel == null)
-        {
-            _logger.Debug($"Got a Parti live notification for a channel we don't care about: {data.Username}");
-            return;
-        }
-
+            .GetMultipleValuesAsync([BuiltIn.Keys.CaptureEnabled]).Result;
         using var db = new ApplicationDbContext();
-        var user = db.Users.FirstOrDefault(u => u.KfId == channel.ForumId);
-        if (user == null)
-        {
-            _logger.Error($"Caught a null when retrieving forum ID {channel.ForumId}");
-            return;
-        }
-
         var url = $"https://parti.com/creator/{data.SocialMedia}/{data.Username}/";
         if (data.SocialMedia == "discord")
         {
             url += "0";
         }
-        _chatBot.SendChatMessage($"@{user.KfUsername} is live! {data.EventTitle} {url}", true);
+
+        var channel = db.Streams.Include(s => s.User)
+            .FirstOrDefault(s => s.Service == StreamService.Parti && s.StreamUrl == url);
+        if (channel == null)
+        {
+            _logger.Info($"Got a live notification from Parti for a stream we don't care about: {data.SocialMedia}/{data.Username}");
+            return;
+        }
+        var identity = "A streamer";
+        if (channel.User != null)
+        {
+            identity = "@" + channel.User.KfUsername;
+        }
+        
+        _chatBot.SendChatMessage($"{identity} is live! {data.EventTitle} {url}", true);
         if (channel.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
         {
-            _logger.Info($"{channel.Username} is configured to auto capture");
-            _ = new YtDlpCapture(url, _cancellationToken).CaptureAsync();
+            _logger.Info($"{channel.StreamUrl} is configured to auto capture");
+            _ = new StreamCapture(url, StreamCaptureMethods.YtDlp, _cancellationToken).CaptureAsync();
         }
     }
 
     private void OnStopStreamBroadcast(object sender, KickModels.StopStreamBroadcastEventModel? e)
     {
         if (e == null) return;
-        var channels = SettingsProvider.GetValueAsync(BuiltIn.Keys.KickChannels).Result.JsonDeserialize<List<KickChannelModel>>();
-        if (channels == null)
+        using var db = new ApplicationDbContext();
+        var channels = db.Streams.Where(s => s.Service == StreamService.Kick).Include(s => s.User);
+        StreamDbModel? channel = null;
+        foreach (var ch in channels)
         {
-            _logger.Error("Caught null when grabbing Kick channels");
-            return;
+            if (ch.Metadata == null)
+            {
+                _logger.Error($"Row ID {ch.Id} in the Streams table has null Metadata when it is required for Kick");
+                continue;
+            }
+
+            KickStreamMetaModel meta;
+            try
+            {
+                meta = JsonSerializer.Deserialize<KickStreamMetaModel>(ch.Metadata) ??
+                       throw new InvalidOperationException(
+                           $"Caught a null when attempting to deserialize metadata for {ch.Id} in the Streams table");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Failed to deserialize the metadata for {ch.Id} in the Streams table");
+                _logger.Error(ex);
+                continue;
+            }
+
+            if (meta.ChannelId != e.Livestream.Id) continue;
+            
+            channel = ch;
+            break;
         }
 
-        var channel = channels.FirstOrDefault(ch => ch.ChannelId == e.Livestream.Channel.Id);
         if (channel == null)
         {
-            _logger.Error($"Caught null when grabbing channel data for {e.Livestream.Channel.Id}");
+            _logger.Error($"Failed to find a Kick stream in the database for {e.Livestream.Id} which we got notified is no longer live");
+            _logger.Error("This really should never happen, but could happen if the metadata for a stream gets screwed up at runtime");
             return;
         }
 
-        using var db = new ApplicationDbContext();
-        var user = db.Users.FirstOrDefault(u => u.KfId == channel.ForumId);
-        if (user == null)
+        var identity = "A streamer";
+        if (channel.User != null)
         {
-            _logger.Error($"Caught null when retrieving forum user {channel.ForumId}");
-            return;
+            identity = "@" + channel.User.KfUsername;
         }
 
         _chatBot.SendChatMessage(
-            $"@{user.KfUsername} is no longer live! :lossmanjack:", true);
-        if (channel.ChannelSlug == "christopherdj") IsChrisDjLive = false;
+            $"{identity} is no longer live! :lossmanjack:", true);
     }
 
     public async Task<bool> CheckBmjIsLive(string bmjUsername)

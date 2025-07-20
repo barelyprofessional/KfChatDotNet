@@ -22,4 +22,5 @@ public class ApplicationDbContext : DbContext
     // public DbSet<PocketWatchAddressDbModel> PocketWatchAddresses { get; set; }
     // public DbSet<PocketWatchTransactionDbModel> PocketWatchTransactions { get; set; }
     public DbSet<MomDbModel> Moms { get; set; }
+    public DbSet<StreamDbModel> Streams { get; set; }
 }
