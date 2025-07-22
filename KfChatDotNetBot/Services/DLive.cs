@@ -45,7 +45,17 @@ public class DLive(ChatBot kfChatBot) : IDisposable
                     continue;
                 }
 
-                var status = await IsLive(username, ct);
+                DLiveIsLiveModel status;
+                try
+                {
+                    status = await IsLive(username, ct);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error($"Caught an exception while retrieving live status for {username}");
+                    _logger.Error(e);
+                    continue;
+                }
                 if (!status.IsLive)
                 {
                     currentlyLive.Remove(username);
