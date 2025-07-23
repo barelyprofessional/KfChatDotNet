@@ -12,8 +12,6 @@ public class PeerTubeVideoDataModel
     public required string Url { get; set; }
     [JsonPropertyName("name")]
     public required string Name { get; set; }
-    [JsonPropertyName("category")]
-    public Dictionary<string, object>? Category { get; set; }
     [JsonPropertyName("isLive")]
     public required bool IsLive { get; set; }
     [JsonPropertyName("account")]
