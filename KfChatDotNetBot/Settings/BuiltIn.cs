@@ -880,6 +880,37 @@ public static class BuiltIn
             Description = "Array of DLive streamers who are currently live for persistence between bot restarts",
             Default = "[]",
             ValueType = SettingValueType.Complex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiPeerTubePersistedCurrentlyLiveStreams,
+            Description = "Array of Kiwi PeerTube stream GUIDs which are currently live for persistence between bot restarts",
+            Default = "[]",
+            ValueType = SettingValueType.Complex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiPeerTubeEnabled,
+            Description = "Whether the Kiwi PeerTube live notification is enabled",
+            Default = "true",
+            ValueType = SettingValueType.Boolean,
+            Regex = "(true|false)"
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiPeerTubeCheckInterval,
+            Description = "Interval (in seconds) to check live streams",
+            Default = "10",
+            ValueType = SettingValueType.Text,
+            Regex = @"\d+"
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KiwiPeerTubeEnforceWhitelist,
+            Description = "Whether to enforce the use of a whitelist (i.e. streamer must be in the database)",
+            Default = "false",
+            ValueType = SettingValueType.Boolean,
+            Regex = "(true|false)"
         }
     ];
     
@@ -979,5 +1010,9 @@ public static class BuiltIn
         public static string CaptureStreamlinkRemuxScript = "Capture.Streamlink.RemuxScript";
         public static string DLiveCheckInterval = "DLive.CheckInterval";
         public static string DLivePersistedCurrentlyLiveStreams = "DLive.PersistedCurrentlyLiveStreams";
+        public static string KiwiPeerTubePersistedCurrentlyLiveStreams = "KiwiPeerTube.PersistedCurrentlyLiveStreams";
+        public static string KiwiPeerTubeEnabled = "KiwiPeerTube.Enabled";
+        public static string KiwiPeerTubeCheckInterval = "KiwiPeerTube.CheckInterval";
+        public static string KiwiPeerTubeEnforceWhitelist = "KiwiPeerTube.EnforceWhitelist";
     }
 }

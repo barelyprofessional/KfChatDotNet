@@ -35,6 +35,7 @@ public class BotServices
     public AlmanacShill? AlmanacShill;
     private Parti? _parti;
     private DLive? _dliveStatusCheck;
+    private PeerTube? _peerTubeStatusCheck;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -83,7 +84,8 @@ public class BotServices
             BuildYeet(),
             BuildRainbet(),
             BuildParti(),
-            BuildDLiveStatusCheck()
+            BuildDLiveStatusCheck(),
+            BuildPeerTubeLiveStatusCheck()
         ];
         try
         {
@@ -321,6 +323,14 @@ public class BotServices
         _dliveStatusCheck = new DLive(_chatBot);
         _dliveStatusCheck.StartLiveStatusCheck();
         _logger.Info("Built the DLive livestream status check task");
+        return Task.CompletedTask;
+    }
+    
+    private Task BuildPeerTubeLiveStatusCheck()
+    {
+        _peerTubeStatusCheck = new PeerTube(_chatBot);
+        _peerTubeStatusCheck.StartLiveStatusCheck();
+        _logger.Info("Built the PeerTube livestream status check task");
         return Task.CompletedTask;
     }
     

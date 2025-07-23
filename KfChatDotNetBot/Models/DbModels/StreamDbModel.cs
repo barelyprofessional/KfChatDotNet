@@ -29,10 +29,16 @@ public enum StreamService
 {
     Kick,
     Parti,
-    DLive
+    DLive,
+    KiwiPeerTube
 }
 
 public class KickStreamMetaModel
 {
     public required int ChannelId { get; set; }
+}
+
+public class PeerTubeMetaModel
+{
+    public required string AccountName { get; set; }
 }
