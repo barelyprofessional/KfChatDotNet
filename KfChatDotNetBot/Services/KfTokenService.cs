@@ -87,7 +87,7 @@ public class KfTokenService
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync(_ctx);
         var document = new HtmlDocument();
-        document.Load(content);
+        document.LoadHtml(content);
         var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
         if (response.StatusCode == HttpStatusCode.NonAuthoritativeInformation && challengeData != null)
         {
@@ -100,7 +100,7 @@ public class KfTokenService
     public async Task<bool> IsLoggedIn()
     {
         var document = new HtmlDocument();
-        document.Load(await GetLoginPage());
+        document.LoadHtml(await GetLoginPage());
         var html = document.DocumentNode.SelectSingleNode("//html");
         if (html == null) throw new Exception("Caught a null when retrieving html element");
         if (!html.Attributes.Contains("data-logged-in"))
