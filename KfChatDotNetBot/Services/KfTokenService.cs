@@ -84,13 +84,17 @@ public class KfTokenService
         await CheckClearanceToken();
         using var client = new HttpClient(GetHttpClientHandler());
         var response = await client.GetAsync($"https://{_kfDomain}/login", _ctx);
-        if (response.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
+        response.EnsureSuccessStatusCode();
+        var content = await response.Content.ReadAsStreamAsync(_ctx);
+        var document = new HtmlDocument();
+        document.Load(content);
+        var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
+        if (response.StatusCode == HttpStatusCode.NonAuthoritativeInformation && challengeData != null)
         {
             _logger.Error("Caught a 203 response when trying to load logon page which means we were KiwiFlare challenged");
             throw new KiwiFlareChallengedException();
         }
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStreamAsync(_ctx);
+        return content;
     }
 
     public async Task<bool> IsLoggedIn()
