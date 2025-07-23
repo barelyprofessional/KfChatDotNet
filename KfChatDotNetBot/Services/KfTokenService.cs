@@ -78,14 +78,14 @@ public class KfTokenService
         throw new Exception("Failed to solve the challenge");
     }
 
-    private async Task<Stream> GetLoginPage()
+    private async Task<string> GetLoginPage()
     {
         _logger.Debug("Checking clearance token is actually valid first");
         await CheckClearanceToken();
         using var client = new HttpClient(GetHttpClientHandler());
         var response = await client.GetAsync($"https://{_kfDomain}/login", _ctx);
         response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStreamAsync(_ctx);
+        var content = await response.Content.ReadAsStringAsync(_ctx);
         var document = new HtmlDocument();
         document.Load(content);
         var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
