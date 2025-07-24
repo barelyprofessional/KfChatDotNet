@@ -1,7 +1,5 @@
 ﻿using System.Net;
-using System.Text;
 using System.Text.Json;
-using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
@@ -11,7 +9,6 @@ using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
 using KfChatDotNetWsClient.Models.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IO;
 using NLog;
 using Websocket.Client;
 
@@ -34,11 +31,14 @@ public class ChatBot
     private Task _kfChatPing;
     private KfTokenService _kfTokenService;
     private int _joinFailures = 0;
+    private Task _kfDeadBotDetection;
+    private DateTime _lastReconnectAttempt = DateTime.UtcNow;
     
     public ChatBot()
     {
         _logger.Info("Bot starting!");
 
+        _kfDeadBotDetection = KfDeadBotDetectionTask();
         var settings = SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
             BuiltIn.Keys.Proxy, BuiltIn.Keys.KiwiFarmsWsReconnectTimeout]).Result;
@@ -57,7 +57,15 @@ public class ChatBot
         
         if (_kfTokenService.GetXfSessionCookie() == null)
         {
-            RefreshXfToken().Wait(_cancellationToken);
+            try
+            {
+                RefreshXfToken().Wait(_cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.Error("Caught an exception while trying to refresh the XF token");
+                _logger.Error(e);
+            }
         }
   
         _logger.Debug("Creating bot command instance");
@@ -95,7 +103,16 @@ public class ChatBot
             _logger.Error("Seems we're in a rejoin loop. Wiping out cookies entirely in hopes it'll make this piece of shit work");
             _kfTokenService.WipeCookies();
         }
-        RefreshXfToken().Wait(_cancellationToken);
+
+        try
+        {
+            RefreshXfToken().Wait(_cancellationToken);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught an exception while trying to refresh the XF token");
+            _logger.Error(e);
+        }
         _kfTokenService.SaveCookies().Wait(_cancellationToken);
         // Shouldn't be null if we've just refreshed the token
         // It's only null if a logon has never been attempted since the cookie DB entry was created
@@ -134,20 +151,60 @@ public class ChatBot
             }
         }
     }
+    
+    private async Task KfDeadBotDetectionTask()
+    {
+        var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDeadBotDetectionInterval)).ToType<int>();
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
+        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        {
+            var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
+            var deadTime = DateTime.UtcNow - _lastReconnectAttempt;
+            // No connection and no successful reconnection attempt in the last 5 minutes
+            // Either the site is completely dead or the bot got screwed by a nasty error and can't reconnect
+            if (!KfClient.IsConnected() && inactivityTime > TimeSpan.FromMinutes(10) && deadTime > TimeSpan.FromMinutes(15))
+            {
+                var shouldExit = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotExitOnDeath)).ToBoolean();
+                _logger.Error("The bot as is dead beyond belief right now");
+                _logger.Error($"IsConnected() -> {KfClient.IsConnected()}");
+                _logger.Error($"inactivityTime -> {inactivityTime:g}");
+                _logger.Error($"deadTime -> {deadTime:g}");
+                if (shouldExit) Environment.Exit(1);
+            }
+        }
+    }
 
     private async Task RefreshXfToken()
     {
-        if (await _kfTokenService.IsLoggedIn())
+        try
         {
-            _logger.Info("We were already logged in and should have a fresh cookie for chat now");
-            // Only seems to happen if the bot thinks it's already logged in
+            if (await _kfTokenService.IsLoggedIn())
+            {
+                _logger.Info("We were already logged in and should have a fresh cookie for chat now");
+                // Only seems to happen if the bot thinks it's already logged in
+                return;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught an error when trying to retrieve a fresh cookie");
+            _logger.Error(e);
+            return;
+        }
+        var settings =
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
+        try
+        {
+            await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
+                settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught an error when trying to login");
+            _logger.Error(e);
             return;
         }
 
-        var settings =
-            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
-        await _kfTokenService.PerformLogin(settings[BuiltIn.Keys.KiwiFarmsUsername].Value!,
-            settings[BuiltIn.Keys.KiwiFarmsPassword].Value!);
         _logger.Info("Successfully logged in");
     }
 
@@ -459,6 +516,7 @@ public class ChatBot
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
     {
+        _lastReconnectAttempt = DateTime.UtcNow;
         var roomId = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsRoomId).Result.ToType<int>();
         _logger.Error($"Sneedchat reconnected due to {reconnectionInfo.Type}");
         _logger.Info("Resetting GambaSesh presence so it can resync if he crashed while the bot was DC'd");

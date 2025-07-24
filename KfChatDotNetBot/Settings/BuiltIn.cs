@@ -911,6 +911,22 @@ public static class BuiltIn
             Default = "false",
             ValueType = SettingValueType.Boolean,
             Regex = "(true|false)"
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotDeadBotDetectionInterval,
+            Description = "Interval in seconds for checking if the bot is completely dead",
+            Default = "15",
+            ValueType = SettingValueType.Text,
+            Regex = @"\d+"
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotExitOnDeath,
+            Description = "Whether the bot should exit if it's dead and unrecoverable",
+            Default = "true",
+            ValueType = SettingValueType.Boolean,
+            Regex = "(true|false)"
         }
     ];
     
@@ -1014,5 +1030,7 @@ public static class BuiltIn
         public static string KiwiPeerTubeEnabled = "KiwiPeerTube.Enabled";
         public static string KiwiPeerTubeCheckInterval = "KiwiPeerTube.CheckInterval";
         public static string KiwiPeerTubeEnforceWhitelist = "KiwiPeerTube.EnforceWhitelist";
+        public static string BotDeadBotDetectionInterval = "Bot.DeadBotDetectionInterval";
+        public static string BotExitOnDeath = "Bot.ExitOnDeath";
     }
 }
