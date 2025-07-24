@@ -102,7 +102,7 @@ public class PeerTube(ChatBot kfChatBot) : IDisposable
             
             _logger.Debug($"Persisting currently live streams, count is {currentlyLive.Count}");
             await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.KiwiPeerTubePersistedCurrentlyLiveStreams,
-                currentlyLive);
+                persistedLive);
         }
     }
     
