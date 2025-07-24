@@ -47,6 +47,11 @@ public class KfTokenService
     {
         var clearanceCookie = _cookies.GetAllCookies()["sssg_clearance"];
         _logger.Debug($"Got clearance cookie with value: {clearanceCookie}");
+        if (await _kiwiFlare.CheckAuth("nigger"))
+        {
+            _logger.Debug("KiwiFlare has been turned off as it's accepting a nigger sssg_clearance");
+            return;
+        };
         if (clearanceCookie != null)
         {
             if (await _kiwiFlare.CheckAuth(clearanceCookie.Value)) return;
