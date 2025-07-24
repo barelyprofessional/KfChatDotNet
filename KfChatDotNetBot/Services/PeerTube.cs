@@ -79,7 +79,7 @@ public class PeerTube(ChatBot kfChatBot) : IDisposable
                 }
                 
                 persistedLive.Add(stream.Uuid);
-                await kfChatBot.SendChatMessageAsync($"{stream.Account.DisplayName} is live! {stream.Name} {stream.Url}", true);
+                await kfChatBot.SendChatMessageAsync($"@{stream.Account.DisplayName} is live! {stream.Name} {stream.Url}", true);
 
                 if (settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
                 {
