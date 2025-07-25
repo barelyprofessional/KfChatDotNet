@@ -119,7 +119,7 @@ public class KfTokenService
     public async Task PerformLogin(string username, string password)
     {
         var document = new HtmlDocument();
-        document.Load(await GetLoginPage());
+        document.LoadHtml(await GetLoginPage());
         var html = document.DocumentNode.SelectSingleNode("//html");
         if (html == null) throw new Exception("Caught a null when retrieving html element");
         // Already logged in
