@@ -213,7 +213,8 @@ public class ChatBot
         // Reset value to 0 as we've now successfully joined
         if (_joinFailures > 0) _joinFailures = 0;
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshDetectEnabled,
-                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit])
+                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit,
+                BuiltIn.Keys.BotRespondToDiscordImpersonation])
             .Result;
         // Send messages if there are any to replay (Assuming we DC'd, and it's now the message flood)
         foreach (var replayMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected)
@@ -303,11 +304,11 @@ public class ChatBot
                 _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
             UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
-            if (message.Author.Id is 70029 or 142504 &&
+            if (message.Author.Id is 70029 or 142504 && settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() &&
                 (message.MessageRawHtmlDecoded.Contains("discord16.png") ||
                  message.MessageRawHtmlDecoded.Contains("TwitchBossmanJack:", StringComparison.CurrentCultureIgnoreCase)))
             {
-                SendChatMessage($"☝️ {message.Author.Username} is a faggot", true);
+                SendChatMessage($"☝️ {message.Author.Username} is a nigger faggot", true);
             }
         }
         

@@ -927,6 +927,14 @@ public static class BuiltIn
             Default = "true",
             ValueType = SettingValueType.Boolean,
             Regex = "(true|false)"
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotRespondToDiscordImpersonation,
+            Description = "Whether to respond to Bossman impersonations",
+            Default = "true",
+            ValueType = SettingValueType.Boolean,
+            Regex = "(true|false)"
         }
     ];
     
@@ -1032,5 +1040,6 @@ public static class BuiltIn
         public static string KiwiPeerTubeEnforceWhitelist = "KiwiPeerTube.EnforceWhitelist";
         public static string BotDeadBotDetectionInterval = "Bot.DeadBotDetectionInterval";
         public static string BotExitOnDeath = "Bot.ExitOnDeath";
+        public static string BotRespondToDiscordImpersonation = "Bot.RespondToDiscordImpersonation";
     }
 }
