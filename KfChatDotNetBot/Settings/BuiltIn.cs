@@ -158,6 +158,9 @@ public static class BuiltIn
             logger.Error(e);
         }
     }
+
+    private const string BooleanRegex = "true|false";
+    private const string WholeNumberRegex = @"\d+";
     
     public static List<BuiltInSettingsModel> BuiltInSettings =
     [
@@ -180,7 +183,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsRoomId,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description =
                 "Kiwi Farms Keno Kasino room ID",
             Default = "15",
@@ -197,7 +200,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsWsReconnectTimeout,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description =
                 "Kiwi Farms chat reconnect timeout",
             Default = "30",
@@ -206,7 +209,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.PusherReconnectTimeout,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description =
                 "Pusher reconnect timeout",
             Default = "30",
@@ -215,7 +218,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.GambaSeshDetectEnabled,
-            Regex = @"true|false",
+            Regex = BooleanRegex,
             Description =
                 "Whether to enable detection for the presence of GambaSesh",
             Default = "true",
@@ -225,7 +228,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.GambaSeshUserId,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description =
                 "GambaSesh's uer ID for the purposes of detection",
             Default = "168162",
@@ -268,7 +271,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.TwitchBossmanJackId,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description =
                 "BossmanJack's Twitch channel ID",
             Default = "114122847",
@@ -285,7 +288,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsSuppressChatMessages,
-            Regex = @"true|false",
+            Regex = BooleanRegex,
             Description =
                 "Enable to prevent messages from actually being sent to chat.",
             Default = "false",
@@ -303,7 +306,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.DiscordBmjId,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description =
                 "BossmanJack's Discord user ID",
             Default = "554123642246529046",
@@ -333,7 +336,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.JuiceCooldown,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Cooldown (in seconds) until you can get juiced again",
             Default = "3600",
             CacheDuration = TimeSpan.FromMinutes(5),
@@ -342,7 +345,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.JuiceAmount,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Amount of $KKK to juice",
             Default = "50",
             CacheDuration = TimeSpan.FromMinutes(5),
@@ -351,7 +354,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KickEnabled,
-            Regex = "true|false",
+            Regex = BooleanRegex,
             Description = "Whether to enable Kick functionality (Pusher websocket mainly)",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -359,7 +362,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.HowlggDivisionAmount,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "How much to divide the Howlgg bets/profit by to get the real value",
             Default = "1650",
             ValueType = SettingValueType.Text
@@ -424,7 +427,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.HowlggBmjUserId,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "BMJ's user ID on howl.gg",
             Default = "951905",
             ValueType = SettingValueType.Text
@@ -441,7 +444,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.TwitchShillRestreamOnCommercial,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether to shill the ad-free restream on commercial",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -449,7 +452,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsInactivityTimeout,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             // You would think the WS library would trip up with the "NoMessageReceived" exception, but there's some bug
             // where it'll occasionally fail to reconnect properly and sit there dead forever, hence the watchdog timer
             Description = "Length of time the client can go without receiving ANY packets from Sneedchat before forcing a reconnect.",
@@ -459,7 +462,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsPingInterval,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Interval in seconds to ping Sneedchat using the non-existent /ping command. " +
                           "Note this affects how often the bot will check inactivity of the connection.",
             Default = "10",
@@ -468,7 +471,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.JuiceLoserDivision,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Amount to divide the juice by if the user's rack is Loser",
             Default = "5",
             ValueType = SettingValueType.Text
@@ -476,7 +479,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.CrackedZalgoFuckUpMode,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "FuckUpMode. 0 = Min, 1 = Normal, 2 = Max",
             Default = "1",
             ValueType = SettingValueType.Text
@@ -484,7 +487,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.CrackedZalgoFuckUpPosition,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "FuckUpPosition: 1 = Up, 2 = Middle, 3 = UpAndMiddle, 4 = Bot (Bottom), 5 = UpAndBot, 6 = MiddleAndBot, 7 = All",
             Default = "2",
             ValueType = SettingValueType.Text
@@ -492,7 +495,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotDisconnectReplayLimit,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Limit of messages which could not be sent while bot was disconnected to replay on connect",
             Default = "10",
             ValueType = SettingValueType.Text
@@ -500,7 +503,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.KiwiFarmsJoinFailLimit,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Limit of times to fail joining the room before wiping cookies",
             Default = "2",
             ValueType = SettingValueType.Text
@@ -553,7 +556,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.HowlggEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether the Howl.gg integration is enabled at all",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -561,7 +564,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.ChipsggEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether the Chips.gg integration is enabled at all",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -569,7 +572,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.RainbetEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether the Rainbet integration is enabled at all",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -591,7 +594,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImageRandomSliceDivideBy,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "What value to divide the image count by for determining how many images to randomly choose from. " +
                           "e.g. a value of 10 on 50 images means the 5 least seen images are chosen from randomly. " +
                           "If the count of images is =< this value, it'll just grab the oldest image. " +
@@ -616,7 +619,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.DiscordTemporarilyBypassGambaSeshInitialValue,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "What the initial value of the Discord GambaSesh temporary bypass variable should be",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -624,7 +627,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotKeesSeen,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Track if Kees has been seen so users can receive a one-time notice if he suddenly shows up",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -632,7 +635,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.ClashggEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether the Clash.gg integration should be enabled",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -654,7 +657,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotAlmanacInterval,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Interval for Almanac reminders in seconds",
             Default = "14400", // 4 hours
             ValueType = SettingValueType.Text
@@ -662,7 +665,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotAlmanacInitialState,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Initial state of the Almanac reminder",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -670,7 +673,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.JuiceAllowedWhileStreaming,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether to allow juicers while Austin is streaming",
             Default = "false",
             ValueType = SettingValueType.Boolean
@@ -678,7 +681,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImagePigCubeSelfDestruct,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether the pigcube should self destruct after a random interval",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -693,7 +696,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.JuiceAutoDeleteMsgDelay,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Delay before deleting the !juice message in milliseconds, null or 0 to disable. " +
                           "Don't set too high as the timeout for !juiceme is 60 seconds",
             Default = "2500",
@@ -702,7 +705,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImagePigCubeSelfDestructMin,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Min value for the Pig Cube self destruct Random.Next() in milliseconds",
             Default = "5000",
             ValueType = SettingValueType.Text
@@ -710,7 +713,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImagePigCubeSelfDestructMax,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Max value for the Pig Cube self destruct Random.Next() in milliseconds",
             Default = "15000",
             ValueType = SettingValueType.Text
@@ -718,7 +721,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BotImageInvertedPigCubeSelfDestructDelay,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Value in milliseconds for how long the bot should wait before self destructing the inverted pig cube",
             Default = "5000",
             ValueType = SettingValueType.Text
@@ -726,7 +729,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.BetBoltEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether to enable the BetBolt bet feed tracking",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -741,7 +744,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.YeetEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether to enable the Yeet bet feed tracking",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -756,7 +759,6 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.YeetProxy,
-            Regex = ".+",
             Description = "Proxy to use for Yeet",
             Default = "socks5://ca-van-wg-socks5-301.relays.mullvad.net:1080",
             ValueType = SettingValueType.Text
@@ -764,7 +766,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.MomCooldown,
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             Description = "Cooldown in seconds for the mom command, 0 to disable",
             Default = "30",
             ValueType = SettingValueType.Text
@@ -808,7 +810,7 @@ public static class BuiltIn
         {
             Key = Keys.CaptureEnabled,
             Description = "Whether the auto-capture system is enabled",
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Default = "true",
             ValueType = SettingValueType.Boolean
         },
@@ -831,7 +833,7 @@ public static class BuiltIn
         new BuiltInSettingsModel
         {
             Key = Keys.PartiEnabled,
-            Regex = "(true|false)",
+            Regex = BooleanRegex,
             Description = "Whether the Parti stream notification service is enabled",
             Default = "true",
             ValueType = SettingValueType.Boolean
@@ -871,7 +873,7 @@ public static class BuiltIn
             Key = Keys.DLiveCheckInterval,
             Description = "How often (in seconds) to check if a DLive streamer is live",
             Default = "15",
-            Regex = @"\d+",
+            Regex = WholeNumberRegex,
             ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
@@ -894,7 +896,7 @@ public static class BuiltIn
             Description = "Whether the Kiwi PeerTube live notification is enabled",
             Default = "true",
             ValueType = SettingValueType.Boolean,
-            Regex = "(true|false)"
+            Regex = BooleanRegex
         },
         new BuiltInSettingsModel
         {
@@ -902,7 +904,7 @@ public static class BuiltIn
             Description = "Interval (in seconds) to check live streams",
             Default = "10",
             ValueType = SettingValueType.Text,
-            Regex = @"\d+"
+            Regex = WholeNumberRegex
         },
         new BuiltInSettingsModel
         {
@@ -910,7 +912,7 @@ public static class BuiltIn
             Description = "Whether to enforce the use of a whitelist (i.e. streamer must be in the database)",
             Default = "false",
             ValueType = SettingValueType.Boolean,
-            Regex = "(true|false)"
+            Regex = BooleanRegex
         },
         new BuiltInSettingsModel
         {
@@ -918,7 +920,7 @@ public static class BuiltIn
             Description = "Interval in seconds for checking if the bot is completely dead",
             Default = "15",
             ValueType = SettingValueType.Text,
-            Regex = @"\d+"
+            Regex = WholeNumberRegex
         },
         new BuiltInSettingsModel
         {
@@ -926,7 +928,7 @@ public static class BuiltIn
             Description = "Whether the bot should exit if it's dead and unrecoverable",
             Default = "true",
             ValueType = SettingValueType.Boolean,
-            Regex = "(true|false)"
+            Regex = BooleanRegex
         },
         new BuiltInSettingsModel
         {
@@ -935,6 +937,8 @@ public static class BuiltIn
             Default = "true",
             ValueType = SettingValueType.Boolean,
             Regex = "(true|false)"
+            Regex = BooleanRegex
+        },
         }
     ];
     
@@ -1041,5 +1045,8 @@ public static class BuiltIn
         public static string BotDeadBotDetectionInterval = "Bot.DeadBotDetectionInterval";
         public static string BotExitOnDeath = "Bot.ExitOnDeath";
         public static string BotRespondToDiscordImpersonation = "Bot.RespondToDiscordImpersonation";
+        public static string MoneySymbolSuffix = "Money.SymbolSuffix";
+        public static string MoneySymbolPrefix = "Money.SymbolPrefix";
+        public static string MoneyEnabled = "Money.Enabled";
     }
 }
