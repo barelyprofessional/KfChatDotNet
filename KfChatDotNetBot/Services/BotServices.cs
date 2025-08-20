@@ -226,6 +226,7 @@ public class BotServices
         //_twitch.OnStreamCommercial += OnTwitchStreamCommercial;
         //_twitch.OnStreamTosStrike += OnTwitchStreamTosStrike;
         //await _twitch.StartWsClient();
+        _twitch.StartLiveStatusCheck();
         _logger.Info("Built Twitch Websocket connection for livestream notifications");
     }
 
