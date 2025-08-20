@@ -22,7 +22,7 @@ public class BotServices
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     
     internal KickWsClient.KickWsClient? KickClient;
-    private Twitch? _twitch;
+    private TwitchGraphQl? _twitch;
     private Shuffle? _shuffle;
     private DiscordService? _discord;
     private TwitchChat? _twitchChat;
@@ -214,18 +214,18 @@ public class BotServices
     
     private async Task BuildTwitch()
     {
-        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.TwitchBossmanJackId, BuiltIn.Keys.Proxy]);
-        if (settings[BuiltIn.Keys.TwitchBossmanJackId].Value == null)
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.Proxy]);
+        if (settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value == null)
         {
             _twitchDisabled = true;
-            _logger.Debug($"Ignoring Twitch client as {BuiltIn.Keys.TwitchBossmanJackId} is not defined");
+            _logger.Debug($"Ignoring Twitch client as {BuiltIn.Keys.TwitchBossmanJackUsername} is not defined");
             return;
         }
-        _twitch = new Twitch([settings[BuiltIn.Keys.TwitchBossmanJackId].ToType<int>()], settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
+        _twitch = new TwitchGraphQl(settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         _twitch.OnStreamStateUpdated += OnTwitchStreamStateUpdated;
-        _twitch.OnStreamCommercial += OnTwitchStreamCommercial;
-        _twitch.OnStreamTosStrike += OnTwitchStreamTosStrike;
-        await _twitch.StartWsClient();
+        //_twitch.OnStreamCommercial += OnTwitchStreamCommercial;
+        //_twitch.OnStreamTosStrike += OnTwitchStreamTosStrike;
+        //await _twitch.StartWsClient();
         _logger.Info("Built Twitch Websocket connection for livestream notifications");
     }
 
@@ -378,7 +378,7 @@ public class BotServices
                     await BuildDiscord();
                 }
 
-                if (!_twitchDisabled && _twitch != null && !_twitch.IsConnected())
+                if (!_twitchDisabled && _twitch != null && !_twitch.IsTaskRunning())
                 {
                     _logger.Error("Twitch died, recreating it");
                     _twitch.Dispose();
@@ -878,19 +878,26 @@ public class BotServices
         _chatBot.SendChatMessage($"🚨🚨 Shufflebros! 🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
 
-    private void OnTwitchStreamStateUpdated(object sender, int channelId, bool isLive)
+    private void OnTwitchStreamStateUpdated(object sender, string channelName, bool isLive)
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
-        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.CaptureEnabled
+        ]).Result;
 
         if (isLive)
         {
             _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just went live on Twitch! https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}\r\n" +
-                                     settings[BuiltIn.Keys.RestreamUrl].Value);
+                                     settings[BuiltIn.Keys.RestreamUrl].Value, true);
             IsBmjLive = true;
+            if (settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
+            {
+                _logger.Info("Capturing Bossman's stream");
+                _ = new StreamCapture($"https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}", StreamCaptureMethods.Streamlink, _cancellationToken).CaptureAsync();
+            }
             return;
         }
-        _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is no longer live! :lossmanjack:");
+        _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is no longer live! :lossmanjack:", true);
         IsBmjLive = false;
     }
     
@@ -1137,6 +1144,7 @@ public class BotServices
             $"{identity} is no longer live! :lossmanjack:", true);
     }
 
+    // TODO: Fix this so it aligns with the new Persisted Live setting instead of tracking separately
     public async Task<bool> CheckBmjIsLive(string bmjUsername)
     {
         if (IsBmjLive)
@@ -1158,7 +1166,7 @@ public class BotServices
                 _logger.Error("Twitch client has not been built!");
                 throw new Exception("Twitch client not initialized");
             }
-            IsBmjLive = await _twitch.IsStreamLive(bmjUsername);
+            IsBmjLive = (await _twitch.GetStream(bmjUsername)).IsLive;
             _isBmjLiveSynced = true;
         }
         if (IsBmjLive)

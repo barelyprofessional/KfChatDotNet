@@ -15,7 +15,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         .GetMultipleValuesAsync([BuiltIn.Keys.CaptureYtDlpBinaryPath, BuiltIn.Keys.CaptureYtDlpWorkingDirectory,
             BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser, BuiltIn.Keys.CaptureYtDlpOutputFormat, BuiltIn.Keys.CaptureYtDlpParentTerminal,
             BuiltIn.Keys.CaptureYtDlpScriptPath, BuiltIn.Keys.CaptureYtDlpUserAgent, BuiltIn.Keys.CaptureStreamlinkBinaryPath,
-            BuiltIn.Keys.CaptureStreamlinkOutputFormat, BuiltIn.Keys.CaptureStreamlinkRemuxScript]).Result;
+            BuiltIn.Keys.CaptureStreamlinkOutputFormat, BuiltIn.Keys.CaptureStreamlinkRemuxScript, BuiltIn.Keys.CaptureStreamlinkTwitchOptions]).Result;
 
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -111,12 +111,17 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         }
         else if (captureMethod == StreamCaptureMethods.Streamlink)
         {
-            captureLine = $"{_settings[BuiltIn.Keys.CaptureStreamlinkBinaryPath].Value} --output \"{_settings[BuiltIn.Keys.CaptureStreamlinkOutputFormat].Value}\" " +
+            var twitchOpts = string.Empty;
+            if (streamUrl.Contains("twitch.tv"))
+            {
+                twitchOpts = _settings[BuiltIn.Keys.CaptureStreamlinkTwitchOptions].Value;
+            }
+            captureLine = $"{_settings[BuiltIn.Keys.CaptureStreamlinkBinaryPath].Value} {twitchOpts} --output \"{_settings[BuiltIn.Keys.CaptureStreamlinkOutputFormat].Value}\" " +
                           $"--retry-streams 15 --retry-max 10 {streamUrl} best";
         }
         else
         {
-            _logger.Error($"We were given a straem capture method that doesn't exist: {captureMethod}");
+            _logger.Error($"We were given a stream capture method that doesn't exist: {captureMethod}");
             throw new UnsupportedStreamCaptureMethodException();
         }
 

@@ -968,6 +968,29 @@ public static class BuiltIn
             Default = "100",
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.TwitchGraphQlCheckInterval,
+            Description = "Interval in seconds to check if Bossman is live on Twitch using GraphQL",
+            Default = "10",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.TwitchGraphQlPersistedCurrentlyLive,
+            Description = "Whether BossmanJack is currently live on Twitch",
+            Default = "false",
+            ValueType = SettingValueType.Boolean,
+            Regex = BooleanRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureStreamlinkTwitchOptions,
+            Description = "Special options for Twitch streams captured with Streamlink",
+            Default = "--twitch-disable-ad --twitch-proxy-playlist=https://eu.luminous.dev,https://eu2.luminous.dev,https://as.luminous.dev,https://cdn.perfprod.com",
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -1065,6 +1088,7 @@ public static class BuiltIn
         public static string CaptureStreamlinkBinaryPath = "Capture.Streamlink.BinaryPath";
         public static string CaptureStreamlinkOutputFormat = "Capture.Streamlink.OutputFormat";
         public static string CaptureStreamlinkRemuxScript = "Capture.Streamlink.RemuxScript";
+        public static string CaptureStreamlinkTwitchOptions = "Capture.Streamlink.TwitchOptions";
         public static string DLiveCheckInterval = "DLive.CheckInterval";
         public static string DLivePersistedCurrentlyLiveStreams = "DLive.PersistedCurrentlyLiveStreams";
         public static string KiwiPeerTubePersistedCurrentlyLiveStreams = "KiwiPeerTube.PersistedCurrentlyLiveStreams";
@@ -1078,5 +1102,7 @@ public static class BuiltIn
         public static string MoneySymbolPrefix = "Money.SymbolPrefix";
         public static string MoneyEnabled = "Money.Enabled";
         public static string MoneyInitialBalance = "Money.InitialBalance";
+        public static string TwitchGraphQlCheckInterval = "TwitchGraphQl.CheckInterval";
+        public static string TwitchGraphQlPersistedCurrentlyLive = "TwitchGraphQl.PersistedCurrentlyLive";
     }
 }
