@@ -119,7 +119,7 @@ public class TwitchGraphQl(string? proxy = null, CancellationToken cancellationT
 
         returnData.IsLive = true;
         returnData.Id = responseContent.GetProperty("data").GetProperty("user").GetProperty("stream").GetProperty("id")
-            .GetInt64();
+            .GetString();
         returnData.ViewerCount = responseContent.GetProperty("data").GetProperty("user").GetProperty("stream").GetProperty("viewersCount")
             .GetInt32();
         return returnData;
@@ -146,5 +146,5 @@ public class TwitchGraphQlModel
     /// <summary>
     /// Stream ID returned by the GraphQL endpoint. null if none
     /// </summary>
-    public long? Id { get; set; }
+    public string? Id { get; set; }
 }
