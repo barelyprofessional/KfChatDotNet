@@ -29,7 +29,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         return handler;
     }
 
-    public async Task<KiwiFlareChallengeModel> GetChallenge()
+    public async Task<KiwiFlareChallengeModel?> GetChallenge()
     {
         using var client = new HttpClient(GetHttpClientHandler());
         var response = await client.GetAsync($"https://{kfDomain}/", _ctx);
@@ -38,7 +38,8 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
         if (challengeData == null)
         {
-            throw new Exception("challengeData was null. Couldn't find html element with id = sssg");
+            _logger.Info("challengeData was null. Couldn't find html element with id = sssg, returning null");
+            return null;
         }
 
         if (!challengeData.Attributes.Contains("data-sssg-challenge")) throw new Exception("data-sssg-challenge attribute missing");
