@@ -61,7 +61,7 @@ public class TwitchGraphQl(string? proxy = null, CancellationToken cancellationT
                 await using var db = new ApplicationDbContext();
                 await db.TwitchViewCounts.AddAsync(new TwitchViewCountDbModel
                 {
-                    Topic = stream.Id.ToString()!,
+                    Topic = stream.Id!,
                     Viewers = stream.ViewerCount!.Value,
                     Time = DateTimeOffset.UtcNow,
                     ServerTime = 0
