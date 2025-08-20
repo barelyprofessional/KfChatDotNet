@@ -23,4 +23,9 @@ public class ApplicationDbContext : DbContext
     // public DbSet<PocketWatchTransactionDbModel> PocketWatchTransactions { get; set; }
     public DbSet<MomDbModel> Moms { get; set; }
     public DbSet<StreamDbModel> Streams { get; set; }
+    public DbSet<GamblerDbModel> Gamblers { get; set; }
+    public DbSet<TransactionDbModel> Transactions { get; set; }
+    public DbSet<WagerDbModel> Wagers { get; set; }
+    public DbSet<GamblerExclusionDbModel> Exclusions { get; set; }
+    public DbSet<GamblerPerkDbModel> Perks { get; set; }
 }

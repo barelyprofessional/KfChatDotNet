@@ -936,9 +936,38 @@ public static class BuiltIn
             Description = "Whether to respond to Bossman impersonations",
             Default = "true",
             ValueType = SettingValueType.Boolean,
-            Regex = "(true|false)"
             Regex = BooleanRegex
         },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneySymbolSuffix,
+            Description = "What is the symbol of the bot's currency when used as a suffix for an amount",
+            Default = "KKK",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneySymbolPrefix,
+            Description = "What is the symbol of the bot's currency when used as a prefix for an amount",
+            Default = "KKK$",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneyEnabled,
+            Description = "Whether the monetary system is enabled at all. " +
+                          "If disabled, the bot won't answer any commands related to balance, transactions, gambling, etc.",
+            Default = "false",
+            ValueType = SettingValueType.Boolean,
+            Regex = BooleanRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneyInitialBalance,
+            Description = "Gambler's initial balance on creation",
+            Default = "100",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
         }
     ];
     
@@ -1048,5 +1077,6 @@ public static class BuiltIn
         public static string MoneySymbolSuffix = "Money.SymbolSuffix";
         public static string MoneySymbolPrefix = "Money.SymbolPrefix";
         public static string MoneyEnabled = "Money.Enabled";
+        public static string MoneyInitialBalance = "Money.InitialBalance";
     }
 }

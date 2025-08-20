@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;

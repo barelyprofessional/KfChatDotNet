@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 
-namespace KfChatDotNetBot;
+namespace KfChatDotNetBot.Extensions;
 
 public static class Extensions
 {

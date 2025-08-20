@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace KfChatDotNetBot.Models.DbModels;
 
@@ -25,11 +26,22 @@ public class GamblerDbModel
     /// <summary>
     /// The seed value given to any instance of Random that's associated with the gambler
     /// </summary>
+    [MaxLength(256)]
     public required string RandomSeed { get; set; }
     /// <summary>
     /// When the gambler entity was created
     /// </summary>
     public required DateTimeOffset Created { get; set; }
+    /// <summary>
+    /// Reference value for total wagered during the entity's lifetime
+    /// This value is recalculated whenever the bot restarts to ensure integrity
+    /// </summary>
+    public required decimal TotalWagered { get; set; }
+    /// <summary>
+    /// Wager requirement for the next VIP level
+    /// If TotalWagered reaches this value, it'll trigger the calculation
+    /// </summary>
+    public required decimal NextVipLevelWagerRequirement { get; set; }
 }
 
 public class TransactionDbModel
@@ -39,9 +51,9 @@ public class TransactionDbModel
     /// </summary>
     public int Id { get; set; }
     /// <summary>
-    /// User whose balance was affected by this transaction
+    /// Gambler whose balance was affected by this transaction
     /// </summary>
-    public required GamblerDbModel User { get; set; }
+    public required GamblerDbModel Gambler { get; set; }
     /// <summary>
     /// Source of the transaction event
     /// </summary>
@@ -50,6 +62,13 @@ public class TransactionDbModel
     /// Time when the event occurred
     /// </summary>
     public required DateTimeOffset Time { get; set; }
+    /// <summary>
+    /// Time represented as a 64-bit UNIX epoch
+    /// This just exists to make it far more efficient to query a range of txns
+    /// as then we can use native SQLite dialect to select e.g. last 24 hours
+    /// instead of copying thousands of rows into memory and using LINQ
+    /// </summary>
+    public required long TimeUnixEpochSeconds { get; set; }
     /// <summary>
     /// Effect of the transaction, plus or minus
     /// </summary>
@@ -62,6 +81,10 @@ public class TransactionDbModel
     /// Sender of the transaction in the case of a juicer, null otherwise
     /// </summary>
     public GamblerDbModel? From { get; set; } = null;
+    /// <summary>
+    /// Snapshot of the gambler's balance after this transaction's effect was applied
+    /// </summary>
+    public required decimal NewBalance { get; set; }
 }
 
 public class WagerDbModel
@@ -71,19 +94,26 @@ public class WagerDbModel
     /// </summary>
     public int Id { get; set; }
     /// <summary>
-    /// User who wagered
+    /// Gambler who wagered
     /// </summary>
-    public required GamblerDbModel User { get; set; }
+    public required GamblerDbModel Gambler { get; set; }
     /// <summary>
     /// Time they wagered
     /// </summary>
     public required DateTimeOffset Time { get; set; }
     /// <summary>
-    /// Amount the user wagered
+    /// Time represented as a 64-bit UNIX epoch
+    /// This just exists to make it far more efficient to query a range of wagers
+    /// as then we can use native SQLite dialect to select e.g. last 24 hours
+    /// instead of copying thousands of rows into memory and using LINQ
+    /// </summary>
+    public required long TimeUnixEpochSeconds { get; set; }
+    /// <summary>
+    /// Amount the gambler wagered
     /// </summary>
     public required decimal WagerAmount { get; set; }
     /// <summary>
-    /// Effect of the wager on the user's balance
+    /// Effect of the wager on the gambler's balance
     /// </summary>
     public required decimal WagerEffect { get; set; }
     /// <summary>
@@ -92,13 +122,108 @@ public class WagerDbModel
     /// </summary>
     public required WagerGame Game { get; set; }
     /// <summary>
-    /// Multiplier if applicable. 0 if it was a complete loss
+    /// Multiplier, e.g. 10.5x if a $1 wager paid out $10.50. 0 if it was a complete loss
     /// </summary>
     public required decimal Multiplier { get; set; }
     /// <summary>
     /// An optional field to store serialized information about the game that was played
     /// </summary>
     public string? GameMeta { get; set; } = null;
+    /// <summary>
+    /// Whether the results of the wager have been realized yet (i.e., is the game 'complete'?)
+    /// This is useful for wagers related to bets on the outcome of events
+    /// For incomplete bets: set the effect to -wager, subtract it from the user's balance, generate a txn for the wager
+    /// Then when the outcome of the bet is fully realized, modify the effect accordingly, generate a new txn for the
+    /// payout and set a multiplier based on the win (if any)
+    /// </summary>
+    public required bool IsComplete { get; set; }
+}
+
+public class GamblerExclusionDbModel
+{
+    /// <summary>
+    /// ID fo the database row
+    /// </summary>
+    public int Id { get; set; }
+    /// <summary>
+    /// Gambler who is excluded
+    /// </summary>
+    public required GamblerDbModel Gambler { get; set; }
+    /// <summary>
+    /// When the exclusion expires
+    /// </summary>
+    public required DateTimeOffset Expires { get; set; }
+    /// <summary>
+    /// When the exclusion was created / began
+    /// </summary>
+    public required DateTimeOffset Created { get; set; }
+    /// <summary>
+    /// What triggered the exclusion
+    /// </summary>
+    public required ExclusionSource Source { get; set; }
+}
+
+public class GamblerPerkDbModel
+{
+    /// <summary>
+    /// ID fo the database row
+    /// </summary>
+    public int Id { get; set; }
+    /// <summary>
+    /// Gambler entity the perk is associated with
+    /// </summary>
+    public required GamblerDbModel Gambler { get; set; }
+    /// <summary>
+    /// Name of the perk
+    /// </summary>
+    [MaxLength(256)]
+    public required string PerkName { get; set; }
+    /// <summary>
+    /// Time when the perk was attained
+    /// </summary>
+    public required DateTimeOffset Time { get; set; }
+    /// <summary>
+    /// Optional metadata associated with the perk
+    /// </summary>
+    public string? Metadata { get; set; } = null;
+    /// <summary>
+    /// What type of perk is this
+    /// </summary>
+    public required GamblerPerkType PerkType { get; set; }
+    /// <summary>
+    /// The tier the perk is at.
+    /// If tiers are not applicable, set to null
+    /// </summary>
+    public int? PerkTier { get; set; }
+    /// <summary>
+    /// The payout from this perk, if any. If none, set to null
+    /// </summary>
+    public decimal? Payout { get; set; }
+}
+
+public enum GamblerPerkType
+{
+    /// <summary>
+    /// For literally anything else, though you should probably just extend this enum
+    /// </summary>
+    Other = -1,
+    /// <summary>
+    /// Used for tracking VIP levels attained
+    /// </summary>
+    [Description("VIP Level")]
+    VipLevel
+}
+
+public enum ExclusionSource
+{
+    /// <summary>
+    /// Exclusion as a result of the hostess' action
+    /// </summary>
+    Hostess,
+    /// <summary>
+    /// Exclusions placed by administrators
+    /// </summary>
+    Administrative
 }
 
 /// <summary>
@@ -123,9 +248,19 @@ public enum TransactionSourceEventType
     /// </summary>
     Administrative,
     /// <summary>
-    /// Some type of bonus, like rakeback or a reload. Do not use for hostess rewards
+    /// Some type of bonus, like a VIP level up. Rakeback / reloads have separate enums for this
     /// </summary>
     Bonus,
+    /// <summary>
+    /// Specifically use for rakeback as we use the delta between last rakeback txn to calculate total wagered
+    /// to figure out what the next rakeback should be (if they've wagered enough to be eligible for one)
+    /// </summary>
+    Rakeback,
+    /// <summary>
+    /// Use specifically for daily reloads as we use the timing of the last reload txn to figure out if the most
+    /// recent reload has been claimed yet or not
+    /// </summary>
+    Reload,
     /// <summary>
     /// Use this only for hostess juicers as the sum of these juicers in a given day can influence the hostess' behavior 
     /// </summary>
@@ -142,7 +277,11 @@ public enum WagerGame
     LambChop,
     Keno,
     [Description("Coinflip")]
-    CoinFlip
+    CoinFlip,
+    /// <summary>
+    /// This is for betting pools based on some sort of event or outcome
+    /// </summary>
+    Event
 }
 
 public enum GamblerState
