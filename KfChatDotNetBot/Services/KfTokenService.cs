@@ -67,6 +67,11 @@ public class KfTokenService
             try
             {
                 var challenge = await _kiwiFlare.GetChallenge();
+                if (challenge == null)
+                {
+                    _logger.Error("Challenge data was null. Might be KiwiFlare is only partially enabled? Not going to do anything.");
+                    return;
+                }
                 var solution = await _kiwiFlare.SolveChallenge(challenge);
                 var token = await _kiwiFlare.SubmitAnswer(solution);
                 _cookies.Add(new Cookie("sssg_clearance", token, "/", _kfDomain));
