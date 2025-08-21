@@ -883,13 +883,13 @@ public class BotServices
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
         var settings = SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.RestreamUrl, BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.CaptureEnabled
+            BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.CaptureEnabled, BuiltIn.Keys.TwitchIcon
         ]).Result;
+        var bmjUsername = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value;
 
         if (isLive)
         {
-            _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just went live on Twitch! https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}\r\n" +
-                                     settings[BuiltIn.Keys.RestreamUrl].Value, true);
+            _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.TwitchIcon].Value}[/img] {bmjUsername} just went [b]LIVE[/b] on Twitch! https://www.twitch.tv/{bmjUsername} 🚨🚨", true);
             IsBmjLive = true;
             if (settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
             {
