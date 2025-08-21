@@ -43,8 +43,6 @@ public class BotServices
     
     private string? _bmjTwitchUsername;
     private bool _twitchDisabled;
-    internal bool IsBmjLive;
-    private bool _isBmjLiveSynced;
     private Dictionary<string, SeenYeetBet> _yeetBets = new();
     
     // lol
@@ -516,7 +514,7 @@ public class BotServices
         db.SaveChanges();
         
         _logger.Info("ALERT BMJ IS BETTING (on Rainbet)");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
 
         var wagered = float.Parse(bet.Value);
         var payout = float.Parse(bet.Payout);
@@ -530,8 +528,7 @@ public class BotServices
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
-                BuiltIn.Keys.JackpotBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.JackpotBmjUsernames, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Jackpot bet has arrived");
         if (!settings[BuiltIn.Keys.JackpotBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.User))
@@ -539,7 +536,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Jackpot)");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
 
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
@@ -561,26 +558,27 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Clash.gg)");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
-
+        if (CheckBmjIsLive().Result) return;
+        var username = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value;
+        
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Payout < bet.Bet) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         if (bet is { Game: ClashggGame.Mines, Multiplier: <= 1 })
         {
             var mineCount = jsonElement.GetProperty("mineCount").GetInt32();
             _chatBot.SendChatMessage(
-                $"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money on {bet.Game.Humanize()} but instantly lost with {mineCount} mines on the board. RIP 💰💰",
+                $"🚨🚨 CLASH.GG BETTING 🚨🚨 {username} just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money on {bet.Game.Humanize()} but instantly lost with {mineCount} mines on the board. RIP 💰💰",
                 true);
             return;
         }
 
         if (bet.Game == ClashggGame.Mines)
         {
-            _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which [b]maybe[/b] paid out " +
+            _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 {username} just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which [b]maybe[/b] paid out " +
                                      $"{bet.Payout / 100.0:N2} {bet.Currency.Humanize()} Money ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
             return;
         }
-        _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 austingambles just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which paid out " +
+        _chatBot.SendChatMessage($"🚨🚨 CLASH.GG BETTING 🚨🚨 {username} just bet {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} Money which paid out " +
                                  $"[color={payoutColor}]{bet.Payout / 100.0:N2} {bet.Currency.Humanize()} Money[/color] ({bet.Multiplier}x) on {bet.Game.Humanize()} 💰💰", true);
     }
     
@@ -588,8 +586,7 @@ public class BotServices
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
-                BuiltIn.Keys.BetBoltBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.BetBoltBmjUsernames, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("BetBolt bet has arrived");
         if (!settings[BuiltIn.Keys.BetBoltBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.Username))
@@ -597,7 +594,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on BetBolt)");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage($"🚨🚨 JEETBOLT BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmountFiat:C} ({bet.BetAmountCrypto:N2} {bet.Crypto}) and won " +
@@ -608,8 +605,7 @@ public class BotServices
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
-                BuiltIn.Keys.YeetBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.YeetBmjUsernames, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Yeet bet has arrived");
         if (!settings[BuiltIn.Keys.YeetBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.Username))
@@ -617,7 +613,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
         //if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         var msg = _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} on {bet.GameName} 💩💩", true);
         _yeetBets.Add(bet.BetIdentifier, new SeenYeetBet {Bet = bet, Message = msg});
@@ -627,8 +623,7 @@ public class BotServices
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
-                BuiltIn.Keys.YeetBmjUsernames, BuiltIn.Keys.TwitchBossmanJackUsername,
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.YeetBmjUsernames, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Yeet bet has arrived");
         if (!settings[BuiltIn.Keys.YeetBmjUsernames].JsonDeserialize<List<string>>()!.Contains(bet.Username))
@@ -636,7 +631,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Multiplier < 1) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         var newMsg =
@@ -862,8 +857,7 @@ public class BotServices
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
-                BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.TwitchBossmanJackUsername,
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Shuffle bet has arrived");
         if (bet.Username != settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
@@ -871,7 +865,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING");
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -890,7 +884,6 @@ public class BotServices
         if (isLive)
         {
             _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.TwitchIcon].Value}[/img] {bmjUsername} just went [b]LIVE[/b] on Twitch! https://www.twitch.tv/{bmjUsername} 🚨🚨", true);
-            IsBmjLive = true;
             if (settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
             {
                 _logger.Info("Capturing Bossman's stream");
@@ -899,7 +892,6 @@ public class BotServices
             return;
         }
         _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is no longer live! :lossmanjack:", true);
-        IsBmjLive = false;
     }
     
     private void OnChipsggRecentBet(object sender, ChipsggBetModel bet)
@@ -923,12 +915,12 @@ public class BotServices
             Currency = bet.Currency!, CurrencyPrice = bet.CurrencyPrice, BetId = bet.BetId ?? "0"
         });
         db.SaveChanges();
-        if (CheckBmjIsLive(settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value ?? "usernamenotset").Result) return;
+        if (CheckBmjIsLive().Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Winnings < bet.Amount) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         _chatBot.SendChatMessage(
-            $"🚨🚨 CHIPS BROS 🚨🚨 AustinGambles just bet [plain]{bet.Amount:N} {bet.Currency!.ToUpper()} " +
+            $"🚨🚨 CHIPS BROS 🚨🚨 {settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} just bet [plain]{bet.Amount:N} {bet.Currency!.ToUpper()} " +
             $"({bet.Amount * bet.CurrencyPrice:C}) which paid out [/plain][color={payoutColor}][plain]{bet.Winnings:N} {bet.Currency.ToUpper()} " +
             $"({bet.Winnings * bet.CurrencyPrice:C})[/plain][/color] [plain]({bet.Multiplier:N}x) on {bet.GameTitle}[/plain] 💰💰",
             true);
@@ -1124,36 +1116,14 @@ public class BotServices
     }
 
     // TODO: Fix this so it aligns with the new Persisted Live setting instead of tracking separately
-    public async Task<bool> CheckBmjIsLive(string bmjUsername)
+    public async Task<bool> CheckBmjIsLive()
     {
-        if (IsBmjLive)
+        var isLive =
+            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive)).ToBoolean();
+        if (isLive || TemporarilySuppressGambaMessages)
         {
             return true;
         }
-        if (TemporarilySuppressGambaMessages)
-        {
-            _logger.Info("Ignoring as TemporarilySuppressGambaMessages is true");
-            return true;
-        }
-        // Only check once because the bot should be tracking the Twitch stream
-        // This is just in case he's already live while the bot starts
-        // He was schizo betting on Dice, so I want to avoid a lot of API requests to Twitch in case they rate limit
-        if (!_isBmjLiveSynced)
-        {
-            if (_twitch == null)
-            {
-                _logger.Error("Twitch client has not been built!");
-                throw new Exception("Twitch client not initialized");
-            }
-            IsBmjLive = (await _twitch.GetStream(bmjUsername)).IsLive;
-            _isBmjLiveSynced = true;
-        }
-        if (IsBmjLive)
-        {
-            _logger.Info("Double checked and he is really online");
-            return true;
-        }
-
         return false;
     }
 }

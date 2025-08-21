@@ -38,23 +38,6 @@ public class SetRoleCommand : ICommand
     }
 }
 
-public class ToggleLiveStatusAdminCommand : ICommand
-{
-    public List<Regex> Patterns => [
-        new Regex(@"^admin toggle livestatus$")
-    ];
-
-    public string? HelpText => "Toggle Bossman's live status so off screen gamba can be relayed";
-    public UserRight RequiredRight => UserRight.TrueAndHonest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
-    {
-        botInstance.BotServices.IsBmjLive = !botInstance.BotServices.IsBmjLive;
-
-        await botInstance.SendChatMessageAsync($"IsBmjLive => {botInstance.BotServices.IsBmjLive}", true);
-    }
-}
-
 public class CacheClearAdminCommand : ICommand
 {
     public List<Regex> Patterns => [

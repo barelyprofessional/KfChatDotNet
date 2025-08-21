@@ -25,7 +25,8 @@ public class JuiceCommand : ICommand
         var juicerSettings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.JuiceAmount, BuiltIn.Keys.JuiceCooldown, BuiltIn.Keys.JuiceLoserDivision,
             BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.JuiceAllowedWhileStreaming,
-            BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.JuiceAutoDeleteMsgDelay
+            BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.JuiceAutoDeleteMsgDelay,
+            BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive
         ]);
         var cooldown = juicerSettings[BuiltIn.Keys.JuiceCooldown].ToType<int>();
         var amount = juicerSettings[BuiltIn.Keys.JuiceAmount].ToType<int>();
@@ -37,7 +38,7 @@ public class JuiceCommand : ICommand
             return;
         }
 
-        if (!juicerSettings[BuiltIn.Keys.JuiceAllowedWhileStreaming].ToBoolean() && botInstance.BotServices.IsBmjLive)
+        if (!juicerSettings[BuiltIn.Keys.JuiceAllowedWhileStreaming].ToBoolean() && juicerSettings[BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive].ToBoolean())
         {
             await botInstance.SendChatMessageAsync(
                 $"No juicers permitted while {juicerSettings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is live!", true);
