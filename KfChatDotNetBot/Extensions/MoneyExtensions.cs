@@ -225,6 +225,13 @@ public static class MoneyExtensions
         return perk;
     }
 
+    /// <summary>
+    /// Upgrade to the given VIP level. Grants a bonus as part of the level up.
+    /// </summary>
+    /// <param name="gambler">The gambler you wish to level up</param>
+    /// <param name="nextVipLevel">VIP level to grant them</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>The bonus they received</returns>
     public static async Task<decimal> UpgradeVipLevel(this GamblerDbModel gambler, NextVipLevelModel nextVipLevel,
         CancellationToken ct = default)
     {
@@ -250,5 +257,44 @@ public static class MoneyExtensions
         await gambler.ModifyBalance(payout, TransactionSourceEventType.Bonus,
             $"VIP Level '{nextVipLevel.VipLevel.Icon} {nextVipLevel.VipLevel.Name}' Tier {nextVipLevel.Tier} level up bonus", ct: ct);
         return payout;
+    }
+
+    /// <summary>
+    /// Format an amount of money using configured symbols
+    /// </summary>
+    /// <param name="amount">The amount you wish to format</param>
+    /// <param name="suffixSymbol">Whether to suffix the symbol</param>
+    /// <param name="prefixSymbol">Whether to prefix the symbol</param>
+    /// <param name="wrapInPlainBbCode">Whether to wrap the resulting string in [plain][/plain] BBCode to avoid characters being interpreted as emotes</param>
+    /// <returns></returns>
+    public static async Task<string> FormatKasinoCurrencyAsync(this decimal amount, bool suffixSymbol = true,
+        bool prefixSymbol = false, bool wrapInPlainBbCode = true)
+    {
+        var settings = await
+            SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.MoneySymbolPrefix, BuiltIn.Keys.MoneySymbolSuffix]);
+        var result = string.Empty;
+        if (wrapInPlainBbCode)
+        {
+            result = "[plain]";
+        }
+
+        if (prefixSymbol)
+        {
+            result += settings[BuiltIn.Keys.MoneySymbolPrefix].Value;
+        }
+
+        result += $"{amount:N2}";
+
+        if (suffixSymbol)
+        {
+            result += $" {settings[BuiltIn.Keys.MoneySymbolSuffix].Value}";
+        }
+
+        if (wrapInPlainBbCode)
+        {
+            result += "[/plain]";
+        }
+
+        return result;
     }
 }

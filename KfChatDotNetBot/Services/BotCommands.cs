@@ -121,9 +121,7 @@ internal class BotCommands
             return;
         }
 
-        var moneySettings =
-            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.MoneyEnabled, BuiltIn.Keys.MoneySymbolSuffix]);
-        if (!moneySettings[BuiltIn.Keys.MoneyEnabled].ToBoolean()) return;
+        if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyEnabled)).ToBoolean()) return;
         var wagerCommand = HasAttribute<WagerCommand>(command);
         if (!wagerCommand) return;
         var gambler = await user.GetGamblerEntity(ct: _cancellationToken);
@@ -136,7 +134,7 @@ internal class BotCommands
         var payout = await gambler.UpgradeVipLevel(newLevel, _cancellationToken);
         await _bot.SendChatMessageAsync(
             $"🤑🤑 {user.KfUsername} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
-            $"and received a bonus of {payout:N2} {moneySettings[BuiltIn.Keys.MoneySymbolSuffix].Value}", true);
+            $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);
     }
     
     private static bool HasAttribute<T>(ICommand command) where T : Attribute
