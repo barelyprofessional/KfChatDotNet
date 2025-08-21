@@ -237,6 +237,16 @@ public class LastStreamCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive, BuiltIn.Keys.TwitchBossmanJackUsername
+        ]);
+        var username = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value;
+        var isLive = settings[BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive].ToBoolean();
+        if (isLive)
+        {
+            await botInstance.SendChatMessageAsync($"{username} is currently live on Twitch https://twitch.tv/{username}", true);
+            return;
+        }
         await using var db = new ApplicationDbContext();
         var latest = db.TwitchViewCounts.OrderByDescending(x => x.Id).FirstOrDefault();
         if (latest == null)
@@ -248,8 +258,7 @@ public class LastStreamCommand : ICommand
         var timespan = DateTimeOffset.UtcNow - latest.Time;
         var agt = TimeZoneInfo.ConvertTime(latest.Time, TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time"));
         // The table doesn't contain the name of the person so we'll just have to assume it's his Twitch username
-        var username = await SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchBossmanJackUsername);
-        await botInstance.SendChatMessageAsync($"{username.Value} last streamed on Twitch approximately {timespan.Humanize(precision: 2, minUnit: TimeUnit.Minute, maxUnit: TimeUnit.Hour)} ago at {agt:dddd h:mm tt} AGT", true);
+        await botInstance.SendChatMessageAsync($"{username} last streamed on Twitch approximately {timespan.Humanize(precision: 2, minUnit: TimeUnit.Minute, maxUnit: TimeUnit.Hour)} ago at {agt:dddd h:mm tt} AGT", true);
     }
 }
 
