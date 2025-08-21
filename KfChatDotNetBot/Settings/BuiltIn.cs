@@ -443,14 +443,6 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
-            Key = Keys.TwitchShillRestreamOnCommercial,
-            Regex = BooleanRegex,
-            Description = "Whether to shill the ad-free restream on commercial",
-            Default = "true",
-            ValueType = SettingValueType.Boolean
-        },
-        new BuiltInSettingsModel
-        {
             Key = Keys.KiwiFarmsInactivityTimeout,
             Regex = WholeNumberRegex,
             // You would think the WS library would trip up with the "NoMessageReceived" exception, but there's some bug
@@ -600,13 +592,6 @@ public static class BuiltIn
                           "If the count of images is =< this value, it'll just grab the oldest image. " +
                           "Fractions will be rounded, so a value of 5 with 7 images will round down and take the oldest image.",
             Default = "5",
-            ValueType = SettingValueType.Text
-        },
-        new BuiltInSettingsModel
-        {
-            Key = Keys.TwitchCommercialRestreamShillMessage,
-            Description = "The specific restream to shill when a commercial is detected if shilling is enabled",
-            Default = "No commercial restream shill message set",
             ValueType = SettingValueType.Text
         },
         new BuiltInSettingsModel
@@ -1030,7 +1015,6 @@ public static class BuiltIn
         public static string ChipsggBmjUserIds = "Chipsgg.BmjUserIds";
         public static string RestreamUrl = "RestreamUrl";
         public static string KiwiFarmsCookies = "KiwiFarms.Cookies";
-        public static string TwitchShillRestreamOnCommercial = "Twitch.ShillRestreamOnCommercial";
         public static string KiwiFarmsInactivityTimeout = "KiwiFarms.InactivityTimeout";
         public static string KiwiFarmsPingInterval = "KiwiFarms.PingInterval";
         public static string JuiceLoserDivision = "Juice.LoserDivision";
@@ -1051,7 +1035,6 @@ public static class BuiltIn
         public static string BotImageAcceptableKeys = "Bot.Image.AcceptableKeys";
         public static string BotToyStoryImage = "Bot.ToyStoryImage";
         public static string BotImageRandomSliceDivideBy = "Bot.Image.RandomSliceDivideBy";
-        public static string TwitchCommercialRestreamShillMessage = "Twitch.CommercialRestreamShillMessage";
         public static string BotChrisDjLiveImage = "Bot.ChrisDjLiveImage";
         public static string DiscordTemporarilyBypassGambaSeshInitialValue =
             "Discord.TemporarilyBypassGambaSeshInitialValue";

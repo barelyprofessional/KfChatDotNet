@@ -42,24 +42,6 @@ public class SetRestreamCommand : ICommand
     }
 }
 
-public class SetShillRestreamCommand : ICommand
-{
-    public List<Regex> Patterns => [
-        new Regex("^restream setshill (?<url>.+)$")
-    ];
-
-    public string? HelpText => "Set restream shill URL";
-    public UserRight RequiredRight => UserRight.TrueAndHonest;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
-        CancellationToken ctx)
-    {
-        await SettingsProvider.SetValueAsync(BuiltIn.Keys.TwitchCommercialRestreamShillMessage, arguments["url"].Value);
-        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated URL for the commercial break restream shill", true);
-    }
-}
-
 public class SelfPromoCommand : ICommand
 {
     public List<Regex> Patterns => [

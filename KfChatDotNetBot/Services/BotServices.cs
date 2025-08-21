@@ -902,28 +902,6 @@ public class BotServices
         IsBmjLive = false;
     }
     
-    private void OnTwitchStreamCommercial(object sender, int channelId, int length, bool scheduled)
-    {
-        var settings = SettingsProvider
-            .GetMultipleValuesAsync([BuiltIn.Keys.TwitchShillRestreamOnCommercial, BuiltIn.Keys.TwitchCommercialRestreamShillMessage, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
-        if (!settings[BuiltIn.Keys.TwitchShillRestreamOnCommercial].ToBoolean())
-        {
-            _logger.Debug("Not shilling as it's disabled");
-            return;
-        }
-
-        _chatBot.SendChatMessage(
-            $"Did you just get a {length} second ad on Twitch? The Keno Kasino encourages Total Advertiser Death.[br]" +
-            $"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} streams are being re-streamed in low latency, ad-free form thanks to @Kees H. Do not watch ads.[br]{settings[BuiltIn.Keys.TwitchCommercialRestreamShillMessage].Value}",
-            true);
-    }
-    
-    private void OnTwitchStreamTosStrike(object sender, int channelId)
-    {
-        var username = SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchBossmanJackUsername).Result;
-        _chatBot.SendChatMessage($":!::!: {username.Value} was just banned from Twitch! :!::!:", true);
-    }
-    
     private void OnChipsggRecentBet(object sender, ChipsggBetModel bet)
     {
         var settings = SettingsProvider
