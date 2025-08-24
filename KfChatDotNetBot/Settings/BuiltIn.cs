@@ -976,7 +976,23 @@ public static class BuiltIn
             Description = "Special options for Twitch streams captured with Streamlink",
             Default = "--twitch-disable-ad --twitch-proxy-playlist=https://eu.luminous.dev,https://eu2.luminous.dev,https://as.luminous.dev,https://cdn.perfprod.com",
             ValueType = SettingValueType.Text
-        }
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.OwncastCheckInterval,
+            Description = "Interval in seconds to check if someone is live on Owncast",
+            Default = "5",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.OwncastPersistedCurrentlyLive,
+            Description = "Whether someone is live on Owncast",
+            Default = "false",
+            ValueType = SettingValueType.Boolean,
+            Regex = BooleanRegex
+        },
     ];
     
     public static class Keys
@@ -1087,5 +1103,7 @@ public static class BuiltIn
         public static string MoneyInitialBalance = "Money.InitialBalance";
         public static string TwitchGraphQlCheckInterval = "TwitchGraphQl.CheckInterval";
         public static string TwitchGraphQlPersistedCurrentlyLive = "TwitchGraphQl.PersistedCurrentlyLive";
+        public static string OwncastCheckInterval = "Owncast.CheckInterval";
+        public static string OwncastPersistedCurrentlyLive = "Owncast.PersistedCurrentlyLive";
     }
 }

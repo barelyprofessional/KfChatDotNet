@@ -37,6 +37,7 @@ public class BotServices
     private Parti? _parti;
     private DLive? _dliveStatusCheck;
     private PeerTube? _peerTubeStatusCheck;
+    private Owncast? _owncastStatusCheck;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -84,7 +85,8 @@ public class BotServices
             BuildRainbet(),
             BuildParti(),
             BuildDLiveStatusCheck(),
-            BuildPeerTubeLiveStatusCheck()
+            BuildPeerTubeLiveStatusCheck(),
+            BuildOwncastLiveStatusCheck()
         ];
         try
         {
@@ -331,6 +333,14 @@ public class BotServices
         _peerTubeStatusCheck = new PeerTube(_chatBot);
         _peerTubeStatusCheck.StartLiveStatusCheck();
         _logger.Info("Built the PeerTube livestream status check task");
+        return Task.CompletedTask;
+    }
+    
+    private Task BuildOwncastLiveStatusCheck()
+    {
+        _owncastStatusCheck = new Owncast(_chatBot);
+        _owncastStatusCheck.StartLiveStatusCheck();
+        _logger.Info("Built the Owncast livestream status check task");
         return Task.CompletedTask;
     }
     
