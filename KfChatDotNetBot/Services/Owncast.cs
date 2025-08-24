@@ -74,7 +74,7 @@ public class Owncast(ChatBot kfChatBot) : IDisposable
         var content = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
         logger.Debug("Owncast endpoint returned the following JSON");
         logger.Debug(content.GetRawText);
-        return content.GetProperty("data").Deserialize<OwncastStatusModel>() ?? throw new InvalidOperationException();
+        return content.Deserialize<OwncastStatusModel>() ?? throw new InvalidOperationException();
     }
 
     public void Dispose()
