@@ -107,7 +107,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
             captureLine = $"{_settings[BuiltIn.Keys.CaptureYtDlpBinaryPath].Value} -o \"{_settings[BuiltIn.Keys.CaptureYtDlpOutputFormat].Value}\" " +
                           $"--user-agent \"{_settings[BuiltIn.Keys.CaptureYtDlpUserAgent].Value}\" " +
                           $"--cookies-from-browser {_settings[BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser].Value} " +
-                          $"--write-info-json --wait-for-video 15 --merge-output-format mp4 {streamUrl}";
+                          $"--write-info-json --wait-for-video 15 --merge-output-format mp4 --verbose {streamUrl}";
         }
         else if (captureMethod == StreamCaptureMethods.Streamlink)
         {
