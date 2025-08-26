@@ -93,8 +93,9 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
     /// <exception cref="UnsupportedOperatingSystemException">Thrown if the operating system is unsupported (i.e. not Windows, Linux or FreeBSD</exception>
     private async Task<string> CreateScriptAsync()
     {
+        var random = Convert.ToHexString(Guid.NewGuid().ToByteArray()[..4]);
         var scriptPath = Path.Join(_settings[BuiltIn.Keys.CaptureYtDlpScriptPath].Value,
-            $"bot_ytdlp_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}.sh");
+            $"bot_ytdlp_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{random}.sh");
         if (OperatingSystem.IsWindows())
         {
             Path.ChangeExtension(scriptPath, ".bat");
