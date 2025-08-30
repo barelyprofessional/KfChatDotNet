@@ -993,6 +993,21 @@ public static class BuiltIn
             ValueType = SettingValueType.Boolean,
             Regex = BooleanRegex
         },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneyRakebackPercentage,
+            Description = "Percentage of total wagered amount that should be returned for rakeback.",
+            Default = "2.5",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneyRakebackMinimumAmount,
+            Description = "Minimum rakeback to pay out. Anything below this will tell the user to go away.",
+            Default = "10",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
     ];
     
     public static class Keys
@@ -1105,5 +1120,7 @@ public static class BuiltIn
         public static string TwitchGraphQlPersistedCurrentlyLive = "TwitchGraphQl.PersistedCurrentlyLive";
         public static string OwncastCheckInterval = "Owncast.CheckInterval";
         public static string OwncastPersistedCurrentlyLive = "Owncast.PersistedCurrentlyLive";
+        public static string MoneyRakebackPercentage = "Money.Rakeback.Percentage";
+        public static string MoneyRakebackMinimumAmount = "Money.Rakeback.MinimumAmount";
     }
 }

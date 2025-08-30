@@ -4,6 +4,7 @@ using Humanizer.Localisation;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
+using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 
@@ -103,5 +104,53 @@ public class SendJuiceCommand : ICommand
         await targetGambler.ModifyBalance(amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
             gambler, ctx);
         await botInstance.SendChatMessageAsync($"@{user.KfUsername}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.KfUsername}", true);
+    }
+}
+
+[KasinoCommand]
+public class RakebackCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^rakeback", RegexOptions.IgnoreCase),
+        new Regex(@"^rapeback", RegexOptions.IgnoreCase)
+    ];
+    public string? HelpText => "Collect your rakeback";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var gambler = await user.GetGamblerEntity(ct: ctx);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.MoneyRakebackPercentage, BuiltIn.Keys.MoneyRakebackMinimumAmount
+        ]);
+        var mostRecentRakeback = await db.Transactions.LastOrDefaultAsync(tx =>
+            tx.EventSource == TransactionSourceEventType.Rakeback && tx.Gambler == gambler, cancellationToken: ctx);
+        long offset = 0;
+        if (mostRecentRakeback != null)
+        {
+            offset = mostRecentRakeback.TimeUnixEpochSeconds;
+        }
+
+        var wagers = db.Wagers.Where(w => w.Gambler == gambler && w.TimeUnixEpochSeconds > offset);
+        if (!await wagers.AnyAsync(ctx))
+        {
+            await botInstance.SendChatMessageAsync(
+                $"@{user.KfUsername}, you haven't wagered since your last rakeback.", true);
+            return;
+        }
+
+        var wagered = await wagers.SumAsync(w => w.WagerAmount, ctx);
+        var rakeback = wagered * (decimal)(settings[BuiltIn.Keys.MoneyRakebackPercentage].ToType<float>() / 100.0);
+        var minimumRakeback = settings[BuiltIn.Keys.MoneyRakebackMinimumAmount].ToType<decimal>();
+        if (rakeback < minimumRakeback)
+        {
+            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, your rakeback payout of {await rakeback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumRakeback.FormatKasinoCurrencyAsync()}", true);
+            return;
+        }
+        await gambler!.ModifyBalance(rakeback, TransactionSourceEventType.Rakeback, "Rakeback claimed by gambler",
+            ct: ctx);
     }
 }
