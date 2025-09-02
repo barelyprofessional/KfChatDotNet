@@ -305,9 +305,11 @@ public class ChatBot
                 _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
             UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
-            if (message.Author.Id is 70029 or 142504 && settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() &&
+            if (message.Author.Id != settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() &&
+                message.Author.Username != settings[BuiltIn.Keys.KiwiFarmsUsername].Value &&
+                settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() &&
                 (message.MessageRawHtmlDecoded.Contains("discord16.png") ||
-                 message.MessageRawHtmlDecoded.Contains("TwitchBossmanJack:", StringComparison.CurrentCultureIgnoreCase)))
+                 message.MessageRawHtmlDecoded.Contains("ImBossmanJack:", StringComparison.CurrentCultureIgnoreCase)))
             {
                 SendChatMessage($"☝️ {message.Author.Username} is a nigger faggot", true);
             }
