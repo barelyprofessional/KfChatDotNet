@@ -1008,6 +1008,21 @@ public static class BuiltIn
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
         },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneyLossbackPercentage,
+            Description = "Percentage of total amount lost that should be returned for lossback.",
+            Default = "5",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.MoneyLossbackMinimumAmount,
+            Description = "Minimum lossback to pay out. Anything below this will tell the user to go away.",
+            Default = "100",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
     ];
     
     public static class Keys
@@ -1122,5 +1137,7 @@ public static class BuiltIn
         public static string OwncastPersistedCurrentlyLive = "Owncast.PersistedCurrentlyLive";
         public static string MoneyRakebackPercentage = "Money.Rakeback.Percentage";
         public static string MoneyRakebackMinimumAmount = "Money.Rakeback.MinimumAmount";
+        public static string MoneyLossbackPercentage = "Money.Lossback.Percentage";
+        public static string MoneyLossbackMinimumAmount = "Money.Lossback.MinimumAmount";
     }
 }

@@ -264,7 +264,13 @@ public enum TransactionSourceEventType
     /// <summary>
     /// Use this only for hostess juicers as the sum of these juicers in a given day can influence the hostess' behavior 
     /// </summary>
-    Hostess
+    Hostess,
+    /// <summary>
+    /// Specifically use for lossback as we use the delta between last lossback txn to calculate total lost
+    /// to figure out what the next lossback should be. (Basically return a small % of the player's losses
+    /// unless the player's actual position is positive during the period, then tell them to fuck off)
+    /// </summary>
+    Lossback
 }
 
 public enum WagerGame
