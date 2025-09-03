@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
+using KfChatDotNetBot.Models.DbModels;
 
 namespace KfChatDotNetBot.Extensions;
 
@@ -129,5 +130,11 @@ public static class Extensions
         var bytes = Encoding.UTF8.GetBytes(s);
         var charCount = Encoding.UTF8.GetCharCount(bytes, 0, limitBytes);
         return s.Substring(0, charCount);
+    }
+
+    // Placeholder for future expansion involving custom titles
+    public static string FormatUsername(this UserDbModel user)
+    {
+        return $"@{user.KfUsername}";
     }
 }

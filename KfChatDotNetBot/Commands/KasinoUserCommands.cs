@@ -26,7 +26,7 @@ public class GetBalanceCommand : ICommand
     {
         var gambler = await user.GetGamblerEntity(ct: ctx);
         await botInstance.SendChatMessageAsync(
-            $"@{user.KfUsername}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
+            $"{user.FormatUsername()}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
     }
 }
 
@@ -47,7 +47,7 @@ public class GetExclusionCommand : ICommand
         var exclusion = await gambler!.GetActiveExclusion(ct: ctx);
         if (exclusion == null)
         {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, you are currently not excluded.", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you are currently not excluded.", true);
             return;
         }
 
@@ -58,7 +58,7 @@ public class GetExclusionCommand : ICommand
             (exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 2, minUnit: TimeUnit.Second,
                 maxUnit: TimeUnit.Day);
         await botInstance.SendChatMessageAsync(
-            $"@{user.KfUsername}, your exclusion for {duration} expires in {expires}", true);
+            $"{user.FormatUsername()}, your exclusion for {duration} expires in {expires}", true);
     }
 }
 
@@ -78,24 +78,25 @@ public class SendJuiceCommand : ICommand
     {
         await using var db = new ApplicationDbContext();
         var gambler = await user.GetGamblerEntity(ct: ctx);
+        db.Attach(gambler!);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
         var amount = decimal.Parse(arguments["amount"].Value);
         if (gambler!.Balance < amount)
         {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, you don't have enough money to juice this much.", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have enough money to juice this much.", true);
             return;
         }
 
         if (targetUser == null)
         {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, the user ID you gave doesn't exist.", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the user ID you gave doesn't exist.", true);
             return;
         }
 
         var targetGambler = await targetUser.GetGamblerEntity(ct: ctx);
         if (targetGambler == null)
         {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, you can't juice a banned user", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't juice a banned user", true);
             return;
         }
 
@@ -103,7 +104,7 @@ public class SendJuiceCommand : ICommand
             $"Juice sent to {targetUser.KfUsername}", ct: ctx);
         await targetGambler.ModifyBalance(amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
             gambler, ctx);
-        await botInstance.SendChatMessageAsync($"@{user.KfUsername}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.KfUsername}", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.KfUsername}", true);
     }
 }
 
@@ -123,6 +124,7 @@ public class RakebackCommand : ICommand
     {
         await using var db = new ApplicationDbContext();
         var gambler = await user.GetGamblerEntity(ct: ctx);
+        db.Attach(gambler!);
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyRakebackPercentage, BuiltIn.Keys.MoneyRakebackMinimumAmount
         ]);
@@ -138,7 +140,7 @@ public class RakebackCommand : ICommand
         if (wagers.Count == 0)
         {
             await botInstance.SendChatMessageAsync(
-                $"@{user.KfUsername}, you haven't wagered since your last rakeback.", true);
+                $"{user.FormatUsername()}, you haven't wagered since your last rakeback.", true);
             return;
         }
 
@@ -147,12 +149,12 @@ public class RakebackCommand : ICommand
         var minimumRakeback = settings[BuiltIn.Keys.MoneyRakebackMinimumAmount].ToType<decimal>();
         if (rakeback < minimumRakeback)
         {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, your rakeback payout of {await rakeback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumRakeback.FormatKasinoCurrencyAsync()}", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your rakeback payout of {await rakeback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumRakeback.FormatKasinoCurrencyAsync()}", true);
             return;
         }
         await gambler!.ModifyBalance(rakeback, TransactionSourceEventType.Rakeback, "Rakeback claimed by gambler",
             ct: ctx);
-        await botInstance.SendChatMessageAsync($"@{user.KfUsername}, the hostess has given you {await rakeback.FormatKasinoCurrencyAsync()} rakeback", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the hostess has given you {await rakeback.FormatKasinoCurrencyAsync()} rakeback", true);
     }
 }
 
@@ -171,6 +173,7 @@ public class LossbackCommand : ICommand
     {
         await using var db = new ApplicationDbContext();
         var gambler = await user.GetGamblerEntity(ct: ctx);
+        db.Attach(gambler!);
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyLossbackPercentage, BuiltIn.Keys.MoneyLossbackMinimumAmount
         ]);
@@ -186,7 +189,7 @@ public class LossbackCommand : ICommand
         if (wagers.Count == 0)
         {
             await botInstance.SendChatMessageAsync(
-                $"@{user.KfUsername}, you don't have any losses to juice back.", true);
+                $"{user.FormatUsername()}, you don't have any losses to juice back.", true);
             return;
         }
 
@@ -195,11 +198,43 @@ public class LossbackCommand : ICommand
         var minimumLossback = settings[BuiltIn.Keys.MoneyLossbackMinimumAmount].ToType<decimal>();
         if (lossback < minimumLossback)
         {
-            await botInstance.SendChatMessageAsync($"@{user.KfUsername}, your lossback payout of {await lossback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumLossback.FormatKasinoCurrencyAsync()}", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your lossback payout of {await lossback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumLossback.FormatKasinoCurrencyAsync()}", true);
             return;
         }
         await gambler!.ModifyBalance(lossback, TransactionSourceEventType.Lossback, "Lossback claimed by gambler",
             ct: ctx);
-        await botInstance.SendChatMessageAsync($"@{user.KfUsername}, the hostess has given you {await lossback.FormatKasinoCurrencyAsync()} lossback", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the hostess has given you {await lossback.FormatKasinoCurrencyAsync()} lossback", true);
+    }
+}
+
+[KasinoCommand]
+public class AbandonKasinoCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^abandon$", RegexOptions.IgnoreCase),
+        new Regex(@"^abandon confirm$", RegexOptions.IgnoreCase)
+
+    ];
+    public string? HelpText => "Abandon your Keno Kasino gambler account";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        if (!message.MessageRawHtmlDecoded.EndsWith("abandon confirm"))
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, are you sure you wish to abandon your Keno Kasino™ account?[br]" +
+                                                   $"This will reset your wager statistics, balance, and temporary exclusions.[br]" +
+                                                   $"You will lose all perks such as VIP levels and custom titles.[br]" +
+                                                   $"To confirm, reply with: !abandon confirm", true);
+            return;
+        }
+        await using var db = new ApplicationDbContext();
+        var gambler = await user.GetGamblerEntity(ct: ctx);
+        db.Attach(gambler!);
+        gambler!.State = GamblerState.Abandoned;
+        await db.SaveChangesAsync(ctx);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, Kasino account with ID {gambler.Id} has been marked as abandoned.", true);
     }
 }
