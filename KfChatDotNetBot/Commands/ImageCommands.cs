@@ -150,7 +150,8 @@ public class GetRandomImage : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct,
             BuiltIn.Keys.BotImageInvertedCubeUrl, BuiltIn.Keys.BotImagePigCubeSelfDestructMin,
-            BuiltIn.Keys.BotImagePigCubeSelfDestructMax, BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay
+            BuiltIn.Keys.BotImagePigCubeSelfDestructMax, BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay,
+            BuiltIn.Keys.BotImageChinkSelfDestruct, BuiltIn.Keys.BotImageChinkSelfDestructDelay
         ]);
         var divideBy = settings[BuiltIn.Keys.BotImageRandomSliceDivideBy].ToType<int>();
         var limit = 1;
@@ -168,7 +169,23 @@ public class GetRandomImage : ICommand
         db.Images.Update(image);
         await db.SaveChangesAsync(ctx);
         var msg = await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true);
-        if (key != "pigcube" || !settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean()) return;
+        int timeToDeletionMsec;
+        
+        if (key == "pigcube" && settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean())
+        {
+            timeToDeletionMsec = image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
+                ? settings[BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay].ToType<int>()
+                : new Random().Next(settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMin].ToType<int>(),
+                    settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMax].ToType<int>());
+        }
+        else if (key == "chink" && settings[BuiltIn.Keys.BotImageChinkSelfDestruct].ToBoolean())
+        {
+            timeToDeletionMsec = settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>();
+        }
+        else
+        {
+            return;
+        }
         while (msg.Status is SentMessageTrackerStatus.WaitingForResponse or SentMessageTrackerStatus.ChatDisconnected)
         {
             await Task.Delay(500, ctx);
@@ -176,21 +193,17 @@ public class GetRandomImage : ICommand
 
         if (msg.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending)
         {
-            logger.Error("Pig cube got lost");
+            logger.Error("Image got lost");
             return;
         }
 
         if (msg.ChatMessageId == null)
         {
-            logger.Error($"Pig cube chat message ID was null even though status was {msg.Status}");
+            logger.Error($"Image chat message ID was null even though status was {msg.Status}");
             return;
         }
 
-        var timeToDeletionMsec = image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
-            ? settings[BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay].ToType<int>()
-            : new Random().Next(settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMin].ToType<int>(),
-                settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMax].ToType<int>());
-        logger.Info($"Deleting pig cube in {timeToDeletionMsec}ms");
+        logger.Info($"Deleting image in {timeToDeletionMsec}ms");
         await Task.Delay(timeToDeletionMsec, ctx);
         await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
     }

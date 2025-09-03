@@ -1023,6 +1023,22 @@ public static class BuiltIn
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
         },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImageChinkSelfDestruct,
+            Description = "Whether the chink photo should self destruct after being sent",
+            Default = "true",
+            ValueType = SettingValueType.Boolean,
+            Regex = BooleanRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotImageChinkSelfDestructDelay,
+            Description = "Delay in milliseconds before destroying the chink image",
+            Default = "7500",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        }
     ];
     
     public static class Keys
@@ -1139,5 +1155,7 @@ public static class BuiltIn
         public static string MoneyRakebackMinimumAmount = "Money.Rakeback.MinimumAmount";
         public static string MoneyLossbackPercentage = "Money.Lossback.Percentage";
         public static string MoneyLossbackMinimumAmount = "Money.Lossback.MinimumAmount";
+        public static string BotImageChinkSelfDestruct = "Bot.Image.ChinkSelfDestruct";
+        public static string BotImageChinkSelfDestructDelay = "Bot.Image.ChinkSelfDestructDelay";
     }
 }
