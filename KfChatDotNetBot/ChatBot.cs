@@ -305,7 +305,7 @@ public class ChatBot
                 _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
             UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
-            if (message.Author.Id != settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() &&
+            if (message.MessageEditDate == null && message.Author.Id != settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() &&
                 message.Author.Username != settings[BuiltIn.Keys.KiwiFarmsUsername].Value &&
                 settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() &&
                 (message.MessageRawHtmlDecoded.Contains("discord16.png") ||
