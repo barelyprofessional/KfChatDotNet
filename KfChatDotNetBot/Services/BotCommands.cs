@@ -1,7 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 using Humanizer;
+using Humanizer.Localisation;
 using KfChatDotNetBot.Commands;
 using KfChatDotNetBot.Extensions;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -34,6 +36,8 @@ internal class BotCommands
         {
             _logger.Debug($"Found command {command.GetType().Name}");
         }
+
+        _ = CleanupExpiredRateLimitEntriesTask();
     }
 
     internal void ProcessMessage(MessageModel message)
@@ -89,11 +93,25 @@ internal class BotCommands
                         return;
                     }
                 }
+                
                 if (user.UserRight < command.RequiredRight)
                 {
                     _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
                     if (continueAfterProcess) continue;
                     break;
+                }
+
+                if (command.RateLimitOptions != null)
+                {
+                    var isRateLimited = RateLimitService.IsRateLimited(user, command, message.MessageRawHtmlDecoded);
+                    if (isRateLimited.IsRateLimited)
+                    {
+                        _ = SendCooldownResponse(user, command.RateLimitOptions, isRateLimited.OldestEntryExpires!.Value, command.GetType().Name);
+                    }
+                    else
+                    {
+                        RateLimitService.AddEntry(user, command, message.MessageRawHtmlDecoded);
+                    }
                 }
                 _ = ProcessMessageAsync(command, message, user, match.Groups);
                 if (!continueAfterProcess) break;
@@ -135,6 +153,48 @@ internal class BotCommands
         await _bot.SendChatMessageAsync(
             $"🤑🤑 {user.KfUsername} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
             $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);
+    }
+
+    private async Task SendCooldownResponse(UserDbModel user, RateLimitOptionsModel options, DateTimeOffset oldestEntryExpires, string commandName)
+    {
+        if (options.Flags.HasFlag(RateLimitFlags.NoResponse)) return;
+        var timeRemaining = oldestEntryExpires - DateTimeOffset.UtcNow;
+        var message = await _bot.SendChatMessageAsync($"{user.FormatUsername()}, please wait {timeRemaining.Humanize(maxUnit: TimeUnit.Minute, minUnit: TimeUnit.Millisecond, precision: 2)} before attempting to run {commandName} again.", true);
+        if (!options.Flags.HasFlag(RateLimitFlags.AutoDeleteCooldownResponse)) return;
+        var i = 0;
+        while (message.ChatMessageId == null)
+        {
+            i++;
+            await Task.Delay(250, _cancellationToken);
+            if (i > 30)
+            {
+                _logger.Error("Gave up waiting for Sneedchat to give us the message ID for removing a cooldown notification");
+                return;
+            }
+
+            if (message.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost)
+            {
+                _logger.Error("Cooldown message was suppressed or lost");
+                return;
+            }
+        }
+
+        var autoDeleteInterval =
+            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRateLimitCooldownAutoDeleteDelay)).ToType<int>();
+        await Task.Delay(autoDeleteInterval, _cancellationToken);
+        await _bot.KfClient.DeleteMessageAsync(message.ChatMessageId.Value);
+    }
+
+    private async Task CleanupExpiredRateLimitEntriesTask()
+    {
+        while (!_cancellationToken.IsCancellationRequested)
+        {
+            var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRateLimitExpiredEntryCleanupInterval))
+                .ToType<int>();
+            await Task.Delay(TimeSpan.FromSeconds(interval), _cancellationToken);
+            _logger.Info("Cleaning up expired rate limit entries");
+            RateLimitService.CleanupExpiredEntries();
+        }
     }
     
     private static bool HasAttribute<T>(ICommand command) where T : Attribute

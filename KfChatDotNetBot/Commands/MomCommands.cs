@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Humanizer;
 using Humanizer.Localisation;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -15,6 +16,7 @@ public class MomCommand : ICommand
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public RateLimitOptionsModel? RateLimitOptions => null;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)

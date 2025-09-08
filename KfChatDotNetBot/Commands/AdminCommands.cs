@@ -20,6 +20,8 @@ public class SetRoleCommand : ICommand
     public string? HelpText => "Set a user's role";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
@@ -47,6 +49,7 @@ public class CacheClearAdminCommand : ICommand
     public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
@@ -69,6 +72,7 @@ public class NewKickChannelCommand : ICommand
     public string? HelpText => "Add a Kick channel to the bot's database";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var autoCapture = false;
@@ -115,6 +119,7 @@ public class RemoveStreamChannelCommand : ICommand
     public string? HelpText => "Remove a Kick channel from the bot's database";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
@@ -140,6 +145,7 @@ public class ReconnectKickCommand : ICommand
     public string? HelpText => "Disconnect from Kick so the watchdog can reconnect it";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         if (botInstance.BotServices.KickClient == null)
@@ -163,6 +169,7 @@ public class NewPartiChannelCommand : ICommand
     public string? HelpText => "Add a Parti channel to the bot's database";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var autoCapture = false;
@@ -210,6 +217,7 @@ public class NewDLiveChannelCommand : ICommand
     public string? HelpText => "Add a DLive channel to the bot's database";
     public UserRight RequiredRight => UserRight.Admin;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var autoCapture = false;
@@ -251,6 +259,7 @@ public class AddCourtHearingCommand : ICommand
     public string? HelpText => "Add a court hearing to the bot's calendar";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var hearings = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
@@ -281,6 +290,7 @@ public class RemoveCourtHearingCommand : ICommand
     public string? HelpText => "Remove a hearing from the bot's calendar";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var hearings = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
@@ -312,7 +322,7 @@ public class DeleteMessagesCommand : ICommand
     public string? HelpText => "Delete the most recent x number of messages";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -345,7 +355,7 @@ public class IgnoreCommand : ICommand
     public string? HelpText => "Ignore a user by ID";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -379,7 +389,7 @@ public class UnignoreCommand : ICommand
     public string? HelpText => "Unignore a user by ID";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -413,7 +423,7 @@ public class SetAlmanacTextCommand : ICommand
     public string? HelpText => "Set the almanac text to whatever";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -431,7 +441,7 @@ public class SetAlmanacIntervalCommand : ICommand
     public string? HelpText => "Set the almanac interval to whatever in seconds";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -461,7 +471,7 @@ public class StopAlmanacCommand : ICommand
     public string? HelpText => "Stop the almanac reminder";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -490,7 +500,7 @@ public class StartAlmanacCommand : ICommand
     public string? HelpText => "Start the almanac reminder";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {

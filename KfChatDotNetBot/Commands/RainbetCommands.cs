@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using Humanizer;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -15,6 +16,7 @@ public class RainbetStatsCommand : ICommand
     public string? HelpText => "Get betting statistics in the given window";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var window = Convert.ToInt32(arguments["window"].Value);
@@ -41,6 +43,7 @@ public class RainbetRecentBetCommand : ICommand
     public string? HelpText => "Get the most recent 3 bets";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

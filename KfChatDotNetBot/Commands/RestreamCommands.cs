@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
@@ -15,7 +16,7 @@ public class GetRestreamCommand : ICommand
     public string? HelpText => "Grab restream URL";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -33,7 +34,7 @@ public class SetRestreamCommand : ICommand
     public string? HelpText => "Set restream URL";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -51,7 +52,7 @@ public class SelfPromoCommand : ICommand
     public string? HelpText => "Promote your shit";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -80,7 +81,7 @@ public class GetRestreamPlainCommand : ICommand
     public string? HelpText => "Grab restream URL with plain prefixed";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {

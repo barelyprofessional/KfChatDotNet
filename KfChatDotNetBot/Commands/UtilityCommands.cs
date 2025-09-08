@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text.RegularExpressions;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
 
@@ -14,6 +15,7 @@ public class TempEnableDiscordRelayingCommand : ICommand
     public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         botInstance.BotServices.TemporarilyBypassGambaSeshForDiscord = true;
@@ -30,6 +32,7 @@ public class TempSuppressGambaMessages : ICommand
     public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         botInstance.BotServices.TemporarilySuppressGambaMessages = true;
@@ -46,6 +49,7 @@ public class EnableGambaMessages : ICommand
     public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         botInstance.BotServices.TemporarilySuppressGambaMessages = false;
@@ -62,6 +66,7 @@ public class GetVersionCommand : ICommand
     public string? HelpText => null;
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var version = Assembly.GetEntryAssembly()?

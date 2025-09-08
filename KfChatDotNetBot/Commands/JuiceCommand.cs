@@ -16,6 +16,7 @@ public class JuiceCommand : ICommand
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
@@ -81,6 +82,7 @@ public class JuiceStatsCommand : ICommand
     public bool HideFromHelp => false;
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         int top;

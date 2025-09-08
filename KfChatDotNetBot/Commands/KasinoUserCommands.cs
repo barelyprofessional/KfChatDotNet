@@ -2,6 +2,7 @@
 using Humanizer;
 using Humanizer.Localisation;
 using KfChatDotNetBot.Extensions;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
@@ -20,7 +21,7 @@ public class GetBalanceCommand : ICommand
     public string? HelpText => "Get your gamba balance";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -39,7 +40,7 @@ public class GetExclusionCommand : ICommand
     public string? HelpText => "Get your exclusion status";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -72,7 +73,7 @@ public class SendJuiceCommand : ICommand
     public string? HelpText => "Send juice to somebody";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -118,7 +119,12 @@ public class RakebackCommand : ICommand
     public string? HelpText => "Collect your rakeback";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 1,
+        Window = TimeSpan.FromSeconds(30),
+        Flags = RateLimitFlags.AutoDeleteCooldownResponse
+    };
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -167,7 +173,12 @@ public class LossbackCommand : ICommand
     public string? HelpText => "Collect your lossback";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        Window = TimeSpan.FromSeconds(30),
+        MaxInvocations = 1,
+        Flags = RateLimitFlags.AutoDeleteCooldownResponse
+    };
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -213,12 +224,11 @@ public class AbandonKasinoCommand : ICommand
     public List<Regex> Patterns => [
         new Regex(@"^abandon$", RegexOptions.IgnoreCase),
         new Regex(@"^abandon confirm$", RegexOptions.IgnoreCase)
-
     ];
     public string? HelpText => "Abandon your Keno Kasino gambler account";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {

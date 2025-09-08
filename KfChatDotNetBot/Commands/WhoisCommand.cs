@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ public class WhoisCommand : ICommand
     public string? HelpText => "Lookup user IDs by username";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();

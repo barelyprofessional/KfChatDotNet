@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
 
@@ -7,9 +8,10 @@ namespace KfChatDotNetBot.Commands;
 public class TimeCommand : ICommand
 {
     public List<Regex> Patterns => [new Regex("^time")];
-    public string? HelpText => "Get current time in AGT";
+    public string? HelpText => "Get current time in BMT";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var bmt = new DateTimeOffset(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,

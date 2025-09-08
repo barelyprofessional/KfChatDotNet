@@ -1038,6 +1038,22 @@ public static class BuiltIn
             Default = "7500",
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotRateLimitCooldownAutoDeleteDelay,
+            Description = "Delay in milliseconds before removing a cooldown message set to auto delete",
+            Default = "15000",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotRateLimitExpiredEntryCleanupInterval,
+            Description = "How often to cleanup expired rate limit entries in seconds",
+            Default = "300",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
         }
     ];
     
@@ -1157,5 +1173,7 @@ public static class BuiltIn
         public static string MoneyLossbackMinimumAmount = "Money.Lossback.MinimumAmount";
         public static string BotImageChinkSelfDestruct = "Bot.Image.ChinkSelfDestruct";
         public static string BotImageChinkSelfDestructDelay = "Bot.Image.ChinkSelfDestructDelay";
+        public static string BotRateLimitCooldownAutoDeleteDelay = "Bot.RateLimit.CooldownAutoDeleteDelay";
+        public static string BotRateLimitExpiredEntryCleanupInterval = "Bot.RateLimit.ExpiredEntryCleanupInterval";
     }
 }

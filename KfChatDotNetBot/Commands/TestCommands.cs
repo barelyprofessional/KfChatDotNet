@@ -17,6 +17,7 @@ public class EditTestCommand : ICommand
     public UserRight RequiredRight => UserRight.Admin;
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
@@ -63,6 +64,7 @@ public class TimeoutTestCommand : ICommand
     public UserRight RequiredRight => UserRight.Admin;
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await Task.Delay(TimeSpan.FromMinutes(1), ctx);
@@ -79,6 +81,7 @@ public class ExceptionTestCommand : ICommand
     public UserRight RequiredRight => UserRight.Admin;
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         throw new Exception("Caused by the test exception command");
@@ -95,6 +98,7 @@ public class LengthLimitTestCommand : ICommand
     public UserRight RequiredRight => UserRight.Admin;
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
@@ -110,13 +114,34 @@ public class LengthLimitTestCommand : ICommand
         await Task.Delay(TimeSpan.FromSeconds(5), ctx);
         logger.Info($"niceTruncation => {niceTruncation.Status}; exactTruncation => {exactTruncation.Status}; doNothing => {doNothing.Status}; refuseToSend => {refuseToSend.Status}");
         if (niceTruncation.ChatMessageId != null)
-            botInstance.KfClient.DeleteMessage(niceTruncation.ChatMessageId.Value);
+            await botInstance.KfClient.DeleteMessageAsync(niceTruncation.ChatMessageId.Value);
         if (exactTruncation.ChatMessageId != null)
-            botInstance.KfClient.DeleteMessage(exactTruncation.ChatMessageId.Value);
+            await botInstance.KfClient.DeleteMessageAsync(exactTruncation.ChatMessageId.Value);
         if (doNothing.ChatMessageId != null)
-            botInstance.KfClient.DeleteMessage(doNothing.ChatMessageId.Value);
+            await botInstance.KfClient.DeleteMessageAsync(doNothing.ChatMessageId.Value);
         // Should never happen
         if (refuseToSend.ChatMessageId != null)
-            botInstance.KfClient.DeleteMessage(refuseToSend.ChatMessageId.Value);
+            await botInstance.KfClient.DeleteMessageAsync(refuseToSend.ChatMessageId.Value);
+    }
+}
+
+public class RateLimitTestCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^test ratelimit$")
+    ];
+
+    public string? HelpText => null;
+    public UserRight RequiredRight => UserRight.Admin;
+    // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
+    public TimeSpan Timeout => TimeSpan.FromSeconds(15);
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 1,
+        Window = TimeSpan.FromSeconds(60)
+    };
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        await botInstance.SendChatMessageAsync("Nigger", true);
     }
 }

@@ -16,6 +16,7 @@ public class InsanityCommand : ICommand
     public string? HelpText => "Insanity";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
@@ -29,6 +30,7 @@ public class TwistedCommand : ICommand
     public string? HelpText => "Get it twisted";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
@@ -45,6 +47,7 @@ public class CrackedCommand : ICommand
     public string? HelpText => "Crackhead Zalgo text";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
@@ -67,6 +70,7 @@ public class CleanCommand : ICommand
     public string? HelpText => "How long has Bossman been clean?";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings =
@@ -90,6 +94,7 @@ public class RehabCommand : ICommand
     public string? HelpText => "How long until rehab is over?";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings =
@@ -121,6 +126,7 @@ public class NextPoVisitCommand : ICommand
     public string? HelpText => "How long until the next PO visit?";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(120);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var time = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotPoNextVisit);
@@ -160,6 +166,7 @@ public class NextCourtHearingCommand : ICommand
     public string? HelpText => "How long until the next court hearing?";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(120);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var hearings = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotCourtCalendar)).JsonDeserialize<List<CourtHearingModel>>();
@@ -215,6 +222,7 @@ public class JailCommand : ICommand
     public string? HelpText => "How long has Bossman been in jail?";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.BotJailStartTime, BuiltIn.Keys.TwitchBossmanJackUsername]);
@@ -235,6 +243,7 @@ public class LastStreamCommand : ICommand
     public string? HelpText => "How long ago did Austin Gambles last stream (on Twitch)?";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([
@@ -270,6 +279,7 @@ public class AlmanacCommand : ICommand
     public string? HelpText => "Return details on how to submit almanac entries";
     public UserRight RequiredRight => UserRight.Guest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var text = await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotAlmanacText);
