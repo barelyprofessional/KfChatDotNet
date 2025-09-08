@@ -151,7 +151,7 @@ internal class BotCommands
         if (newLevel == null) return;
         var payout = await gambler.UpgradeVipLevel(newLevel, _cancellationToken);
         await _bot.SendChatMessageAsync(
-            $"🤑🤑 {user.KfUsername} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
+            $"🤑🤑 {user.FormatUsername()} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
             $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);
     }
 
