@@ -5,7 +5,6 @@ using KfChatDotNetBot.Settings;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NLog;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace KfChatDotNetBot.Extensions;
 
@@ -26,7 +25,7 @@ public static class MoneyExtensions
         await using var db = new ApplicationDbContext();
         db.Attach(user);
         var gambler =
-            await db.Gamblers.LastOrDefaultAsync(g => g.User == user && g.State != GamblerState.PermanentlyBanned,
+            await db.Gamblers.OrderBy(x => x.Id).LastOrDefaultAsync(g => g.User == user && g.State != GamblerState.PermanentlyBanned,
                 cancellationToken: ct);
         if (!createIfNoneExists) return gambler;
         var permaBanned = await db.Gamblers.AnyAsync(g => g.User == user && g.State == GamblerState.PermanentlyBanned, cancellationToken: ct);
@@ -43,7 +42,7 @@ public static class MoneyExtensions
             NextVipLevelWagerRequirement = Money.VipLevels[0].BaseWagerRequirement
         }, ct);
         await db.SaveChangesAsync(ct);
-        return await db.Gamblers.LastOrDefaultAsync(g => g.User == user, cancellationToken: ct);
+        return await db.Gamblers.OrderBy(x => x.Id).LastOrDefaultAsync(g => g.User == user, cancellationToken: ct);
     }
 
     /// <summary>
@@ -220,7 +219,7 @@ public static class MoneyExtensions
     {
         await using var db = new ApplicationDbContext();
         db.Attach(gambler);
-        var perk = await db.Perks.LastOrDefaultAsync(
+        var perk = await db.Perks.OrderBy(x => x.Id).LastOrDefaultAsync(
             p => p.Gambler == gambler && p.PerkType == GamblerPerkType.VipLevel, ct);
         return perk;
     }

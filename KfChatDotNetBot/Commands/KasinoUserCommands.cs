@@ -128,7 +128,7 @@ public class RakebackCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyRakebackPercentage, BuiltIn.Keys.MoneyRakebackMinimumAmount
         ]);
-        var mostRecentRakeback = await db.Transactions.LastOrDefaultAsync(tx =>
+        var mostRecentRakeback = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(tx =>
             tx.EventSource == TransactionSourceEventType.Rakeback && tx.Gambler == gambler, cancellationToken: ctx);
         long offset = 0;
         if (mostRecentRakeback != null)
@@ -177,7 +177,7 @@ public class LossbackCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyLossbackPercentage, BuiltIn.Keys.MoneyLossbackMinimumAmount
         ]);
-        var mostRecentLossback = await db.Transactions.LastOrDefaultAsync(tx =>
+        var mostRecentLossback = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(tx =>
             tx.EventSource == TransactionSourceEventType.Lossback && tx.Gambler == gambler, cancellationToken: ctx);
         long offset = 0;
         if (mostRecentLossback != null)
