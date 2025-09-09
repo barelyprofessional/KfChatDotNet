@@ -813,7 +813,7 @@ public class BotServices
             return;
         }
         
-        var result = $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username}: {message.Content}";
+        var result = $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username}: {message.Content?.Replace("❤️", ":feels:")}";
         foreach (var attachment in message.Attachments ?? [])
         {
             result += $"[br]Attachment: {attachment.GetProperty("filename").GetString()} {attachment.GetProperty("url").GetString()}";
