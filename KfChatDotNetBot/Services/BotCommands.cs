@@ -107,11 +107,9 @@ internal class BotCommands
                     if (isRateLimited.IsRateLimited)
                     {
                         _ = SendCooldownResponse(user, command.RateLimitOptions, isRateLimited.OldestEntryExpires!.Value, command.GetType().Name);
+                        continue;
                     }
-                    else
-                    {
-                        RateLimitService.AddEntry(user, command, message.MessageRawHtmlDecoded);
-                    }
+                    RateLimitService.AddEntry(user, command, message.MessageRawHtmlDecoded);
                 }
                 _ = ProcessMessageAsync(command, message, user, match.Groups);
                 if (!continueAfterProcess) break;
