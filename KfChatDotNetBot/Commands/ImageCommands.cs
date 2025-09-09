@@ -151,7 +151,11 @@ public class GetRandomImage : ICommand
         await using var db = new ApplicationDbContext();
         var key = arguments["key"].Value.ToLower();
         var images = db.Images.Where(i => i.Key == key);
-        if (!await images.AnyAsync(ctx)) return;
+        if (!await images.AnyAsync(ctx))
+        {
+            RateLimitService.RemoveMostRecentEntry(user, this);
+            return;
+        }
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct,
             BuiltIn.Keys.BotImageInvertedCubeUrl, BuiltIn.Keys.BotImagePigCubeSelfDestructMin,
