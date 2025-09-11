@@ -335,6 +335,13 @@ public static class BuiltIn
         },
         new BuiltInSettingsModel
         {
+            Key = Keys.ShuffleDotUsBmjUsername,
+            Description = "Bossman's Shuffle.us Username",
+            Default = "BossmanJack",
+            ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
             Key = Keys.JuiceCooldown,
             Regex = WholeNumberRegex,
             Description = "Cooldown (in seconds) until you can get juiced again",
@@ -1079,6 +1086,7 @@ public static class BuiltIn
         public static string TwitchIcon = "Twitch.Icon";
         public static string DiscordIcon = "Discord.Icon";
         public static string ShuffleBmjUsername = "Shuffle.BmjUsername";
+        public static string ShuffleDotUsBmjUsername = "ShuffleDotUs.BmjUsername";
         public static string JuiceCooldown = "Juice.Cooldown";
         public static string JuiceAmount = "Juice.Amount";
         public static string KickEnabled = "Kick.Enabled";

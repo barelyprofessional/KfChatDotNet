@@ -38,6 +38,7 @@ public class BotServices
     private DLive? _dliveStatusCheck;
     private PeerTube? _peerTubeStatusCheck;
     private Owncast? _owncastStatusCheck;
+    private ShuffleDotUs _shuffleDotUs;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -86,7 +87,8 @@ public class BotServices
             BuildParti(),
             BuildDLiveStatusCheck(),
             BuildPeerTubeLiveStatusCheck(),
-            BuildOwncastLiveStatusCheck()
+            BuildOwncastLiveStatusCheck(),
+            BuildShuffleDotUs()
         ];
         try
         {
@@ -109,6 +111,14 @@ public class BotServices
         _shuffle = new Shuffle((await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy)).Value, _cancellationToken);
         _shuffle.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
         await _shuffle.StartWsClient();
+    }
+    
+    private async Task BuildShuffleDotUs()
+    {
+        _logger.Debug("Building Shuffle.us");
+        _shuffleDotUs = new ShuffleDotUs((await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy)).Value, _cancellationToken);
+        _shuffleDotUs.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
+        await _shuffleDotUs.StartWsClient();
     }
 
     private async Task BuildDiscord()
@@ -473,6 +483,14 @@ public class BotServices
                     _parti.Dispose();
                     _parti = null!;
                     await BuildParti();
+                }
+                
+                if (_shuffleDotUs != null && !_shuffleDotUs.IsConnected())
+                {
+                    _logger.Error("Shuffle.us died, recreating it");
+                    _shuffleDotUs.Dispose();
+                    _shuffleDotUs = null!;
+                    await BuildShuffleDotUs();
                 }
             }
             catch (Exception e)
@@ -867,20 +885,35 @@ public class BotServices
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
-                BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.ShuffleDotUsBmjUsername,
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]).Result;
         _logger.Trace("Shuffle bet has arrived");
-        if (bet.Username != settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
+        bool isDotUs;
+        if (bet.Username == settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
+        {
+            isDotUs = false;
+        }
+        else if (bet.Username == settings[BuiltIn.Keys.ShuffleDotUsBmjUsername].Value)
+        {
+            isDotUs = true;
+        }
+        else
         {
             return;
         }
-        _logger.Info("ALERT BMJ IS BETTING");
+        _logger.Info($"ALERT BMJ IS BETTING: isDotUs => {isDotUs}");
         if (CheckBmjIsLive().Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (float.Parse(bet.Payout) < float.Parse(bet.Amount)) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        var preamble = "🚨🚨 Shufflebros! 🚨🚨";
+        if (isDotUs)
+        {
+            preamble = "🦅🦅 Shuffle US! 🦅🦅";
+        }
         // There will be a check for live status but ignoring that while we deal with an emergency dice situation
-        _chatBot.SendChatMessage($"🚨🚨 Shufflebros! 🚨🚨 {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
+        _chatBot.SendChatMessage($"{preamble} {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
     }
 
     private void OnTwitchStreamStateUpdated(object sender, string channelName, bool isLive)
