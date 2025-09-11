@@ -23,7 +23,8 @@ public static class MoneyExtensions
     public static async Task<GamblerDbModel?> GetGamblerEntity(this UserDbModel user, bool createIfNoneExists = true, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(user);
+        // Refetch user as I'm fairly certain some of the buggy behavior is coming from db.Attach being weird
+        user = await db.Users.FirstAsync(u => u.Id == user.Id, cancellationToken: ct);
         var gambler =
             await db.Gamblers.OrderBy(x => x.Id).LastOrDefaultAsync(g => g.User == user && g.State != GamblerState.PermanentlyBanned,
                 cancellationToken: ct);
@@ -54,8 +55,7 @@ public static class MoneyExtensions
     public static async Task<bool> IsPermanentlyBanned(this UserDbModel user, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(user);
-        return await db.Gamblers.AnyAsync(u => u.User == user && u.State == GamblerState.PermanentlyBanned,
+        return await db.Gamblers.AnyAsync(u => u.User.Id == user.Id && u.State == GamblerState.PermanentlyBanned,
             cancellationToken: ct);
     }
 
@@ -73,7 +73,7 @@ public static class MoneyExtensions
         CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
+        gambler = await db.Gamblers.FirstAsync(g => g.Id == gambler.Id, cancellationToken: ct);
         gambler.Balance += effect;
         await db.Transactions.AddAsync(new TransactionDbModel
         {
@@ -113,7 +113,7 @@ public static class MoneyExtensions
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
+        gambler = await db.Gamblers.FirstAsync(g => g.Id == gambler.Id, cancellationToken: ct);
         string? metaJson = null;
         if (gameMeta != null)
         {
@@ -175,8 +175,7 @@ public static class MoneyExtensions
     public static async Task<GamblerExclusionDbModel?> GetActiveExclusion(this GamblerDbModel gambler, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
-        return (await db.Exclusions.Where(g => g.Gambler == gambler).ToListAsync(ct))
+        return (await db.Exclusions.Where(g => g.Gambler.Id == gambler.Id).ToListAsync(ct))
             .LastOrDefault(e => e.Expires <= DateTimeOffset.UtcNow);
     }
 
@@ -218,9 +217,8 @@ public static class MoneyExtensions
     public static async Task<GamblerPerkDbModel?> GetVipLevel(this GamblerDbModel gambler, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
         var perk = await db.Perks.OrderBy(x => x.Id).LastOrDefaultAsync(
-            p => p.Gambler == gambler && p.PerkType == GamblerPerkType.VipLevel, ct);
+            p => p.Gambler.Id == gambler.Id && p.PerkType == GamblerPerkType.VipLevel, ct);
         return perk;
     }
 
@@ -235,7 +233,7 @@ public static class MoneyExtensions
         CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
+        gambler = await db.Gamblers.FirstAsync(g => g.Id == gambler.Id, cancellationToken: ct);
         var payout = nextVipLevel.VipLevel.BonusPayout;
         if (nextVipLevel.Tier > 1)
         {

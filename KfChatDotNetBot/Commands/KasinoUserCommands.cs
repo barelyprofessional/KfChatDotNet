@@ -8,6 +8,7 @@ using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
+using NLog;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -77,12 +78,17 @@ public class SendJuiceCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
         var gambler = await user.GetGamblerEntity(ct: ctx);
-        db.Attach(gambler!);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
         var amount = decimal.Parse(arguments["amount"].Value);
-        if (gambler!.Balance < amount)
+        if (gambler == null)
+        {
+            logger.Error($"Caught a null when looking up {user.KfUsername}");
+            return;
+        }
+        if (gambler.Balance < amount)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have enough money to juice this much.", true);
             return;
