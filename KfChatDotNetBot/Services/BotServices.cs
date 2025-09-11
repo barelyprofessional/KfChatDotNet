@@ -38,7 +38,7 @@ public class BotServices
     private DLive? _dliveStatusCheck;
     private PeerTube? _peerTubeStatusCheck;
     private Owncast? _owncastStatusCheck;
-    private ShuffleDotUs _shuffleDotUs;
+    private ShuffleDotUs? _shuffleDotUs;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
