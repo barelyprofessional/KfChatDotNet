@@ -137,7 +137,7 @@ public class RateLimitTestCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
-        MaxInvocations = 1,
+        MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(60)
     };
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
