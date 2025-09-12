@@ -155,10 +155,19 @@ internal class BotCommands
 
     private async Task SendCooldownResponse(UserDbModel user, RateLimitOptionsModel options, DateTimeOffset oldestEntryExpires, string commandName)
     {
-        if (options.Flags.HasFlag(RateLimitFlags.NoResponse)) return;
+        if (options.Flags.HasFlag(RateLimitFlags.NoResponse))
+        {
+            _logger.Info("No response flag set. Ignoring");
+            return;
+        }
+        _logger.Info($"Oldest entry: {oldestEntryExpires:o}");
         var timeRemaining = oldestEntryExpires - DateTimeOffset.UtcNow;
         var message = await _bot.SendChatMessageAsync($"{user.FormatUsername()}, please wait {timeRemaining.Humanize(maxUnit: TimeUnit.Minute, minUnit: TimeUnit.Millisecond, precision: 2)} before attempting to run {commandName} again.", true);
-        if (options.Flags.HasFlag(RateLimitFlags.NoAutoDeleteCooldownResponse)) return;
+        if (options.Flags.HasFlag(RateLimitFlags.NoAutoDeleteCooldownResponse))
+        {
+            _logger.Info("Not going to cleanup cooldown response");
+            return;
+        }
         var i = 0;
         while (message.ChatMessageId == null)
         {
