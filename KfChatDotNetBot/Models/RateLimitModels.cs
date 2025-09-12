@@ -34,10 +34,11 @@ public class RateLimitOptionsModel
     /// Maximum number of permitted invocations within the window before triggering the rate limit
     /// </summary>
     public required int MaxInvocations { get; set; }
+
     /// <summary>
     /// Optional set of flags to configure the behavior of the rate limiter
     /// </summary>
-    public RateLimitFlags Flags { get; set; }
+    public RateLimitFlags Flags { get; set; } = RateLimitFlags.None;
 }
 
 public class IsRateLimitedModel
@@ -56,6 +57,10 @@ public class IsRateLimitedModel
 [Flags]
 public enum RateLimitFlags
 {
+    /// <summary>
+    /// Placeholder for the default value
+    /// </summary>
+    None,
     /// <summary>
     /// Silently ignore a user when they trigger a rate limit
     /// </summary>
