@@ -291,7 +291,15 @@ public class ChatBot
                 !InitialStartCooldown)
             {
                 _logger.Debug("Passing message to command interface");
-                _botCommands.ProcessMessage(message);
+                try
+                {
+                    _botCommands.ProcessMessage(message);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error("ProcessMessage threw an exception");
+                    _logger.Error(e);
+                }
             }
 
             // Update or add the element to keep it in sync
