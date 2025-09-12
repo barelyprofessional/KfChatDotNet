@@ -305,3 +305,20 @@ public class AlmanacCommand : ICommand
         await botInstance.SendChatMessageAsync($"@{user.KfUsername}, {text.Value}", true);
     }
 }
+
+public class JuiceSportsCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^juicesports", RegexOptions.IgnoreCase)
+    ];
+    public string? HelpText => "Juicesports LFG!";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        await botInstance.SendChatMessageAsync(":juice: [img]https://i.ddos.lgbt/u/3GJtHq.gif[/img] :juice: [br]⠀⠀⠀⠀⠀⠀⠀" +
+                                               "[img]https://i.ddos.lgbt/u/KAwWMW.webp[/img][br]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀" +
+                                               "[img]https://i.ddos.lgbt/u/uCuSOw.gif[/img][br]", true);
+    }
+}
