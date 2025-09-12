@@ -76,8 +76,7 @@ public enum RateLimitFlags
     /// </summary>
     ExemptPrivilegedUsers,
     /// <summary>
-    /// Automatically clean up the cooldown response sent to a user
-    /// Mutually exclusive with NoResponse
+    /// Do not automatically clean up the cooldown response sent to a user
     /// </summary>
-    AutoDeleteCooldownResponse
+    NoAutoDeleteCooldownResponse
 }

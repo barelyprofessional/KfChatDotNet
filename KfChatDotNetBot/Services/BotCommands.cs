@@ -158,7 +158,7 @@ internal class BotCommands
         if (options.Flags.HasFlag(RateLimitFlags.NoResponse)) return;
         var timeRemaining = oldestEntryExpires - DateTimeOffset.UtcNow;
         var message = await _bot.SendChatMessageAsync($"{user.FormatUsername()}, please wait {timeRemaining.Humanize(maxUnit: TimeUnit.Minute, minUnit: TimeUnit.Millisecond, precision: 2)} before attempting to run {commandName} again.", true);
-        if (!options.Flags.HasFlag(RateLimitFlags.AutoDeleteCooldownResponse)) return;
+        if (options.Flags.HasFlag(RateLimitFlags.NoAutoDeleteCooldownResponse)) return;
         var i = 0;
         while (message.ChatMessageId == null)
         {

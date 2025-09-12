@@ -128,8 +128,7 @@ public class RakebackCommand : ICommand
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
         MaxInvocations = 1,
-        Window = TimeSpan.FromSeconds(30),
-        Flags = RateLimitFlags.AutoDeleteCooldownResponse
+        Window = TimeSpan.FromSeconds(30)
     };
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -182,8 +181,7 @@ public class LossbackCommand : ICommand
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
         Window = TimeSpan.FromSeconds(30),
-        MaxInvocations = 1,
-        Flags = RateLimitFlags.AutoDeleteCooldownResponse
+        MaxInvocations = 1
     };
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
