@@ -57,6 +57,7 @@ public class PeerTube(ChatBot kfChatBot) : IDisposable
             {
                 if (persistedLive.Contains(stream.Uuid)) continue;
                 StreamDbModel? dbEntry = null;
+                PeerTubeMetaModel? meta = null;
                 foreach (var row in streams)
                 {
                     if (row.Metadata == null)
@@ -64,13 +65,16 @@ public class PeerTube(ChatBot kfChatBot) : IDisposable
                         _logger.Error($"Stream ID {row.Id} has null metadata");
                         continue;
                     }
-                    var meta = JsonSerializer.Deserialize<PeerTubeMetaModel>(row.Metadata);
+                    meta = JsonSerializer.Deserialize<PeerTubeMetaModel>(row.Metadata);
                     if (meta == null)
                     {
                         _logger.Error($"Caught a null when deserializing the metadata for {row.Id}");
                         continue;
                     }
-                    if (meta.AccountName == stream.Account.Name) dbEntry = row;
+
+                    if (meta.AccountName != stream.Account.Name) continue;
+                    dbEntry = row;
+                    break;
                 }
                 if (settings[BuiltIn.Keys.KiwiPeerTubeEnforceWhitelist].ToBoolean() && dbEntry == null)
                 {
@@ -89,7 +93,7 @@ public class PeerTube(ChatBot kfChatBot) : IDisposable
                         continue;
                     }
                     _logger.Info($"{stream.Url} is live and set to auto capture (if configured)");
-                    _ = new StreamCapture(stream.Url, StreamCaptureMethods.YtDlp, ct).CaptureAsync();
+                    _ = new StreamCapture(stream.Url, StreamCaptureMethods.YtDlp, meta?.CaptureOverrides, ct).CaptureAsync();
                 }
             }
 

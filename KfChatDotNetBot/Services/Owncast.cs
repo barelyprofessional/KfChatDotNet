@@ -47,7 +47,7 @@ public class Owncast(ChatBot kfChatBot) : IDisposable
             if (!status.Online) continue;
             await kfChatBot.SendChatMessageAsync("https://bossmanjack.tv restream is live!", true);
             if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.CaptureEnabled)).ToBoolean()) continue;
-            _ = new StreamCapture("https://bossmanjack.tv", StreamCaptureMethods.YtDlp, ct).CaptureAsync();
+            _ = new StreamCapture("https://bossmanjack.tv", StreamCaptureMethods.YtDlp, null, ct).CaptureAsync();
         }
     }
     

@@ -1061,6 +1061,13 @@ public static class BuiltIn
             Default = "300",
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.CaptureStreamlinkBmjWorkingDirectory,
+            Description = "Working directory for BMJ's Twitch streams captured with streamlink",
+            Default = "/root/twitch/",
+            ValueType = SettingValueType.Text
         }
     ];
     
@@ -1183,5 +1190,6 @@ public static class BuiltIn
         public static string BotImageChinkSelfDestructDelay = "Bot.Image.ChinkSelfDestructDelay";
         public static string BotRateLimitCooldownAutoDeleteDelay = "Bot.RateLimit.CooldownAutoDeleteDelay";
         public static string BotRateLimitExpiredEntryCleanupInterval = "Bot.RateLimit.ExpiredEntryCleanupInterval";
+        public static string CaptureStreamlinkBmjWorkingDirectory = "Bot.Streamlink.BmjWorkingDirectory";
     }
 }

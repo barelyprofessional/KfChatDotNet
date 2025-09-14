@@ -72,10 +72,24 @@ public class DLive(ChatBot kfChatBot) : IDisposable
 
                 await kfChatBot.SendChatMessageAsync($"{identity} is live! {status.Title} {stream.StreamUrl}", true);
 
+                BaseMetaModel? meta = null;
+                if (stream.Metadata != null)
+                {
+                    try
+                    {
+                        meta = JsonSerializer.Deserialize<BaseMetaModel>(stream.Metadata);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Error($"Caught an exception when attempting to deserialize metadata for DLive stream {stream.StreamUrl}");
+                        _logger.Error(e);
+                    }
+                }
+
                 if (stream.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
                 {
                     _logger.Info($"{stream.StreamUrl} is live and set to auto capture");
-                    _ = new StreamCapture(stream.StreamUrl, StreamCaptureMethods.Streamlink, ct).CaptureAsync();
+                    _ = new StreamCapture(stream.StreamUrl, StreamCaptureMethods.Streamlink, meta?.CaptureOverrides, ct).CaptureAsync();
                 }
                 currentlyLive.Add(username);
             }

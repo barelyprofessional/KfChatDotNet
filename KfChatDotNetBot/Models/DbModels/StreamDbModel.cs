@@ -33,12 +33,35 @@ public enum StreamService
     KiwiPeerTube
 }
 
-public class KickStreamMetaModel
+public class BaseMetaModel
+{
+    public CaptureOverridesModel? CaptureOverrides { get; set; } = null;
+}
+
+public class CaptureOverridesModel
+{
+    // Options applicable to YtDlp will not work with Streamlink and vice versa
+    // That being said, some options are shared while still being explicitly marked as YtDlp
+    // This applies to CaptureYtDlpWorkingDirectory, CaptureYtDlpParentTerminal, and CaptureYtDlpScriptPath
+    public string? CaptureYtDlpBinaryPath { get; set; } = null;
+    public string? CaptureYtDlpWorkingDirectory { get; set; } = null;
+    public string? CaptureYtDlpCookiesFromBrowser { get; set; } = null;
+    public string? CaptureYtDlpOutputFormat { get; set; } = null;
+    public string? CaptureYtDlpParentTerminal { get; set; } = null;
+    public string? CaptureYtDlpScriptPath { get; set; } = null;
+    public string? CaptureYtDlpUserAgent { get; set; } = null;
+    public string? CaptureStreamlinkBinaryPath { get; set; } = null;
+    public string? CaptureStreamlinkOutputFormat { get; set; } = null;
+    public string? CaptureStreamlinkRemuxScript { get; set; } = null;
+    public string? CaptureStreamlinkTwitchOptions { get; set; } = null;
+}
+
+public class KickStreamMetaModel : BaseMetaModel
 {
     public required int ChannelId { get; set; }
 }
 
-public class PeerTubeMetaModel
+public class PeerTubeMetaModel : BaseMetaModel
 {
     public required string AccountName { get; set; }
 }

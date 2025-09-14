@@ -920,7 +920,7 @@ public class BotServices
     {
         _logger.Info($"BossmanJack stream event came in. isLive => {isLive}");
         var settings = SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.CaptureEnabled, BuiltIn.Keys.TwitchIcon
+            BuiltIn.Keys.TwitchBossmanJackUsername, BuiltIn.Keys.CaptureEnabled, BuiltIn.Keys.TwitchIcon, BuiltIn.Keys.CaptureStreamlinkBmjWorkingDirectory
         ]).Result;
         var bmjUsername = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value;
 
@@ -930,7 +930,12 @@ public class BotServices
             if (settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
             {
                 _logger.Info("Capturing Bossman's stream");
-                _ = new StreamCapture($"https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}", StreamCaptureMethods.Streamlink, _cancellationToken).CaptureAsync();
+                _ = new StreamCapture($"https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}",
+                    StreamCaptureMethods.Streamlink,
+                    new CaptureOverridesModel
+                    {
+                        CaptureYtDlpWorkingDirectory = settings[BuiltIn.Keys.CaptureStreamlinkBmjWorkingDirectory].Value
+                    }, _cancellationToken).CaptureAsync();
             }
             return;
         }
@@ -1025,6 +1030,7 @@ public class BotServices
         using var db = new ApplicationDbContext();
         var channels = db.Streams.Where(s => s.Service == StreamService.Kick).Include(s => s.User);
         StreamDbModel? channel = null;
+        KickStreamMetaModel? meta = null;
         foreach (var ch in channels)
         {
             if (ch.Metadata == null)
@@ -1033,7 +1039,6 @@ public class BotServices
                 continue;
             }
 
-            KickStreamMetaModel meta;
             try
             {
                 meta = JsonSerializer.Deserialize<KickStreamMetaModel>(ch.Metadata) ??
@@ -1071,7 +1076,7 @@ public class BotServices
         if (channel.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
         {
             _logger.Info($"{channel.StreamUrl} is configured to auto capture");
-            _ = new StreamCapture(channel.StreamUrl, StreamCaptureMethods.YtDlp, _cancellationToken).CaptureAsync();
+            _ = new StreamCapture(channel.StreamUrl, StreamCaptureMethods.YtDlp, meta?.CaptureOverrides, _cancellationToken).CaptureAsync();
         }
     }
     
@@ -1098,12 +1103,26 @@ public class BotServices
         {
             identity = "@" + channel.User.KfUsername;
         }
+
+        BaseMetaModel? meta = null;
+        if (channel.Metadata != null)
+        {
+            try
+            {
+                meta = JsonSerializer.Deserialize<BaseMetaModel>(channel.Metadata);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Failed to deserialize metadata for Parti stream: {channel.StreamUrl}");
+                _logger.Error(e);
+            }
+        }
         
         _chatBot.SendChatMessage($"{identity} is live! {data.EventTitle} {url}", true);
         if (channel.AutoCapture && settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
         {
             _logger.Info($"{channel.StreamUrl} is configured to auto capture");
-            _ = new StreamCapture(url, StreamCaptureMethods.YtDlp, _cancellationToken).CaptureAsync();
+            _ = new StreamCapture(url, StreamCaptureMethods.YtDlp, meta?.CaptureOverrides, _cancellationToken).CaptureAsync();
         }
     }
 
@@ -1158,7 +1177,6 @@ public class BotServices
             $"{identity} is no longer live! :lossmanjack:", true);
     }
 
-    // TODO: Fix this so it aligns with the new Persisted Live setting instead of tracking separately
     public async Task<bool> CheckBmjIsLive()
     {
         var isLive =

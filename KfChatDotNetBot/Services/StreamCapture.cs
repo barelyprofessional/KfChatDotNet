@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using NLog;
 
@@ -9,7 +10,7 @@ namespace KfChatDotNetBot.Services;
 /// </summary>
 /// <param name="streamUrl">Streamer URL</param>
 /// <param name="ct">Cancellation token</param>
-public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod, CancellationToken ct = default)
+public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod, CaptureOverridesModel? captureOverrides = null, CancellationToken ct = default)
 {
     private readonly Dictionary<string, Setting> _settings = SettingsProvider
         .GetMultipleValuesAsync([BuiltIn.Keys.CaptureYtDlpBinaryPath, BuiltIn.Keys.CaptureYtDlpWorkingDirectory,
@@ -38,7 +39,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         }
         else if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
         {
-            pStartInfoFileName = _settings[BuiltIn.Keys.CaptureYtDlpParentTerminal].Value!;
+            pStartInfoFileName = captureOverrides?.CaptureYtDlpParentTerminal ?? _settings[BuiltIn.Keys.CaptureYtDlpParentTerminal].Value!;
             pStartInfoExecuteArgument = "-x";
             pStartInfoExecuteScript = scriptPath;
         }
@@ -51,7 +52,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         {
             FileName = pStartInfoFileName,
             ArgumentList = { pStartInfoExecuteArgument, pStartInfoExecuteScript },
-            WorkingDirectory = _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value
+            WorkingDirectory = captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value
         });
 
         if (process == null)
@@ -94,7 +95,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
     private async Task<string> CreateScriptAsync()
     {
         var random = Convert.ToHexString(Guid.NewGuid().ToByteArray()[..4]);
-        var scriptPath = Path.Join(_settings[BuiltIn.Keys.CaptureYtDlpScriptPath].Value,
+        var scriptPath = Path.Join(_settings[captureOverrides?.CaptureYtDlpScriptPath ?? BuiltIn.Keys.CaptureYtDlpScriptPath].Value,
             $"bot_ytdlp_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{random}.sh");
         if (OperatingSystem.IsWindows())
         {
@@ -105,9 +106,10 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         string captureLine;
         if (captureMethod == StreamCaptureMethods.YtDlp)
         {
-            captureLine = $"{_settings[BuiltIn.Keys.CaptureYtDlpBinaryPath].Value} -o \"{_settings[BuiltIn.Keys.CaptureYtDlpOutputFormat].Value}\" " +
-                          $"--user-agent \"{_settings[BuiltIn.Keys.CaptureYtDlpUserAgent].Value}\" " +
-                          $"--cookies-from-browser {_settings[BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser].Value} " +
+            captureLine = $"{captureOverrides?.CaptureYtDlpBinaryPath ?? _settings[BuiltIn.Keys.CaptureYtDlpBinaryPath].Value} " +
+                          $"-o \"{captureOverrides?.CaptureYtDlpOutputFormat ?? _settings[BuiltIn.Keys.CaptureYtDlpOutputFormat].Value}\" " +
+                          $"--user-agent \"{captureOverrides?.CaptureYtDlpUserAgent ?? _settings[BuiltIn.Keys.CaptureYtDlpUserAgent].Value}\" " +
+                          $"--cookies-from-browser {captureOverrides?.CaptureYtDlpCookiesFromBrowser ?? _settings[BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser].Value} " +
                           $"--write-info-json --wait-for-video 15 --merge-output-format mp4 --verbose {streamUrl}";
         }
         else if (captureMethod == StreamCaptureMethods.Streamlink)
@@ -115,9 +117,10 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
             var twitchOpts = string.Empty;
             if (streamUrl.Contains("twitch.tv"))
             {
-                twitchOpts = _settings[BuiltIn.Keys.CaptureStreamlinkTwitchOptions].Value;
+                twitchOpts = captureOverrides?.CaptureStreamlinkTwitchOptions ?? _settings[BuiltIn.Keys.CaptureStreamlinkTwitchOptions].Value;
             }
-            captureLine = $"{_settings[BuiltIn.Keys.CaptureStreamlinkBinaryPath].Value} {twitchOpts} --output \"{_settings[BuiltIn.Keys.CaptureStreamlinkOutputFormat].Value}\" " +
+            captureLine = $"{captureOverrides?.CaptureStreamlinkBinaryPath ?? _settings[BuiltIn.Keys.CaptureStreamlinkBinaryPath].Value} {twitchOpts} " +
+                          $"--output \"{captureOverrides?.CaptureStreamlinkOutputFormat ?? _settings[BuiltIn.Keys.CaptureStreamlinkOutputFormat].Value}\" " +
                           $"--retry-streams 15 --retry-max 10 {streamUrl} best";
         }
         else
@@ -129,7 +132,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         var remuxLine = string.Empty;
         if (captureMethod == StreamCaptureMethods.Streamlink)
         {
-            remuxLine = _settings[BuiltIn.Keys.CaptureStreamlinkRemuxScript].Value;
+            remuxLine = captureOverrides?.CaptureStreamlinkRemuxScript ?? _settings[BuiltIn.Keys.CaptureStreamlinkRemuxScript].Value;
         }
         
         string scriptContent;
@@ -138,8 +141,8 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         {
             // GetPathRoot on Windows returns the top level directory, e.g. "C:\". Assuming the working directory is on another drive such as D:
             // we'll need to swap to that drive letter, so this just trims off the \ to transform it to D: or whatever. UNC paths not supported
-            scriptContent = $"{Path.GetPathRoot(_settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value)?.TrimEnd('\\')}{Environment.NewLine}" +
-                            $"CD {_settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
+            scriptContent = $"{Path.GetPathRoot(captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value)?.TrimEnd('\\')}{Environment.NewLine}" +
+                            $"CD {captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
                             $"{captureLine}{Environment.NewLine}" +
                             $"{remuxLine}{Environment.NewLine}" +
                             $"PAUSE";
@@ -147,7 +150,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         else if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
         {
             scriptContent = $"#!/bin/bash{Environment.NewLine}" +
-                            $"cd {_settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
+                            $"cd {captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
                             $"{captureLine}{Environment.NewLine}" +
                             $"{remuxLine}{Environment.NewLine}" +
                             $"read -p \"Press enter to exit\"";
