@@ -741,7 +741,16 @@ public class BotServices
     private void DiscordOnConversationSummaryUpdate(object sender, DiscordConversationSummaryUpdateModel summary, string guildId)
     {
         _logger.Info($"Received a conversation summary update for guild {guildId}");
-        var discordIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordIcon).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.DiscordIcon, BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordOnlySendSummariesIncludingBmj
+        ]).Result;
+        var discordIcon = settings[BuiltIn.Keys.DiscordIcon];
+        if (settings[BuiltIn.Keys.DiscordOnlySendSummariesIncludingBmj].ToBoolean() &&
+            !summary.People.Contains(settings[BuiltIn.Keys.DiscordBmjId].Value ?? string.Empty))
+        {
+            _logger.Info($"Ignoring as BMJ's Discord ID '{settings[BuiltIn.Keys.DiscordBmjId].Value}' wasn't among the people listed for this conversation summary: {string.Join(", ", summary.People)}");
+            return;
+        }
         _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] {summary.Topic}: {summary.SummaryShort} 🤖🤖", true);
     }
     

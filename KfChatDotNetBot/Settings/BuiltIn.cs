@@ -1068,6 +1068,14 @@ public static class BuiltIn
             Description = "Working directory for BMJ's Twitch streams captured with streamlink",
             Default = "/root/twitch/",
             ValueType = SettingValueType.Text
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.DiscordOnlySendSummariesIncludingBmj,
+            Description = "Only send Discord conversation summaries to the chat where BMJ's Discord ID is listed as participating",
+            Default = "true",
+            ValueType = SettingValueType.Boolean,
+            Regex = BooleanRegex
         }
     ];
     
@@ -1191,5 +1199,6 @@ public static class BuiltIn
         public static string BotRateLimitCooldownAutoDeleteDelay = "Bot.RateLimit.CooldownAutoDeleteDelay";
         public static string BotRateLimitExpiredEntryCleanupInterval = "Bot.RateLimit.ExpiredEntryCleanupInterval";
         public static string CaptureStreamlinkBmjWorkingDirectory = "Bot.Streamlink.BmjWorkingDirectory";
+        public static string DiscordOnlySendSummariesIncludingBmj = "Discord.OnlySendSummariesIncludingBmj";
     }
 }

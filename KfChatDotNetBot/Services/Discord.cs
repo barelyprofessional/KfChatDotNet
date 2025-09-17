@@ -316,6 +316,11 @@ public class DiscordConversationSummaryUpdateModel
     public required string Topic { get; set; }
     [JsonPropertyName("summ_short")]
     public required string SummaryShort { get; set; }
+    /// <summary>
+    /// List of Discord IDs for people whose messages were used to generate the summary
+    /// </summary>
+    [JsonPropertyName("people")]
+    public required List<string> People { get; set; }
 }
 
 // https://discord.com/developers/docs/resources/channel#channel-object-channel-types
