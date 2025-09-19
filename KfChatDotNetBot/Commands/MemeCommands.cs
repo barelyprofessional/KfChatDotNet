@@ -34,7 +34,7 @@ public class TwistedCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
-        await botInstance.SendChatMessageAsync("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯", true);
+        await botInstance.SendChatMessageAsync("🦍 🗣 GET IT TWISTED 🌪 , GAMBLE ✅ . PLEASE START GAMBLING 👍 . GAMBLING IS AN INVESTMENT 🎰 AND AN INVESTMENT ONLY 👍 . YOU WILL PROFIT 💰 , YOU WILL WIN ❗ ️. YOU WILL DO ALL OF THAT 💯 , YOU UNDERSTAND ⁉ ️ YOU WILL BECOME A BILLIONAIRE 💵 📈 AND REBUILD YOUR FUCKING LIFE 🤯");
     }
 }
 
@@ -48,7 +48,7 @@ public class ScratchCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         // ReSharper disable once StringLiteralTypo
-        await botInstance.SendChatMessageAsync("🐀 🗣 GET IT TWISTED 🌪, SCRATCH ✅. PLEASE START SCRATCHING 👍. SCRATCHING YOUR SCABIES SORES IS RELIEF 😌 AND RELIEF ONLY 👍. YOU WILL FEEL BETTER 💪, YOU WILL FIND COMFORT ❗️. YOU WILL DO ALL OF THAT 💯, YOU UNDERSTAND ⁉️ YOU WILL CONQUER THE ITCH 🦠 AND REBUILD YOUR SKIN’S PEACE 🤯");
+        await botInstance.SendChatMessageAsync("🐀 🗣 GET IT TWISTED 🌪, SCRATCH ✅. PLEASE START SCRATCHING 👍. SCRATCHING YOUR SCABIES SORES IS RELIEF 😌 AND RELIEF ONLY 👍. YOU WILL FEEL BETTER 💪, YOU WILL FIND COMFORT ❗️. YOU WILL DO ALL OF THAT 💯, YOU UNDERSTAND ⁉️ YOU WILL CONQUER THE ITCH 🦠 AND REBUILD YOUR SKIN’S PEACE 🤯", true);
     }
 }
 
