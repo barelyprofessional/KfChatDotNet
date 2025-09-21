@@ -39,6 +39,10 @@ public class ChatBot
     {
         _logger.Info("Bot starting!");
 
+        _logger.Debug("Starting services");
+        BotServices = new BotServices(this, _cancellationToken);
+        BotServices.InitializeServices();
+        
         _kfDeadBotDetection = KfDeadBotDetectionTask();
         var settings = SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
@@ -83,10 +87,6 @@ public class ChatBot
 
         _logger.Debug("Creating ping task");
         _kfChatPing = KfPingTask();
-        
-        _logger.Debug("Starting services");
-        BotServices = new BotServices(this, _cancellationToken);
-        BotServices.InitializeServices();
         
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
