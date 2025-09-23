@@ -313,12 +313,15 @@ public class ChatBot
                 _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
             }
             UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
+            // Strip weird control characters and just allow basic punctuation + whitespace
+            var kindaSanitized = new string(message.MessageRawHtmlDecoded
+                .Where(c => c == ' ' || char.IsPunctuation(c) || char.IsLetter(c) || char.IsDigit(c)).ToArray());
             if (message.MessageEditDate == null && message.Author.Id != settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() &&
                 message.Author.Username != settings[BuiltIn.Keys.KiwiFarmsUsername].Value &&
                 settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() &&
-                (message.MessageRawHtmlDecoded.Contains("discord16.png") ||
-                 message.MessageRawHtmlDecoded.Contains("mBossmanJack:", StringComparison.CurrentCultureIgnoreCase) || 
-                 message.MessageRawHtmlDecoded.Contains("by @KenoGPT at", StringComparison.CurrentCultureIgnoreCase)))
+                (kindaSanitized.Contains("discord16.png") ||
+                 kindaSanitized.Contains("mBossmanJack:", StringComparison.CurrentCultureIgnoreCase) || 
+                 kindaSanitized.Contains("by @KenoGPT at", StringComparison.CurrentCultureIgnoreCase)))
             {
                 SendChatMessage($"☝️ {message.Author.Username} is a nigger faggot", true);
             }
