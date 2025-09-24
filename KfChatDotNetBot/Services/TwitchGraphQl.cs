@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
+using Microsoft.EntityFrameworkCore;
 using NLog;
 
 namespace KfChatDotNetBot.Services;
@@ -57,18 +58,21 @@ public class TwitchGraphQl(string? proxy = null, CancellationToken cancellationT
 
             if (stream.IsLive)
             {
-                _logger.Info("Updating DB with fresh view count");
                 await using var db = new ApplicationDbContext();
-                await db.TwitchViewCounts.AddAsync(new TwitchViewCountDbModel
+                var mostRecentViewCount = await db.TwitchViewCounts.OrderBy(x => x.Id).LastOrDefaultAsync(ct);
+                if (mostRecentViewCount == null || mostRecentViewCount.Viewers != stream.ViewerCount!.Value || mostRecentViewCount.Topic != stream.Id)
                 {
-                    Topic = stream.Id!,
-                    Viewers = stream.ViewerCount!.Value,
-                    Time = DateTimeOffset.UtcNow,
-                    ServerTime = 0
-                }, ct);
-                await db.SaveChangesAsync(ct);
+                    _logger.Info("Updating DB with fresh view count");
+                    await db.TwitchViewCounts.AddAsync(new TwitchViewCountDbModel
+                    {
+                        Topic = stream.Id!,
+                        Viewers = stream.ViewerCount!.Value,
+                        Time = DateTimeOffset.UtcNow,
+                        ServerTime = 0
+                    }, ct);
+                    await db.SaveChangesAsync(ct);
+                }
             }
-
             var persistedLive = settings[BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive].ToBoolean();
             if (stream.IsLive == persistedLive) continue;
             OnStreamStateUpdated?.Invoke(this, settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value!, stream.IsLive);
