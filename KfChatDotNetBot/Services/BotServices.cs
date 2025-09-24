@@ -50,6 +50,7 @@ public class BotServices
     // lol
     internal bool TemporarilyBypassGambaSeshForDiscord;
     internal bool TemporarilySuppressGambaMessages = false;
+    internal bool TemporarilyForceGambaMessages = false;
 
     public BotServices(ChatBot botInstance, CancellationToken ctx)
     {
@@ -1188,6 +1189,7 @@ public class BotServices
 
     public async Task<bool> CheckBmjIsLive()
     {
+        if (TemporarilyForceGambaMessages) return false;
         var isLive =
             (await SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchGraphQlPersistedCurrentlyLive)).ToBoolean();
         if (isLive || TemporarilySuppressGambaMessages)

@@ -519,3 +519,21 @@ public class StartAlmanacCommand : ICommand
         await botInstance.SendChatMessageAsync("Asked it nicely to start", true);
     }
 }
+
+public class ToggleForcedGambaMessagesCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^admin toggle gamba")
+    ];
+
+    public string? HelpText => "Toggle forced gamba messages while a stream is running";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        botInstance.BotServices.TemporarilyForceGambaMessages = !botInstance.BotServices.TemporarilyForceGambaMessages;
+        await botInstance.SendChatMessageAsync($"TemporarilyForceGambaMessages is now {botInstance.BotServices.TemporarilyForceGambaMessages}", true);
+    }
+}
