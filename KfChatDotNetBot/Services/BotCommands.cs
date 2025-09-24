@@ -74,7 +74,7 @@ internal class BotCommands
                     if (!kasinoEnabled) return;
                 }
 
-                if (kasinoCommand && user.IsPermanentlyBanned(_cancellationToken).Result)
+                if (kasinoCommand && Money.IsPermanentlyBannedAsync(user, _cancellationToken).Result)
                 {
                     _bot.SendChatMessage($"@{message.Author.Username}, you've been permanently banned from the kasino. Contact support for more information.", true);
                     return;
@@ -84,8 +84,8 @@ internal class BotCommands
                 {
                     // GetGamblerEntity will only return null if the user is permanbanned
                     // and we have a check further up the chain for that hence ignoring the null
-                    var exclusion = user.GetGamblerEntity(ct: _cancellationToken).Result
-                        !.GetActiveExclusion(ct: _cancellationToken).Result;
+                    var gambler = Money.GetGamblerEntityAsync(user, ct: _cancellationToken).Result;
+                    var exclusion = Money.GetActiveExclusionAsync(gambler!, ct: _cancellationToken).Result;
                     if (exclusion != null)
                     {
                         _bot.SendChatMessage(
@@ -140,14 +140,14 @@ internal class BotCommands
         if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyEnabled)).ToBoolean()) return;
         var wagerCommand = HasAttribute<WagerCommand>(command);
         if (!wagerCommand) return;
-        var gambler = await user.GetGamblerEntity(ct: _cancellationToken);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: _cancellationToken);
         if (gambler == null) return;
         if (gambler.TotalWagered < gambler.NextVipLevelWagerRequirement) return;
         // The reason for doing this instead of passing in TotalWagered is that otherwise VIP levels might
         // get skipped if the user is a low VIP level but wagering very large amounts
         var newLevel = Money.GetNextVipLevel(gambler.NextVipLevelWagerRequirement);
         if (newLevel == null) return;
-        var payout = await gambler.UpgradeVipLevel(newLevel, _cancellationToken);
+        var payout = await Money.UpgradeVipLevelAsync(gambler, newLevel, _cancellationToken);
         await _bot.SendChatMessageAsync(
             $"🤑🤑 {user.FormatUsername()} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
             $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);

@@ -26,7 +26,7 @@ public class GetBalanceCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var gambler = await user.GetGamblerEntity(ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
     }
@@ -45,8 +45,12 @@ public class GetExclusionCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var gambler = await user.GetGamblerEntity(ct: ctx);
-        var exclusion = await gambler!.GetActiveExclusion(ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        if (gambler == null)
+        {
+            throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
+        }
+        var exclusion = await Money.GetActiveExclusionAsync(gambler, ct: ctx);
         if (exclusion == null)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you are currently not excluded.", true);
@@ -80,7 +84,7 @@ public class SendJuiceCommand : ICommand
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
-        var gambler = await user.GetGamblerEntity(ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
         var amount = decimal.Parse(arguments["amount"].Value);
         if (gambler == null)
@@ -100,16 +104,16 @@ public class SendJuiceCommand : ICommand
             return;
         }
 
-        var targetGambler = await targetUser.GetGamblerEntity(ct: ctx);
+        var targetGambler = await Money.GetGamblerEntityAsync(targetUser, ct: ctx);
         if (targetGambler == null)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't juice a banned user", true);
             return;
         }
 
-        await gambler.ModifyBalance(-amount, TransactionSourceEventType.Juicer,
+        await Money.ModifyBalanceAsync(gambler, -amount, TransactionSourceEventType.Juicer,
             $"Juice sent to {targetUser.KfUsername}", ct: ctx);
-        await targetGambler.ModifyBalance(amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
+        await Money.ModifyBalanceAsync(targetGambler, amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
             gambler, ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.KfUsername}", true);
     }
@@ -134,20 +138,23 @@ public class RakebackCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var gambler = await user.GetGamblerEntity(ct: ctx);
-        db.Attach(gambler!);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        if (gambler == null)
+        {
+            throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
+        }
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyRakebackPercentage, BuiltIn.Keys.MoneyRakebackMinimumAmount
         ]);
         var mostRecentRakeback = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(tx =>
-            tx.EventSource == TransactionSourceEventType.Rakeback && tx.Gambler == gambler, cancellationToken: ctx);
+            tx.EventSource == TransactionSourceEventType.Rakeback && tx.Gambler.Id == gambler.Id, cancellationToken: ctx);
         long offset = 0;
         if (mostRecentRakeback != null)
         {
             offset = mostRecentRakeback.TimeUnixEpochSeconds;
         }
 
-        var wagers = await db.Wagers.Where(w => w.Gambler == gambler && w.TimeUnixEpochSeconds > offset).ToListAsync(ctx);
+        var wagers = await db.Wagers.Where(w => w.Gambler.Id == gambler.Id && w.TimeUnixEpochSeconds > offset).ToListAsync(ctx);
         if (wagers.Count == 0)
         {
             await botInstance.SendChatMessageAsync(
@@ -163,7 +170,7 @@ public class RakebackCommand : ICommand
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your rakeback payout of {await rakeback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumRakeback.FormatKasinoCurrencyAsync()}", true);
             return;
         }
-        await gambler!.ModifyBalance(rakeback, TransactionSourceEventType.Rakeback, "Rakeback claimed by gambler",
+        await Money.ModifyBalanceAsync(gambler, rakeback, TransactionSourceEventType.Rakeback, "Rakeback claimed by gambler",
             ct: ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the hostess has given you {await rakeback.FormatKasinoCurrencyAsync()} rakeback", true);
     }
@@ -187,20 +194,23 @@ public class LossbackCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var gambler = await user.GetGamblerEntity(ct: ctx);
-        db.Attach(gambler!);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        if (gambler == null)
+        {
+            throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
+        }
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyLossbackPercentage, BuiltIn.Keys.MoneyLossbackMinimumAmount
         ]);
         var mostRecentLossback = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(tx =>
-            tx.EventSource == TransactionSourceEventType.Lossback && tx.Gambler == gambler, cancellationToken: ctx);
+            tx.EventSource == TransactionSourceEventType.Lossback && tx.Gambler.Id == gambler.Id, cancellationToken: ctx);
         long offset = 0;
         if (mostRecentLossback != null)
         {
             offset = mostRecentLossback.TimeUnixEpochSeconds;
         }
 
-        var wagers = await db.Wagers.Where(w => w.Gambler == gambler && w.TimeUnixEpochSeconds > offset && w.Multiplier < 1).ToListAsync(ctx);
+        var wagers = await db.Wagers.Where(w => w.Gambler.Id == gambler.Id && w.TimeUnixEpochSeconds > offset && w.Multiplier < 1).ToListAsync(ctx);
         if (wagers.Count == 0)
         {
             await botInstance.SendChatMessageAsync(
@@ -216,7 +226,7 @@ public class LossbackCommand : ICommand
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your lossback payout of {await lossback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumLossback.FormatKasinoCurrencyAsync()}", true);
             return;
         }
-        await gambler!.ModifyBalance(lossback, TransactionSourceEventType.Lossback, "Lossback claimed by gambler",
+        await Money.ModifyBalanceAsync(gambler, lossback, TransactionSourceEventType.Lossback, "Lossback claimed by gambler",
             ct: ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the hostess has given you {await lossback.FormatKasinoCurrencyAsync()} lossback", true);
     }
@@ -245,8 +255,12 @@ public class AbandonKasinoCommand : ICommand
             return;
         }
         await using var db = new ApplicationDbContext();
-        var gambler = await user.GetGamblerEntity(ct: ctx);
-        db.Attach(gambler!);
+        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        if (gambler == null)
+        {
+            throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
+        }
+        db.Attach(gambler);
         gambler!.State = GamblerState.Abandoned;
         await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, Kasino account with ID {gambler.Id} has been marked as abandoned.", true);

@@ -1,9 +1,16 @@
-﻿using KfChatDotNetBot.Models;
+﻿using Humanizer;
+using KfChatDotNetBot.Models;
+using KfChatDotNetBot.Models.DbModels;
+using KfChatDotNetBot.Settings;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using NLog;
 
 namespace KfChatDotNetBot.Services;
 
 public static class Money
 {
+    private static Logger _logger = LogManager.GetCurrentClassLogger();
     /// <summary>
     /// This is the list of available VIP levels for gamblers to ascend
     /// The order of this array is important, it begins with the loest level VIP, and ascends IN ORDER to the max level
@@ -196,4 +203,276 @@ public static class Money
             WagerRequirement = nextTier
         };
     }
+    
+    /// <summary>
+    /// Retrieve a gambler entity for a given user
+    /// Returns null if createIfNoneExists is false and no gambler exists
+    /// Also returns null if the user was permanently banned from gambling
+    /// If there are multiple "active" gamblers, only the newest is returned
+    /// </summary>
+    /// <param name="user">User whose gambler entity you wish to retrieve</param>
+    /// <param name="createIfNoneExists">Whether to create a gambler entity if none exists already</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns></returns>
+    public static async Task<GamblerDbModel?> GetGamblerEntityAsync(UserDbModel user, bool createIfNoneExists = true, CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        var gambler =
+            await db.Gamblers.OrderBy(x => x.Id).Include(x => x.User).LastOrDefaultAsync(g => g.User.Id == user.Id && g.State != GamblerState.PermanentlyBanned,
+                cancellationToken: ct);
+        _logger.Info($"Retrieved entity for {user.KfUsername}. Is Gambler Entity Null? => {gambler == null}");
+        if (gambler != null)
+        {
+            _logger.Info($"Gambler entity details: {gambler.Id}, Created: {gambler.Created:o}");
+        }
+        if (!createIfNoneExists) return gambler;
+        var permaBanned = await IsPermanentlyBannedAsync(user, ct);
+        _logger.Info($"permaBanned => {permaBanned}");
+        if (permaBanned) return null;
+        var initialBalance = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyInitialBalance)).ToType<decimal>();
+        await db.Gamblers.AddAsync(new GamblerDbModel
+        {
+            User = user,
+            Balance = initialBalance,
+            Created = DateTimeOffset.UtcNow,
+            RandomSeed = Guid.NewGuid().ToString(),
+            State = GamblerState.Active,
+            TotalWagered = 0,
+            NextVipLevelWagerRequirement = Money.VipLevels[0].BaseWagerRequirement
+        }, ct);
+        await db.SaveChangesAsync(ct);
+        var newEntity = await db.Gamblers.OrderBy(x => x.Id).Include(x => x.User)
+            .LastOrDefaultAsync(g => g.User == user, cancellationToken: ct);
+        if (newEntity == null)
+        {
+            throw new InvalidOperationException(
+                $"Caught a null when trying to retrieve freshly created gambler entity for user {user.KfId}");
+        }
+        _logger.Info($"New gambler entity created for {user.KfUsername} with ID {newEntity.Id}");
+        return newEntity;
+    }
+        
+    /// <summary>
+    /// Simple check to see whether a user has been permanently banned from the kasino
+    /// </summary>
+    /// <param name="user">User to check for the permaban</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns></returns>
+    public static async Task<bool> IsPermanentlyBannedAsync(UserDbModel user, CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        return await db.Gamblers.AnyAsync(u => u.User.Id == user.Id && u.State == GamblerState.PermanentlyBanned,
+            cancellationToken: ct);
+    }
+    
+    /// <summary>
+    /// Modify a gambler's balance by a given +/- amount
+    /// </summary>
+    /// <param name="gambler">Gambler entity whose balance you wish to modify</param>
+    /// <param name="effect">The 'effect' of this modification, as in how much to add or remove</param>
+    /// <param name="eventSource">The event which initiated this balance modification</param>
+    /// <param name="comment">Optional comment to provide for the transaction</param>
+    /// <param name="from">If applicable, who sent the transaction (e.g. if a juicer)</param>
+    /// <param name="ct">Cancellation token</param>
+    public static async Task ModifyBalanceAsync(GamblerDbModel gambler, decimal effect,
+        TransactionSourceEventType eventSource, string? comment = null, GamblerDbModel? from = null,
+        CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        db.Attach(gambler);
+        _logger.Info($"Updating balance for {gambler.Id} with effect {effect:N}. Balance is currently {gambler.Balance:N}");
+        gambler.Balance += effect;
+        _logger.Info($"Balance is now {gambler.Balance:N}");
+        await db.Transactions.AddAsync(new TransactionDbModel
+        {
+            Gambler = gambler,
+            EventSource = eventSource,
+            Effect = effect,
+            Time = DateTimeOffset.UtcNow,
+            Comment = comment,
+            From = from,
+            NewBalance = gambler.Balance,
+            TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        }, ct);
+        await db.SaveChangesAsync(ct);
+    }
+    
+    /// <summary>
+    /// Add a wager to the database
+    /// Will also issue a balance update unless you explicitly disable autoModifyBalance
+    /// </summary>
+    /// <param name="gambler">Gambler who wagered</param>
+    /// <param name="wagerAmount">The amount they wagered</param>
+    /// <param name="wagerEffect">The effect of the wager on the gambler's balance.
+    /// Please note this includes the wager itself. So for a bet of 500 that paid out 50, you pass in an effect of -450
+    /// If instead they won 600 then the effect would be +100. the wagered amount is not factored into balance changes,
+    /// it's just recorded for calculating bonuses and statistics</param>
+    /// <param name="game">The game which was played as part of this wager</param>
+    /// <param name="autoModifyBalance">Whether tu automatically update the user's balance according to the wager effect.
+    /// Typically, you should leave this on so as to ensure every wager has an associated transaction.</param>
+    /// <param name="gameMeta">Optionally store metadata related to the wager, such as player choices, or game outcomes.
+    /// Data will be serialized to JSON.</param>
+    /// <param name="isComplete">Whether the game is 'complete'. Set to false for wagers with unknown outcomes.
+    /// NOTE: wagerEffect will be ignored, instead value will be derived from the wagerAmount</param>
+    /// <param name="ct">Cancellation token</param>
+    public static async Task NewWagerAsync(GamblerDbModel gambler, decimal wagerAmount, decimal wagerEffect,
+        WagerGame game, bool autoModifyBalance = true, dynamic? gameMeta = null, bool isComplete = true,
+        CancellationToken ct = default)
+    {
+        _logger.Info($"Adding a wager for {gambler.User.KfUsername}. wagerAmount => {wagerAmount:N}, " +
+                     $"wagerEffect => {wagerEffect:N}, game => {game.Humanize()}, autoModifyBalance => {autoModifyBalance}, " +
+                     $"isComplete => {isComplete}");
+        await using var db = new ApplicationDbContext();
+        db.Attach(gambler);
+        string? metaJson = null;
+        if (gameMeta != null)
+        {
+            metaJson = JsonConvert.SerializeObject(gameMeta, Formatting.Indented);
+            _logger.Info("Serialized metadata follows");
+            _logger.Info(metaJson);
+        }
+
+        if (!isComplete)
+        {
+            wagerEffect = -wagerAmount;
+            _logger.Info($"isComplete is false, set wagerEffect to {wagerEffect}");
+        }
+        decimal multi = 0;
+        if (isComplete && wagerAmount > 0 && wagerEffect > 0 && wagerAmount + wagerEffect > 0)
+        {
+            multi = (wagerAmount + wagerEffect) / wagerAmount;
+            _logger.Info($"multi is {multi}");
+        }
+
+        gambler.TotalWagered += wagerAmount;
+        _logger.Info($"Updated TotalWagered to {gambler.TotalWagered}");
+        var wager = await db.Wagers.AddAsync(new WagerDbModel
+        {
+            Gambler = gambler,
+            Time = DateTimeOffset.UtcNow,
+            WagerAmount = wagerAmount,
+            WagerEffect = wagerEffect,
+            Multiplier = multi,
+            Game = game,
+            GameMeta = metaJson,
+            IsComplete = isComplete,
+            TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        }, ct);
+        await db.SaveChangesAsync(ct);
+        _logger.Info($"Added wager row with ID {wager.Entity.Id}");
+        gambler.Balance += wagerEffect;
+        if (!autoModifyBalance) return;
+
+        var txn = await db.Transactions.AddAsync(new TransactionDbModel
+        {
+            Gambler = gambler,
+            EventSource = TransactionSourceEventType.Gambling,
+            Time = DateTimeOffset.UtcNow,
+            Effect = wagerEffect,
+            Comment = $"Win from wager {wager.Entity.Id}",
+            From = null,
+            NewBalance = gambler.Balance,
+            TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        }, ct);
+        await db.SaveChangesAsync(ct);
+        _logger.Info($"Added transaction with ID {txn.Entity.Id}");
+    }
+    
+    /// <summary>
+    /// Get an active exclusion, returns null if there's no active exclusion
+    /// If there's somehow multiple exclusions, will just grab the most recent one
+    /// </summary>
+    /// <param name="gambler">Gambler entity to retrieve the exclusion for</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns></returns>
+    public static async Task<GamblerExclusionDbModel?> GetActiveExclusionAsync(GamblerDbModel gambler, CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        return (await db.Exclusions.Where(g => g.Gambler.Id == gambler.Id).ToListAsync(ct))
+            .LastOrDefault(e => e.Expires <= DateTimeOffset.UtcNow);
+    }
+    
+    /// <summary>
+    /// Get random number using the gambler's seed and a given number of iterations
+    /// </summary>
+    /// <param name="gambler">Gambler entity to reference their random seed</param>
+    /// <param name="min">Minimum value for generating random</param>
+    /// <param name="max">Maximum value for random, incremented by 1 if add1ToMaxParam is true
+    /// so it's consistent with the behavior of min</param>
+    /// <param name="iterations">Number of random number generator iterations to run before returning a result</param>
+    /// <param name="incrementMaxParam">Increments the 'max' param by 1 as otherwise the value will never be returned by Random.Next()
+    /// This is because the default behavior of .NET is unintuitive, min value can be returned but max is never by default</param>
+    /// <returns>A random number based on the given parameters</returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static int GetRandomNumber(GamblerDbModel gambler, int min, int max, int iterations = 10,
+        bool incrementMaxParam = true)
+    {
+        var random = new Random(gambler.RandomSeed.GetHashCode());
+        var result = 0;
+        var i = 0;
+        if (incrementMaxParam) max++;
+        if (iterations <= 0) throw new ArgumentException("Iterations cannot be 0 or lower");
+        while (i < iterations)
+        {
+            i++;
+            result = random.Next(min, max);
+        }
+        _logger.Info($"Generated random number {result} with min {min} and max {max} over {iterations} iterations");
+        return result;
+    }
+    
+    /// <summary>
+    /// Get the user's current VIP level
+    /// </summary>
+    /// <param name="gambler">Gambler entity whose VIP level you want to get</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns></returns>
+    public static async Task<GamblerPerkDbModel?> GetVipLevelAsync(GamblerDbModel gambler, CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        var perk = await db.Perks.OrderBy(x => x.Id).LastOrDefaultAsync(
+            p => p.Gambler.Id == gambler.Id && p.PerkType == GamblerPerkType.VipLevel, ct);
+        _logger.Info($"User's VIP perk is null? {perk == null}");
+        if (perk != null)
+        {
+            _logger.Info($"VIP perk found for {gambler.User.Id}, {perk.PerkName} tier {perk.PerkTier}");
+        }
+        return perk;
+    }
+    
+    /// <summary>
+    /// Upgrade to the given VIP level. Grants a bonus as part of the level up.
+    /// </summary>
+    /// <param name="gambler">The gambler you wish to level up</param>
+    /// <param name="nextVipLevel">VIP level to grant them</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>The bonus they received</returns>
+    public static async Task<decimal> UpgradeVipLevelAsync(GamblerDbModel gambler, NextVipLevelModel nextVipLevel,
+        CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        db.Attach(gambler);
+        var payout = nextVipLevel.VipLevel.BonusPayout;
+        if (nextVipLevel.Tier > 1)
+        {
+            payout = nextVipLevel.VipLevel.BonusPayout / (nextVipLevel.VipLevel.Tiers - 1);
+        }
+        _logger.Info($"Calculated a VIP payout of {payout:N} for gambler ID {gambler.Id}");
+
+        await db.Perks.AddAsync(new GamblerPerkDbModel
+        {
+            Gambler = gambler,
+            PerkType = GamblerPerkType.VipLevel,
+            PerkName = nextVipLevel.VipLevel.Name,
+            PerkTier = nextVipLevel.Tier,
+            Time = DateTimeOffset.UtcNow,
+            Payout = payout,
+        }, ct);
+        gambler.NextVipLevelWagerRequirement = nextVipLevel.WagerRequirement;
+        await db.SaveChangesAsync(ct);
+        await ModifyBalanceAsync(gambler, payout, TransactionSourceEventType.Bonus,
+            $"VIP Level '{nextVipLevel.VipLevel.Icon} {nextVipLevel.VipLevel.Name}' Tier {nextVipLevel.Tier} level up bonus", ct: ct);
+        return payout;
+    }
+    
 }
