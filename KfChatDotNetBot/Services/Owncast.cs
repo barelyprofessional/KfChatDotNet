@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using NLog;
 
@@ -47,7 +48,10 @@ public class Owncast(ChatBot kfChatBot) : IDisposable
             if (!status.Online) continue;
             await kfChatBot.SendChatMessageAsync("https://bossmanjack.tv restream is live!", true);
             if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.CaptureEnabled)).ToBoolean()) continue;
-            _ = new StreamCapture("https://bossmanjack.tv/hls/stream.m3u8", StreamCaptureMethods.Streamlink, null, ct).CaptureAsync();
+            _ = new StreamCapture("https://bossmanjack.tv/hls/stream.m3u8", StreamCaptureMethods.Streamlink, new CaptureOverridesModel
+            {
+                CaptureStreamlinkOutputFormat = "bossmanjacktv-{time:%Y-%m-%d_%Hh%Mm%Ss}.ts"
+            }, ct).CaptureAsync();
         }
     }
     
