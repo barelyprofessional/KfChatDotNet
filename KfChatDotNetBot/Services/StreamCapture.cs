@@ -121,7 +121,7 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
             }
             captureLine = $"{captureOverrides?.CaptureStreamlinkBinaryPath ?? _settings[BuiltIn.Keys.CaptureStreamlinkBinaryPath].Value} {twitchOpts} " +
                           $"--output \"{captureOverrides?.CaptureStreamlinkOutputFormat ?? _settings[BuiltIn.Keys.CaptureStreamlinkOutputFormat].Value}\" " +
-                          $"--retry-streams 15 --retry-max 10 {streamUrl} best";
+                          $"--retry-streams 15 --retry-max 10 --hls-segment-queue-threshold 0 {streamUrl} best";
         }
         else
         {
