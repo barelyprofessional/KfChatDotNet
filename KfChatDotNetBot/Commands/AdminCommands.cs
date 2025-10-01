@@ -537,3 +537,21 @@ public class ToggleForcedGambaMessagesCommand : ICommand
         await botInstance.SendChatMessageAsync($"TemporarilyForceGambaMessages is now {botInstance.BotServices.TemporarilyForceGambaMessages}", true);
     }
 }
+
+public class ToggleDiscordRelayingCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^tempenable discord$",  RegexOptions.IgnoreCase),
+        new Regex("^admin toggle discord", RegexOptions.IgnoreCase)
+    ];
+
+    public string? HelpText => null;
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        botInstance.BotServices.TemporarilyBypassGambaSeshForDiscord = !botInstance.BotServices.TemporarilyBypassGambaSeshForDiscord;
+        await botInstance.SendChatMessageAsync($"TemporarilyBypassGambaSeshForDiscord is now {botInstance.BotServices.TemporarilyBypassGambaSeshForDiscord}", true);
+    }
+}
