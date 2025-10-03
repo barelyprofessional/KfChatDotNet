@@ -26,7 +26,7 @@ public class GetBalanceCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
     }
@@ -45,12 +45,12 @@ public class GetExclusionCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
         {
             throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
         }
-        var exclusion = await Money.GetActiveExclusionAsync(gambler, ct: ctx);
+        var exclusion = await Money.GetActiveExclusionAsync(gambler.Id, ct: ctx);
         if (exclusion == null)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you are currently not excluded.", true);
@@ -84,7 +84,7 @@ public class SendJuiceCommand : ICommand
     {
         var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
-        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
         var amount = decimal.Parse(arguments["amount"].Value);
         if (gambler == null)
@@ -104,17 +104,17 @@ public class SendJuiceCommand : ICommand
             return;
         }
 
-        var targetGambler = await Money.GetGamblerEntityAsync(targetUser, ct: ctx);
+        var targetGambler = await Money.GetGamblerEntityAsync(targetUser.Id, ct: ctx);
         if (targetGambler == null)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't juice a banned user", true);
             return;
         }
 
-        await Money.ModifyBalanceAsync(gambler, -amount, TransactionSourceEventType.Juicer,
+        await Money.ModifyBalanceAsync(gambler.Id, -amount, TransactionSourceEventType.Juicer,
             $"Juice sent to {targetUser.KfUsername}", ct: ctx);
-        await Money.ModifyBalanceAsync(targetGambler, amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
-            gambler, ctx);
+        await Money.ModifyBalanceAsync(targetGambler.Id, amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
+            gambler.Id, ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.KfUsername}", true);
     }
 }
@@ -138,7 +138,7 @@ public class RakebackCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
         {
             throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
@@ -170,7 +170,7 @@ public class RakebackCommand : ICommand
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your rakeback payout of {await rakeback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumRakeback.FormatKasinoCurrencyAsync()}", true);
             return;
         }
-        await Money.ModifyBalanceAsync(gambler, rakeback, TransactionSourceEventType.Rakeback, "Rakeback claimed by gambler",
+        await Money.ModifyBalanceAsync(gambler.Id, rakeback, TransactionSourceEventType.Rakeback, "Rakeback claimed by gambler",
             ct: ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the hostess has given you {await rakeback.FormatKasinoCurrencyAsync()} rakeback", true);
     }
@@ -194,7 +194,7 @@ public class LossbackCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
         {
             throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");
@@ -226,7 +226,7 @@ public class LossbackCommand : ICommand
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your lossback payout of {await lossback.FormatKasinoCurrencyAsync()} is below the minimum amount of {await minimumLossback.FormatKasinoCurrencyAsync()}", true);
             return;
         }
-        await Money.ModifyBalanceAsync(gambler, lossback, TransactionSourceEventType.Lossback, "Lossback claimed by gambler",
+        await Money.ModifyBalanceAsync(gambler.Id, lossback, TransactionSourceEventType.Lossback, "Lossback claimed by gambler",
             ct: ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the hostess has given you {await lossback.FormatKasinoCurrencyAsync()} lossback", true);
     }
@@ -255,7 +255,7 @@ public class AbandonKasinoCommand : ICommand
             return;
         }
         await using var db = new ApplicationDbContext();
-        var gambler = await Money.GetGamblerEntityAsync(user, ct: ctx);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
         {
             throw new InvalidOperationException($"Caught a null when retrieving {user.Id}'s gambler entity");

@@ -210,13 +210,18 @@ public static class Money
     /// Also returns null if the user was permanently banned from gambling
     /// If there are multiple "active" gamblers, only the newest is returned
     /// </summary>
-    /// <param name="user">User whose gambler entity you wish to retrieve</param>
+    /// <param name="userId">User whose gambler entity you wish to retrieve</param>
     /// <param name="createIfNoneExists">Whether to create a gambler entity if none exists already</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns></returns>
-    public static async Task<GamblerDbModel?> GetGamblerEntityAsync(UserDbModel user, bool createIfNoneExists = true, CancellationToken ct = default)
+    public static async Task<GamblerDbModel?> GetGamblerEntityAsync(int userId, bool createIfNoneExists = true, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Id == userId, cancellationToken: ct);
+        if (user == null)
+        {
+            throw new Exception($"User ID {userId} not found");
+        }
         var gambler =
             await db.Gamblers.OrderBy(x => x.Id).Include(x => x.User).LastOrDefaultAsync(g => g.User.Id == user.Id && g.State != GamblerState.PermanentlyBanned,
                 cancellationToken: ct);
@@ -226,7 +231,7 @@ public static class Money
             _logger.Info($"Gambler entity details: {gambler.Id}, Created: {gambler.Created:o}");
         }
         if (!createIfNoneExists) return gambler;
-        var permaBanned = await IsPermanentlyBannedAsync(user, ct);
+        var permaBanned = await IsPermanentlyBannedAsync(userId, ct);
         _logger.Info($"permaBanned => {permaBanned}");
         if (permaBanned) return null;
         var initialBalance = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyInitialBalance)).ToType<decimal>();
@@ -255,34 +260,39 @@ public static class Money
     /// <summary>
     /// Simple check to see whether a user has been permanently banned from the kasino
     /// </summary>
-    /// <param name="user">User to check for the permaban</param>
+    /// <param name="userId">User to check for the permaban</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns></returns>
-    public static async Task<bool> IsPermanentlyBannedAsync(UserDbModel user, CancellationToken ct = default)
+    public static async Task<bool> IsPermanentlyBannedAsync(int userId, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        return await db.Gamblers.AnyAsync(u => u.User.Id == user.Id && u.State == GamblerState.PermanentlyBanned,
+        return await db.Gamblers.AnyAsync(u => u.User.Id == userId && u.State == GamblerState.PermanentlyBanned,
             cancellationToken: ct);
     }
     
     /// <summary>
     /// Modify a gambler's balance by a given +/- amount
     /// </summary>
-    /// <param name="gambler">Gambler entity whose balance you wish to modify</param>
+    /// <param name="gamblerId">Gambler entity whose balance you wish to modify</param>
     /// <param name="effect">The 'effect' of this modification, as in how much to add or remove</param>
     /// <param name="eventSource">The event which initiated this balance modification</param>
     /// <param name="comment">Optional comment to provide for the transaction</param>
-    /// <param name="from">If applicable, who sent the transaction (e.g. if a juicer)</param>
+    /// <param name="fromId">If applicable, who sent the transaction (e.g. if a juicer)</param>
     /// <param name="ct">Cancellation token</param>
-    public static async Task ModifyBalanceAsync(GamblerDbModel gambler, decimal effect,
-        TransactionSourceEventType eventSource, string? comment = null, GamblerDbModel? from = null,
+    public static async Task ModifyBalanceAsync(int gamblerId, decimal effect,
+        TransactionSourceEventType eventSource, string? comment = null, int? fromId = null,
         CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
+        var gambler = await db.Gamblers.FirstOrDefaultAsync(x => x.Id == gamblerId, cancellationToken: ct);
+        if (gambler == null)
+        {
+            throw new Exception($"Could not find gambler entity with given ID {gamblerId}");
+        }
         _logger.Info($"Updating balance for {gambler.Id} with effect {effect:N}. Balance is currently {gambler.Balance:N}");
         gambler.Balance += effect;
         _logger.Info($"Balance is now {gambler.Balance:N}");
+        var from = await db.Gamblers.FirstOrDefaultAsync(x => x.Id == fromId, cancellationToken: ct);
         await db.Transactions.AddAsync(new TransactionDbModel
         {
             Gambler = gambler,
@@ -301,7 +311,7 @@ public static class Money
     /// Add a wager to the database
     /// Will also issue a balance update unless you explicitly disable autoModifyBalance
     /// </summary>
-    /// <param name="gambler">Gambler who wagered</param>
+    /// <param name="gamblerId">Gambler who wagered</param>
     /// <param name="wagerAmount">The amount they wagered</param>
     /// <param name="wagerEffect">The effect of the wager on the gambler's balance.
     /// Please note this includes the wager itself. So for a bet of 500 that paid out 50, you pass in an effect of -450
@@ -315,15 +325,20 @@ public static class Money
     /// <param name="isComplete">Whether the game is 'complete'. Set to false for wagers with unknown outcomes.
     /// NOTE: wagerEffect will be ignored, instead value will be derived from the wagerAmount</param>
     /// <param name="ct">Cancellation token</param>
-    public static async Task NewWagerAsync(GamblerDbModel gambler, decimal wagerAmount, decimal wagerEffect,
+    public static async Task NewWagerAsync(int gamblerId, decimal wagerAmount, decimal wagerEffect,
         WagerGame game, bool autoModifyBalance = true, dynamic? gameMeta = null, bool isComplete = true,
         CancellationToken ct = default)
     {
+        await using var db = new ApplicationDbContext();
+        var gambler = await db.Gamblers.Include(gamblerDbModel => gamblerDbModel.User)
+            .FirstOrDefaultAsync(x => x.Id == gamblerId, ct);
+        if (gambler == null)
+        {
+            throw new Exception($"Tried to add wager for permanently excluded gambler {gamblerId}");
+        }
         _logger.Info($"Adding a wager for {gambler.User.KfUsername}. wagerAmount => {wagerAmount:N}, " +
                      $"wagerEffect => {wagerEffect:N}, game => {game.Humanize()}, autoModifyBalance => {autoModifyBalance}, " +
                      $"isComplete => {isComplete}");
-        await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
         string? metaJson = null;
         if (gameMeta != null)
         {
@@ -382,13 +397,13 @@ public static class Money
     /// Get an active exclusion, returns null if there's no active exclusion
     /// If there's somehow multiple exclusions, will just grab the most recent one
     /// </summary>
-    /// <param name="gambler">Gambler entity to retrieve the exclusion for</param>
+    /// <param name="gamblerId">Gambler ID to retrieve the exclusion for</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns></returns>
-    public static async Task<GamblerExclusionDbModel?> GetActiveExclusionAsync(GamblerDbModel gambler, CancellationToken ct = default)
+    public static async Task<GamblerExclusionDbModel?> GetActiveExclusionAsync(int gamblerId, CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        return (await db.Exclusions.Where(g => g.Gambler.Id == gambler.Id).ToListAsync(ct))
+        return (await db.Exclusions.Where(g => g.Gambler.Id == gamblerId).ToListAsync(ct))
             .LastOrDefault(e => e.Expires <= DateTimeOffset.UtcNow);
     }
     
@@ -443,15 +458,19 @@ public static class Money
     /// <summary>
     /// Upgrade to the given VIP level. Grants a bonus as part of the level up.
     /// </summary>
-    /// <param name="gambler">The gambler you wish to level up</param>
+    /// <param name="gamblerId">The gambler you wish to level up</param>
     /// <param name="nextVipLevel">VIP level to grant them</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>The bonus they received</returns>
-    public static async Task<decimal> UpgradeVipLevelAsync(GamblerDbModel gambler, NextVipLevelModel nextVipLevel,
+    public static async Task<decimal> UpgradeVipLevelAsync(int gamblerId, NextVipLevelModel nextVipLevel,
         CancellationToken ct = default)
     {
         await using var db = new ApplicationDbContext();
-        db.Attach(gambler);
+        var gambler = await db.Gamblers.FirstOrDefaultAsync(x => x.Id == gamblerId, ct);
+        if (gambler == null)
+        {
+            throw new Exception($"Tried to upgrade VIP level for gambler with ID {gamblerId} who does not exist");
+        }
         var payout = nextVipLevel.VipLevel.BonusPayout;
         if (nextVipLevel.Tier > 1)
         {
@@ -470,7 +489,7 @@ public static class Money
         }, ct);
         gambler.NextVipLevelWagerRequirement = nextVipLevel.WagerRequirement;
         await db.SaveChangesAsync(ct);
-        await ModifyBalanceAsync(gambler, payout, TransactionSourceEventType.Bonus,
+        await ModifyBalanceAsync(gamblerId, payout, TransactionSourceEventType.Bonus,
             $"VIP Level '{nextVipLevel.VipLevel.Icon} {nextVipLevel.VipLevel.Name}' Tier {nextVipLevel.Tier} level up bonus", ct: ct);
         return payout;
     }
