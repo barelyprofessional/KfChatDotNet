@@ -7,6 +7,7 @@ using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
+using Microsoft.EntityFrameworkCore;
 using NLog;
 
 namespace KfChatDotNetBot.Services;
@@ -61,7 +62,7 @@ internal class BotCommands
                 if (!match.Success) continue;
                 _logger.Debug($"Message matches {regex}");
                 using var db = new ApplicationDbContext();
-                var user = db.Users.FirstOrDefault(u => u.KfId == message.Author.Id);
+                var user = db.Users.AsNoTracking().FirstOrDefault(u => u.KfId == message.Author.Id);
                 // This should never happen as brand-new users are created upon join
                 if (user == null) return;
                 if (user.Ignored) return;
