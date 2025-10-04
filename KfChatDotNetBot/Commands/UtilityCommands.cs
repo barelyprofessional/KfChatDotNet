@@ -71,7 +71,8 @@ public class GetVersionCommand : ICommand
 public class GetLastActivity : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex("^lastactivity", RegexOptions.IgnoreCase)
+        new Regex("^lastactivity", RegexOptions.IgnoreCase),
+        new Regex("^lastactive", RegexOptions.IgnoreCase)
     ];
 
     public string? HelpText => "When was Bossman last active?";
