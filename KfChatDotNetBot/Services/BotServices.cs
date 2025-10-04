@@ -541,11 +541,11 @@ public class BotServices
         });
         _logger.Info("Added a Bossman Rainbet bet to the database");
         db.SaveChanges();
-        
+        var wagered = float.Parse(bet.Value);
         _logger.Info("ALERT BMJ IS BETTING (on Rainbet)");
+        UpdateBossmanLastSighting($"betting {wagered:C} {bet.CurrencyName} on {bet.Game.Name} at Rainbet").Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
 
-        var wagered = float.Parse(bet.Value);
         var payout = float.Parse(bet.Payout);
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (payout < wagered) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -565,6 +565,8 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Jackpot)");
+        UpdateBossmanLastSighting($"betting {bet.Wager} {bet.Currency} on {bet.GameName} at Jackpot")
+            .Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
 
 
@@ -587,6 +589,9 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Clash.gg)");
+        UpdateBossmanLastSighting(
+                $"betting {bet.Bet / 100.0:N2} {bet.Currency.Humanize()} on {bet.Game.Humanize()} at Clash.gg")
+            .Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
         var username = settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value;
         
@@ -623,6 +628,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on BetBolt)");
+        UpdateBossmanLastSighting($"betting {bet.BetAmountFiat:C} on {bet.GameName} at BetBolt").Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -642,6 +648,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
+        UpdateBossmanLastSighting($"betting {bet.BetAmount:C} on {bet.GameName} at Yeet").Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
         //if (bet.WinAmountFiat < 0) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
         var msg = _chatBot.SendChatMessage($"🚨🚨 JEET BETTING 🚨🚨 {bet.Username} just bet {bet.BetAmount:C} worth of {bet.CurrencyCode} on {bet.GameName} 💩💩", true);
@@ -660,6 +667,7 @@ public class BotServices
             return;
         }
         _logger.Info("ALERT BMJ IS BETTING (on Yeet)");
+        UpdateBossmanLastSighting($"betting {bet.BetAmount:C} on {bet.GameName} at Yeet").Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         if (bet.Multiplier < 1) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
@@ -763,6 +771,7 @@ public class BotServices
         var discordIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
         _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] Discord {channel.Type.Humanize()} channel '{channelName}' was deleted 🚨🚨", true);
+        UpdateBossmanLastSighting($"deleting {channelName} on Discord").Wait(_cancellationToken);
     }
 
     private void DiscordOnChannelCreated(object sender, DiscordChannelCreationModel channel)
@@ -773,6 +782,7 @@ public class BotServices
         var discordIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.DiscordIcon).Result;
         var channelName = channel.Name ?? "Unknown name";
         _chatBot.SendChatMessage($"[img]{discordIcon.Value}[/img] New Discord {channel.Type.Humanize()} channel created: {channelName} 🚨🚨", true);
+        UpdateBossmanLastSighting($"creating {channelName} on Discord").Wait(_cancellationToken);
     }
     
     private void TwitchChatOnMessageReceived(object sender, string nick, string target, string message)
@@ -784,8 +794,10 @@ public class BotServices
         // Not caching this value as it won't harm it to have to look this up in even the worst spergout sesh
         var twitchIcon = SettingsProvider.GetValueAsync(BuiltIn.Keys.TwitchIcon).Result.Value;
         _chatBot.SendChatMessage($"[img]{twitchIcon}[/img] {nick}: {message.TrimEnd('\r')}", true);
+        UpdateBossmanLastSighting("talking in Twitch chat").Wait(_cancellationToken);
     }
 
+    // TODO: Figure out why this never works
     private void DiscordOnPresenceUpdated(object sender, DiscordPresenceUpdateModel presence)
     {
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
@@ -801,6 +813,7 @@ public class BotServices
         // _lastDiscordStatus = presence.Status;
         var clientStatus = presence.ClientStatus.Keys.Aggregate(string.Empty, (current, device) => current + $"{device} is {presence.ClientStatus[device]}; ");
         _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {presence.User.GlobalName ?? presence.User.Username} has updated his Discord presence: {clientStatus}");
+        UpdateBossmanLastSighting($"going {presence.Status} on Discord").Wait(_cancellationToken);
     }
 
     private void DiscordOnMessageReceived(object sender, DiscordMessageModel message)
@@ -832,12 +845,14 @@ public class BotServices
                 _chatBot.SendChatMessage($"Verified [b]True and Honest[/b] by @KenoGPT at {bmt:dddd h:mm:ss tt} BMT",
                     true);
             _ = DiscordFlashText(flashMsg);
+            UpdateBossmanLastSighting("going live on Discord").Wait(_cancellationToken);
             return;
         }
         if (message.Type == DiscordMessageType.StageEnd)
         {
             _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username} just ended a stage called {message.Content} :lossmanjack:",
                 true);
+            UpdateBossmanLastSighting("ending a stage on Discord").Wait(_cancellationToken);
             return;
         }
         
@@ -848,6 +863,7 @@ public class BotServices
         }
         
         _chatBot.SendChatMessage(result, TemporarilyBypassGambaSeshForDiscord);
+        UpdateBossmanLastSighting("talking in Discord").Wait(_cancellationToken);
     }
 
     private async Task DiscordFlashText(SentMessageTrackerModel msg)
@@ -903,10 +919,12 @@ public class BotServices
         if (bet.Username == settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
         {
             isDotUs = false;
+            UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.com").Wait(_cancellationToken);
         }
         else if (bet.Username == settings[BuiltIn.Keys.ShuffleDotUsBmjUsername].Value)
         {
             isDotUs = true;
+            UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.us").Wait(_cancellationToken);
         }
         else
         {
@@ -947,9 +965,12 @@ public class BotServices
                         CaptureYtDlpWorkingDirectory = settings[BuiltIn.Keys.CaptureStreamlinkBmjWorkingDirectory].Value
                     }, _cancellationToken).CaptureAsync();
             }
+
+            UpdateBossmanLastSighting("going live on Twitch").Wait(_cancellationToken);
             return;
         }
         _chatBot.SendChatMessage($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} is no longer live! :lossmanjack:", true);
+        UpdateBossmanLastSighting("ending stream on Twitch").Wait(_cancellationToken);
     }
     
     private void OnChipsggRecentBet(object sender, ChipsggBetModel bet)
@@ -973,6 +994,8 @@ public class BotServices
             Currency = bet.Currency!, CurrencyPrice = bet.CurrencyPrice, BetId = bet.BetId ?? "0"
         });
         db.SaveChanges();
+        UpdateBossmanLastSighting($"betting {bet.Amount:N} {bet.Currency!.ToUpper()} on {bet.GameTitle} at Chips.gg")
+            .Wait(_cancellationToken);
         if (CheckBmjIsLive().Result) return;
 
         var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
@@ -1029,6 +1052,7 @@ public class BotServices
         
         _logger.Debug("Message from BossmanJack");
         _chatBot.SendChatMessage($"[img]{kickIcon.Value}[/img] BossmanJack: {e.Content.TranslateKickEmotes()}");
+        UpdateBossmanLastSighting("talking in Kick chat").Wait(_cancellationToken);
     }
     
     private void OnStreamerIsLive(object sender, KickModels.StreamerIsLiveEventModel? e)
@@ -1197,5 +1221,16 @@ public class BotServices
             return true;
         }
         return false;
+    }
+
+    public async Task UpdateBossmanLastSighting(string activity)
+    {
+        _logger.Info($"Updating Bossman last sighting with: {activity}");
+        var sighting = new LastSightingModel
+        {
+            When = DateTimeOffset.UtcNow,
+            Activity = activity
+        };
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.BossmanLastSighting, sighting);
     }
 }

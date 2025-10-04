@@ -1076,6 +1076,13 @@ public static class BuiltIn
             Default = "true",
             ValueType = SettingValueType.Boolean,
             Regex = BooleanRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BossmanLastSighting,
+            Description = "Object containing details of Bossman's last sighting",
+            Default = "{\n    \"When\": \"2025-10-03T01:20:00-04:00\",\n    \"Activity\": \"going to jail\"\n}",
+            ValueType = SettingValueType.Complex
         }
     ];
     
@@ -1200,5 +1207,6 @@ public static class BuiltIn
         public static string BotRateLimitExpiredEntryCleanupInterval = "Bot.RateLimit.ExpiredEntryCleanupInterval";
         public static string CaptureStreamlinkBmjWorkingDirectory = "Bot.Streamlink.BmjWorkingDirectory";
         public static string DiscordOnlySendSummariesIncludingBmj = "Discord.OnlySendSummariesIncludingBmj";
+        public static string BossmanLastSighting = "Bot.BossmanLastSighting";
     }
 }

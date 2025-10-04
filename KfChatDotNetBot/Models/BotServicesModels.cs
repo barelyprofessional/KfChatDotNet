@@ -25,3 +25,16 @@ public class PartiChannelModel
     public bool AutoCapture { get; set; } = false;
     public required string SocialMedia { get; set; }
 }
+
+public class LastSightingModel
+{
+    /// <summary>
+    /// When Bossman was last seen
+    /// </summary>
+    public required DateTimeOffset When { get; set; }
+    /// <summary>
+    /// Where he was last seen. Message is formatted like "Bossman last seen 30 minutes ago {activity}
+    /// Suggestions: "going offline on Discord", "talking in Discord", "betting on Shuffle.us"
+    /// </summary>
+    public required string Activity { get; set; }
+}
