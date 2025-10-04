@@ -229,6 +229,7 @@ public static class Money
         if (gambler != null)
         {
             _logger.Info($"Gambler entity details: {gambler.Id}, Created: {gambler.Created:o}");
+            return gambler;
         }
         if (!createIfNoneExists) return gambler;
         var permaBanned = await IsPermanentlyBannedAsync(userId, ct);
