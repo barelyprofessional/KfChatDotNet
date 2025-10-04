@@ -94,7 +94,7 @@ public class GetLastActivity : ICommand
         var activity = lastActive.JsonDeserialize<LastSightingModel>();
         var elapsed = DateTimeOffset.UtcNow - activity!.When;
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, BossmanJack was last seen {elapsed.Humanize(maxUnit: TimeUnit.Day, minUnit: TimeUnit.Second, precision: 2)} {activity.Activity}",
+            $"{user.FormatUsername()}, BossmanJack was last seen {elapsed.Humanize(maxUnit: TimeUnit.Day, minUnit: TimeUnit.Second, precision: 2)} ago {activity.Activity}",
             true);
     }
 }
