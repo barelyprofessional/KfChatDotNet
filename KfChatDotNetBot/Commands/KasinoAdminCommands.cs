@@ -12,7 +12,7 @@ namespace KfChatDotNetBot.Commands;
 public class TempExcludeCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex("^admin kasino exclude", RegexOptions.IgnoreCase),
+        new Regex("^admin kasino exclude$", RegexOptions.IgnoreCase),
         new Regex(@"^admin kasino exclude (?<user_id>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^admin kasino exclude (?<user_id>\d+) (?<seconds>\d+)$", RegexOptions.IgnoreCase),
     ];
