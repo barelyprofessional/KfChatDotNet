@@ -51,8 +51,9 @@ public class TempExcludeCommand : ICommand
                 $"{user.FormatUsername()}, {targetUser.KfUsername} can't be excluded as he's banned.", true);
             return;
         }
+        targetGambler = await db.Gamblers.FirstOrDefaultAsync(x => x.Id == targetGambler.Id, cancellationToken: ctx);
 
-        var activeExclusion = await Money.GetActiveExclusionAsync(targetGambler.Id, ctx);
+        var activeExclusion = await Money.GetActiveExclusionAsync(targetGambler!.Id, ctx);
         if (activeExclusion != null)
         {
             var length = DateTimeOffset.UtcNow - activeExclusion.Expires;
