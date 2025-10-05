@@ -29,7 +29,7 @@ public class GuessWhatNumberCommand : ICommand
             return;
         }
 
-        var wager = Convert.ToDecimal(amount);
+        var wager = Convert.ToDecimal(amount.Value);
         var guess = Convert.ToInt32(arguments["number"].Value);
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
