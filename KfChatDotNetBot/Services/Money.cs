@@ -228,7 +228,7 @@ public static class Money
             await db.Gamblers.AsNoTracking().OrderBy(x => x.Id).Include(x => x.User).LastOrDefaultAsync(g => g.User.Id == user.Id && g.State != GamblerState.PermanentlyBanned,
                 cancellationToken: ct);
         _logger.Info($"Retrieved entity for {user.KfUsername}. Is Gambler Entity Null? => {gambler == null}");
-        if (gambler != null)
+        if (gambler != null && gambler.State != GamblerState.Abandoned)
         {
             _logger.Info($"Gambler entity details: {gambler.Id}, Created: {gambler.Created:o}");
             return gambler;
