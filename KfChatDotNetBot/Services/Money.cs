@@ -5,6 +5,9 @@ using KfChatDotNetBot.Settings;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using NLog;
+using RandN;
+using RandN.Compat;
+using RandN.Rngs;
 
 namespace KfChatDotNetBot.Services;
 
@@ -423,7 +426,8 @@ public static class Money
     public static int GetRandomNumber(GamblerDbModel gambler, int min, int max, int iterations = 10,
         bool incrementMaxParam = true)
     {
-        var random = new Random(gambler.RandomSeed.GetHashCode());
+        var rng = StandardRng.Create();
+        var random = RandomShim.Create(rng);
         var result = 0;
         var i = 0;
         if (incrementMaxParam) max++;
