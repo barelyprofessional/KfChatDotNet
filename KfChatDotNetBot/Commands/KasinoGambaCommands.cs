@@ -17,7 +17,7 @@ public class GuessWhatNumberCommand : ICommand
         new Regex("^guess$")
     ];
     public string? HelpText => "What number am I thinking of?";
-    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
