@@ -287,7 +287,9 @@ public enum WagerGame
     /// <summary>
     /// This is for betting pools based on some sort of event or outcome
     /// </summary>
-    Event
+    Event,
+    [Description("Guess what number I'm thinking of")]
+    GuessWhatNumber
 }
 
 public enum GamblerState
