@@ -225,7 +225,7 @@ public static class Money
             throw new Exception($"User ID {userId} not found");
         }
         var gambler =
-            await db.Gamblers.OrderBy(x => x.Id).Include(x => x.User).LastOrDefaultAsync(g => g.User.Id == user.Id && g.State != GamblerState.PermanentlyBanned,
+            await db.Gamblers.AsNoTracking().OrderBy(x => x.Id).Include(x => x.User).LastOrDefaultAsync(g => g.User.Id == user.Id && g.State != GamblerState.PermanentlyBanned,
                 cancellationToken: ct);
         _logger.Info($"Retrieved entity for {user.KfUsername}. Is Gambler Entity Null? => {gambler == null}");
         if (gambler != null)
@@ -249,7 +249,7 @@ public static class Money
             NextVipLevelWagerRequirement = Money.VipLevels[0].BaseWagerRequirement
         }, ct);
         await db.SaveChangesAsync(ct);
-        var newEntity = await db.Gamblers.OrderBy(x => x.Id).Include(x => x.User)
+        var newEntity = await db.Gamblers.AsNoTracking().OrderBy(x => x.Id).Include(x => x.User)
             .LastOrDefaultAsync(g => g.User == user, cancellationToken: ct);
         if (newEntity == null)
         {
