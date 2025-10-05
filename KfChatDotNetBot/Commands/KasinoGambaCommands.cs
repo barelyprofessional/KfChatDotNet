@@ -43,19 +43,22 @@ public class GuessWhatNumberCommand : ICommand
         }
 
         var answer = Money.GetRandomNumber(gambler, 1, 10);
+        decimal newBalance;
         if (guess == answer)
         {
             var effect = wager * 9;
             await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.GuessWhatNumber, ct: ctx);
+            newBalance = gambler.Balance + effect;
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, correct! You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await (gambler.Balance + effect).FormatKasinoCurrencyAsync()}",
+                $"{user.FormatUsername()}, correct! You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
                 true);
             return;
         }
 
         await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.GuessWhatNumber, ct: ctx);
+        newBalance = gambler.Balance - wager;
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, wrong! I was thinking of {answer}. Your balance is now {await (gambler.Balance - wager).FormatKasinoCurrencyAsync()}",
+            $"{user.FormatUsername()}, wrong! I was thinking of {answer}. Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
             true);
     }
 }
