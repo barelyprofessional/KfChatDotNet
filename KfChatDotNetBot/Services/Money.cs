@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using NLog;
 using RandN;
 using RandN.Compat;
-using RandN.Rngs;
 
 namespace KfChatDotNetBot.Services;
 
