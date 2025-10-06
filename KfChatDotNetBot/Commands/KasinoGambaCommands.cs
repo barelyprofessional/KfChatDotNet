@@ -63,6 +63,8 @@ public class GuessWhatNumberCommand : ICommand
     }
 }
 
+[KasinoCommand]
+[WagerCommand]
 public class KenoCommand : ICommand
 {
     public List<Regex> Patterns => [
