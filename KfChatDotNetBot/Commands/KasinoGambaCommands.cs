@@ -156,9 +156,7 @@ public class KenoCommand : ICommand
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
     {
         var displayMessage = "";
-        
         //keno board is 8 x 5, numbers left to right, top to bottom
-        
         //FIRST FRAME 11111111111111111111111111111
         var totalCounter = 1;
         for (var column = 0; column < 5; column++)
@@ -175,8 +173,6 @@ public class KenoCommand : ICommand
         var msg = await botInstance.SendChatMessageAsync(displayMessage, true);
         await Task.Delay(1500);
         //FIRST FRAME 11111111111111111111111111111
-
-        var matchCount = 0;
         for (var frame = 0; frame < 10; frame++) //1 frame per casino number
         {
             displayMessage = "";
@@ -185,20 +181,27 @@ public class KenoCommand : ICommand
             {
                 for (var row = 0; row < 8; row++)
                 {
-                    if (matches[matchCount] == totalCounter && matchCount < matches.Count)
+                    if (casinoNumbers[frame] == totalCounter)
                     {
-                        displayMessage += MatchRevealDisplay;
-                        matchCount++;
+                        displayMessage += CasinoNumberDisplay;
+                        if (matches.Contains(totalCounter))
+                        {
+                            displayMessage += MatchRevealDisplay;
+            
+                        }
+                        else{
+                            displayMessage += CasinoNumberDisplay;
+                        }
+                    
                     }
                     else if (playerNumbers.Contains(totalCounter)) displayMessage += PlayerNumberDisplay;
-                    else if (casinoNumbers[frame] == (totalCounter)) displayMessage += CasinoNumberDisplay;
+                
                     else displayMessage += BlankSpaceDisplay;
                 }
                 displayMessage += "[br]";
             }
             await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, displayMessage);
             await Task.Delay(1000);
-            
         }
     }
     private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler)
