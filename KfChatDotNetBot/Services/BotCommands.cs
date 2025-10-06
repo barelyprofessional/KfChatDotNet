@@ -166,34 +166,16 @@ internal class BotCommands
         }
         _logger.Info($"Oldest entry: {oldestEntryExpires:o}");
         var timeRemaining = oldestEntryExpires - DateTimeOffset.UtcNow;
-        var message = await _bot.SendChatMessageAsync($"{user.FormatUsername()}, please wait {timeRemaining.Humanize(maxUnit: TimeUnit.Minute, minUnit: TimeUnit.Millisecond, precision: 2)} before attempting to run {commandName} again.", true);
-        if (options.Flags.HasFlag(RateLimitFlags.NoAutoDeleteCooldownResponse))
+        TimeSpan? autoDeleteAfter = null;
+        if (!options.Flags.HasFlag(RateLimitFlags.NoAutoDeleteCooldownResponse))
         {
-            _logger.Info("Not going to cleanup cooldown response");
-            return;
-        }
-        var i = 0;
-        while (message.ChatMessageId == null)
-        {
-            i++;
-            await Task.Delay(250, _cancellationToken);
-            if (i > 30)
-            {
-                _logger.Error("Gave up waiting for Sneedchat to give us the message ID for removing a cooldown notification");
-                return;
-            }
-
-            if (message.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost)
-            {
-                _logger.Error("Cooldown message was suppressed or lost");
-                return;
-            }
+            autoDeleteAfter = TimeSpan.FromMilliseconds(
+                (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRateLimitCooldownAutoDeleteDelay)).ToType<int>());
         }
 
-        var autoDeleteInterval =
-            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRateLimitCooldownAutoDeleteDelay)).ToType<int>();
-        await Task.Delay(autoDeleteInterval, _cancellationToken);
-        await _bot.KfClient.DeleteMessageAsync(message.ChatMessageId.Value);
+        await _bot.SendChatMessageAsync(
+            $"{user.FormatUsername()}, please wait {timeRemaining.Humanize(maxUnit: TimeUnit.Minute, minUnit: TimeUnit.Millisecond, precision: 2)} before attempting to run {commandName} again.",
+            true, autoDeleteAfter: autoDeleteAfter);
     }
 
     private async Task CleanupExpiredRateLimitEntriesTask()

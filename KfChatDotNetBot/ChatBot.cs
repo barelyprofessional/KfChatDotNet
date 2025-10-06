@@ -332,7 +332,16 @@ public class ChatBot
 
     // Reference for Sneedchat hardcoded length limit
     // https://github.com/jaw-sh/ruforo/blob/master/src/web/chat/connection.rs#L226
-    public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023)
+    /// <summary>
+    /// Async method for sending a chat message
+    /// </summary>
+    /// <param name="message">The message you wish to send</param>
+    /// <param name="bypassSeshDetect">Whether to bypass detecting if GambaSesh is present and send unconditionally</param>
+    /// <param name="lengthLimitBehavior">What behavior to use when encountering a message that exceeds the length limit</param>
+    /// <param name="lengthLimit">Length limit to enforce in bytes</param>
+    /// <param name="autoDeleteAfter">Length of time until the message is auto deleted, null to disable. Starts counting from when the message is echoed by Sneedchat</param>
+    /// <returns>An object you can use to check the status of the message and get its ID for editing/deleting later</returns>
+    public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023, TimeSpan? autoDeleteAfter = null)
     {
         var settings = await SettingsProvider
             .GetMultipleValuesAsync([
@@ -396,24 +405,53 @@ public class ChatBot
         _logger.Debug($"Message is {messageTracker.Message.Utf8LengthBytes()} bytes");
         SentMessages.Add(messageTracker);
         await KfClient.SendMessageInstantAsync(messageTracker.Message);
+        if (autoDeleteAfter != null)
+        {
+            _ = SendChatMessageAsyncAutoDeleteTask(messageTracker, autoDeleteAfter.Value);
+        }
         return messageTracker;
     }
 
-    public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false,
-        LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023)
+    private async Task SendChatMessageAsyncAutoDeleteTask(SentMessageTrackerModel message, TimeSpan deleteAfter)
     {
-        return SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior, lengthLimit).Result;
+        var i = 0;
+        while (message.ChatMessageId == null)
+        {
+            i++;
+            await Task.Delay(100, _cancellationToken);
+            if (message.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
+            if (i <= 120) continue;
+            _logger.Error($"Gave up waiting for message with content '{message.Message}'");
+            return;
+        }
+
+        await Task.Delay(deleteAfter, _cancellationToken);
+        await KfClient.DeleteMessageAsync(message.ChatMessageId.Value);
     }
 
-    // If you feed this long ass messages they will be eaten, don't be retarded.
+    /// <summary>
+    /// Non-async method which wraps the async method for sending a chat message
+    /// </summary>
+    /// <param name="message">The message you wish to send</param>
+    /// <param name="bypassSeshDetect">Whether to bypass detecting if GambaSesh is present and send unconditionally</param>
+    /// <param name="lengthLimitBehavior">What behavior to use when encountering a message that exceeds the length limit</param>
+    /// <param name="lengthLimit">Length limit to enforce in bytes</param>
+    /// <param name="autoDeleteAfter">Length of time until the message is auto deleted, null to disable. Starts counting from when the message is echoed by Sneedchat</param>
+    /// <returns>An object you can use to check the status of the message and get its ID for editing/deleting later</returns>
+    public SentMessageTrackerModel SendChatMessage(string message, bool bypassSeshDetect = false,
+        LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023, TimeSpan? autoDeleteAfter = null)
+    {
+        return SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior, lengthLimit, autoDeleteAfter).Result;
+    }
+
     public async Task<List<SentMessageTrackerModel>> SendChatMessagesAsync(List<string> messages,
-        bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.RefuseToSend)
+        bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.RefuseToSend, TimeSpan? autoDeleteAfter = null)
     {
         List<SentMessageTrackerModel> sentMessages = [];
 
         foreach (var message in messages)
         {
-            sentMessages.Add(await SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior));
+            sentMessages.Add(await SendChatMessageAsync(message, bypassSeshDetect, lengthLimitBehavior, autoDeleteAfter: autoDeleteAfter));
             // Delay sending each message, hopefully this will help the issue where messages come out of order
             await Task.Delay(TimeSpan.FromMilliseconds(100), _cancellationToken);
         }

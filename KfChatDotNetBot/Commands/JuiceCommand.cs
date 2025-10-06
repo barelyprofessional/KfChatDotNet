@@ -48,21 +48,16 @@ public class JuiceCommand : ICommand
         
         if (lastJuicer.Count == 0 || (lastJuicer[0].JuicedAt.AddSeconds(cooldown) - DateTimeOffset.UtcNow).TotalSeconds <= 0)
         {
-            var sentMsg = await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true);
+            TimeSpan? autoDeleteAfter = null;
+            if (juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].Value != null)
+            {
+                autoDeleteAfter =
+                    TimeSpan.FromSeconds(juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].ToType<int>());
+            }
+            await botInstance.SendChatMessageAsync($"!juice {message.Author.Id} {amount}", true, autoDeleteAfter: autoDeleteAfter);
             await db.Juicers.AddAsync(new JuicerDbModel
                 { Amount = amount, User = user, JuicedAt = DateTimeOffset.UtcNow }, ctx);
             await db.SaveChangesAsync(ctx);
-            if (juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].Value == null) return;
-            var delay = juicerSettings[BuiltIn.Keys.JuiceAutoDeleteMsgDelay].ToType<int>();
-            if (delay <= 0) return;
-            while (sentMsg.ChatMessageId == null)
-            {
-                if (sentMsg.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending) return;
-                await Task.Delay(500, ctx);
-            }
-
-            await Task.Delay(delay, ctx);
-            await botInstance.KfClient.DeleteMessageAsync(sentMsg.ChatMessageId.Value);
             return;
         }
 

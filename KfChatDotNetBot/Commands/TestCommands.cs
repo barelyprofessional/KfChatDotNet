@@ -44,13 +44,13 @@ public class EditTestCommand : ICommand
         {
             i++;
             await Task.Delay(delay, ctx);
-            botInstance.KfClient.EditMessage(reference.ChatMessageId!.Value, $"{msg} {i}");
+            await botInstance.KfClient.EditMessageAsync(reference.ChatMessageId!.Value, $"{msg} {i}");
         }
 
         await Task.Delay(delay, ctx);
-        botInstance.KfClient.EditMessage(reference.ChatMessageId!.Value, "This message will self destruct in 1 second");
+        await botInstance.KfClient.EditMessageAsync(reference.ChatMessageId!.Value, "This message will self destruct in 1 second");
         await Task.Delay(delay, ctx);
-        botInstance.KfClient.DeleteMessage(reference.ChatMessageId!.Value);
+        await botInstance.KfClient.DeleteMessageAsync(reference.ChatMessageId!.Value);
     }
 }
 

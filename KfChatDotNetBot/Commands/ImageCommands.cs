@@ -177,43 +177,18 @@ public class GetRandomImage : ICommand
         image.LastSeen = DateTimeOffset.UtcNow;
         db.Images.Update(image);
         await db.SaveChangesAsync(ctx);
-        var msg = await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true);
-        int timeToDeletionMsec;
-        
+        TimeSpan? timeToDeletion = null;
         if (key == "pigcube" && settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean())
         {
-            timeToDeletionMsec = image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
+            timeToDeletion = TimeSpan.FromMilliseconds(image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
                 ? settings[BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay].ToType<int>()
                 : new Random().Next(settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMin].ToType<int>(),
-                    settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMax].ToType<int>());
+                    settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMax].ToType<int>()));
         }
         else if (key == "chink" && settings[BuiltIn.Keys.BotImageChinkSelfDestruct].ToBoolean())
         {
-            timeToDeletionMsec = settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>();
+            timeToDeletion = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>());
         }
-        else
-        {
-            return;
-        }
-        while (msg.Status is SentMessageTrackerStatus.WaitingForResponse or SentMessageTrackerStatus.ChatDisconnected)
-        {
-            await Task.Delay(500, ctx);
-        }
-
-        if (msg.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending)
-        {
-            logger.Error("Image got lost");
-            return;
-        }
-
-        if (msg.ChatMessageId == null)
-        {
-            logger.Error($"Image chat message ID was null even though status was {msg.Status}");
-            return;
-        }
-
-        logger.Info($"Deleting image in {timeToDeletionMsec}ms");
-        await Task.Delay(timeToDeletionMsec, ctx);
-        await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
+        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true, autoDeleteAfter: timeToDeletion);
     }
 }
