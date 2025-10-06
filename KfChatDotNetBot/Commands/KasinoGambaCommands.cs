@@ -62,3 +62,159 @@ public class GuessWhatNumberCommand : ICommand
             true);
     }
 }
+
+public class KenoCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^keno (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex("^keno$")
+    ];
+    public string? HelpText => "!keno [bet amount] [numbers to pick(optional, default 10)]";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 3,
+        Window = TimeSpan.FromSeconds(10)
+    };
+
+    private const string PlayerNumberDisplay = "⬜";
+    private const string CasinoNumberDisplay = "🔶";
+    private const string MatchRevealDisplay = "💠";
+    private const string BlankSpaceDisplay = "⬛";
+
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        if (!arguments.TryGetValue("amount", out var amount)) //if user just enters !keno
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !keno <wager> <number between 1 and 10>, or !keno <wager> and 10 will be selected automatically", true);
+            return;
+        }
+        var wager = Convert.ToDecimal(amount.Value);
+        var numbers = 0;
+        numbers = !arguments.TryGetValue("numbers", out var userNumbers) ? 10 : Convert.ToInt32(userNumbers.Value); //if user just enters !keno <wager>
+        
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        if (gambler == null)
+            throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        if (gambler.Balance < wager)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
+                true);
+            return;
+        }
+        
+        if (numbers is < 1 or > 10) //if user picks invalid numbers
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can only pick numbers from 1 - 10", true);
+            return;
+        }
+        
+        var payoutMultipliers = new[,]//stole the payout multis from stake keno and re added the RTP, except for the 1000x
+        {
+            {0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},               // 1 selection
+            {0.0, 0.0, 17.27, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},             // 2 selections
+            {0.0, 0.0, 0.0, 82.32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},             // 3 selections
+            {0.0, 0.0, 0.0, 10.1, 261.61, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},           // 4 selections
+            {0.0, 0.0, 0.0, 4.5, 48.48, 454.54, 0.0, 0.0, 0.0, 0.0, 0.0},          // 5 selections
+            {0.0, 0.0, 0.0, 0.0, 11.11, 353.53, 717.17, 0.0, 0.0, 0.0, 0.0},       // 6 selections
+            {0.0, 0.0, 0.0, 0.0, 7.07, 90.90, 404.04, 808.08, 0.0, 0.0, 0.0},      // 7 selections
+            {0.0, 0.0, 0.0, 0.0, 5.05, 20.20, 272.72, 606.06, 909.09, 0.0, 0.0},   // 8 selections
+            {0.0, 0.0, 0.0, 0.0, 4.04, 11.11, 56.56, 505.05, 808.08, 1000.0, 0.0}, // 9 selections
+            {0.0, 0.0, 0.0, 0.0, 3.53, 8.08, 13.13, 63.63, 505.05, 808.08, 1000.0} // 10 selections
+        };
+        var playerNumbers = GenerateKenoNumbers(numbers, gambler);
+        var casinoNumbers = GenerateKenoNumbers(10, gambler);
+        var matches = playerNumbers.Intersect(casinoNumbers).ToList();
+        var payoutMulti = payoutMultipliers[numbers - 1, matches.Count];
+        
+        await AnimatedDisplayTable(playerNumbers, casinoNumbers, matches, botInstance);
+        
+        if (payoutMulti == 0) //you lose
+        {
+            await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Keno, ct: ctx);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [COLOR=RED]lost {wager}[/COLOR]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.", true);
+            return;
+        }
+
+        //you win
+        var win = wager * (decimal)payoutMulti;
+        // Required to avoid compiler errors when trying to format it in the win message
+        var newBalance = gambler.Balance + win;
+        await Money.NewWagerAsync(gambler.Id, wager, wager * (decimal)payoutMulti, WagerGame.Keno, ct: ctx);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [COLOR=GREEN]won {wager * (decimal)payoutMulti} with a {payoutMulti}x multi![/COLOR]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
+    }
+
+    private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
+    {
+        var displayMessage = "";
+        
+        //keno board is 8 x 5, numbers left to right, top to bottom
+        
+        //FIRST FRAME 11111111111111111111111111111
+        var totalCounter = 1;
+        for (var column = 0; column < 5; column++)
+        {
+            for (var row = 0; row < 8; row++)
+            {
+                if (playerNumbers.Contains(totalCounter)) displayMessage += PlayerNumberDisplay;
+                else displayMessage += BlankSpaceDisplay;
+                totalCounter++;
+            }
+            displayMessage += "[br]";
+        }
+
+        var msg = await botInstance.SendChatMessageAsync(displayMessage, true);
+        await Task.Delay(1500);
+        //FIRST FRAME 11111111111111111111111111111
+
+        var matchCount = 0;
+        for (var frame = 0; frame < 10; frame++) //1 frame per casino number
+        {
+            displayMessage = "";
+            totalCounter = 1;
+            for (var column = 0; column < 5; column++)
+            {
+                for (var row = 0; row < 8; row++)
+                {
+                    if (matches[matchCount] == totalCounter && matchCount < matches.Count)
+                    {
+                        displayMessage += MatchRevealDisplay;
+                        matchCount++;
+                    }
+                    else if (playerNumbers.Contains(totalCounter)) displayMessage += PlayerNumberDisplay;
+                    else if (casinoNumbers[frame] == (totalCounter)) displayMessage += CasinoNumberDisplay;
+                    else displayMessage += BlankSpaceDisplay;
+                }
+                displayMessage += "[br]";
+            }
+            await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, displayMessage);
+            await Task.Delay(1000);
+            
+        }
+    }
+    private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler)
+    {
+        var numbers = new List<int>();
+        for (var i = 0; i < size; i++)
+        {
+            var repeatNum = true;
+            while (repeatNum)
+            {
+                var randomNum = Money.GetRandomNumber(gambler, 1, 10);
+                if (numbers.Contains(randomNum)) continue;
+                numbers.Add(randomNum);
+                repeatNum = false;
+            }
+        }
+
+        return numbers;
+    }
+    
+}
