@@ -436,7 +436,6 @@ public static class Money
             i++;
             result = random.Next(min, max);
         }
-        _logger.Info($"Generated random number {result} with min {min} and max {max} over {iterations} iterations");
         return result;
     }
     

@@ -209,7 +209,7 @@ public class KenoCommand : ICommand
             var repeatNum = true;
             while (repeatNum)
             {
-                var randomNum = Money.GetRandomNumber(gambler, 1, 10);
+                var randomNum = Money.GetRandomNumber(gambler, 1, 40);
                 if (numbers.Contains(randomNum)) continue;
                 numbers.Add(randomNum);
                 repeatNum = false;
