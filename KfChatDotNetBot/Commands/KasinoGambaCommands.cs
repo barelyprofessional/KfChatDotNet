@@ -5,6 +5,7 @@ using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
+using NLog;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -144,7 +145,7 @@ public class KenoCommand : ICommand
         if (payoutMulti == 0) //you lose
         {
             await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Keno, ct: ctx);
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {wager}[/color]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.", true);
             return;
         }
 
@@ -153,11 +154,12 @@ public class KenoCommand : ICommand
         // Required to avoid compiler errors when trying to format it in the win message
         var newBalance = gambler.Balance + win;
         await Money.NewWagerAsync(gambler.Id, wager, wager * (decimal)payoutMulti, WagerGame.Keno, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {wager * (decimal)payoutMulti} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
     }
-
-    private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
+    
+private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         var displayMessage = "";
         //keno board is 8 x 5, numbers left to right, top to bottom
         //FIRST FRAME 11111111111111111111111111111
@@ -191,30 +193,37 @@ public class KenoCommand : ICommand
             {
                 for (var row = 0; row < 8; row++)
                 {
-                    if (casinoNumbers[frame] == totalCounter)
+                    if (casinoNumbers.Take(frame+1).Contains(totalCounter))
                     {
-                        displayMessage += CasinoNumberDisplay;
+                       
                         if (matches.Contains(totalCounter))
                         {
                             displayMessage += MatchRevealDisplay;
-            
                         }
                         else
                         {
                             displayMessage += CasinoNumberDisplay;
                         }
-                    
                     }
                     else if (playerNumbers.Contains(totalCounter)) displayMessage += PlayerNumberDisplay;
-                
                     else displayMessage += BlankSpaceDisplay;
+
+                    totalCounter++;
                 }
                 displayMessage += "[br]";
             }
             await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, displayMessage);
             await Task.Delay(500);
+            if (displayMessage.Length > 79 || !displayMessage.Contains(BlankSpaceDisplay) ||
+                !(displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay)) && frame != 9) //every board should have blank spaces and casino numbers or matches. player numbers might be hidden by matches
+            {
+                logger.Info($"Casino numbers: {string.Join(",", casinoNumbers)} | Player Numbers: {string.Join(",", playerNumbers)} | Matches: {string.Join(",", matches)} | Frame: {frame - 1} | Display Board:");
+                logger.Info(displayMessage);
+                await botInstance.SendChatMessageAsync($"Keno is bugged dewd, died on frame {frame} :bossman:", true);
+            }
         }
     }
+
     private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler)
     {
         var numbers = new List<int>();
