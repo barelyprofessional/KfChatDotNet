@@ -1083,6 +1083,14 @@ public static class BuiltIn
             Description = "Object containing details of Bossman's last sighting",
             Default = "{\n    \"When\": \"2025-10-03T01:20:00-04:00\",\n    \"Activity\": \"going to jail\"\n}",
             ValueType = SettingValueType.Complex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KasinoKenoFrameDelay,
+            Description = "Delay in milliseconds between each frame on the keno board",
+            Default = "250",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
         }
     ];
     
@@ -1208,5 +1216,6 @@ public static class BuiltIn
         public static string CaptureStreamlinkBmjWorkingDirectory = "Bot.Streamlink.BmjWorkingDirectory";
         public static string DiscordOnlySendSummariesIncludingBmj = "Discord.OnlySendSummariesIncludingBmj";
         public static string BossmanLastSighting = "Bot.BossmanLastSighting";
+        public static string KasinoKenoFrameDelay = "Kasino.Keno.FrameDelay";
     }
 }

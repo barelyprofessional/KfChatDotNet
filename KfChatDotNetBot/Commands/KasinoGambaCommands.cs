@@ -157,7 +157,7 @@ public class KenoCommand : ICommand
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
     }
     
-private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
+    private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
     {
         var logger = LogManager.GetCurrentClassLogger();
         var displayMessage = "";
@@ -184,6 +184,8 @@ private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casin
             if (i > 60) return;
             await Task.Delay(100);
         }
+
+        var frameDelay = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoFrameDelay)).ToType<int>();
         //FIRST FRAME 11111111111111111111111111111
         for (var frame = 0; frame < 10; frame++) //1 frame per casino number
         {
@@ -213,14 +215,13 @@ private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casin
                 displayMessage += "[br]";
             }
             await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, displayMessage);
-            await Task.Delay(500);
-            if (displayMessage.Length > 79 || !displayMessage.Contains(BlankSpaceDisplay) ||
-                !(displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay)) && frame != 9) //every board should have blank spaces and casino numbers or matches. player numbers might be hidden by matches
-            {
-                logger.Info($"Casino numbers: {string.Join(",", casinoNumbers)} | Player Numbers: {string.Join(",", playerNumbers)} | Matches: {string.Join(",", matches)} | Frame: {frame - 1} | Display Board:");
-                logger.Info(displayMessage);
-                await botInstance.SendChatMessageAsync($"Keno is bugged dewd, died on frame {frame} :bossman:", true);
-            }
+            await Task.Delay(frameDelay);
+            if (displayMessage.Length <= 79 && displayMessage.Contains(BlankSpaceDisplay) &&
+                (displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay) ||
+                 frame == 9)) continue; //every board should have blank spaces and casino numbers or matches. player numbers might be hidden by matches
+            logger.Info($"Casino numbers: {string.Join(",", casinoNumbers)} | Player Numbers: {string.Join(",", playerNumbers)} | Matches: {string.Join(",", matches)} | Frame: {frame - 1} | Display Board:");
+            logger.Info(displayMessage);
+            await botInstance.SendChatMessageAsync($"Keno is bugged dewd, died on frame {frame} :bossman:", true);
         }
     }
 
