@@ -3,6 +3,7 @@ using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
+using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 
 namespace KfChatDotNetBot.Commands;
@@ -98,9 +99,7 @@ public class KenoCommand : ICommand
             return;
         }
         var wager = Convert.ToDecimal(amount.Value);
-        var numbers = 0;
-        numbers = !arguments.TryGetValue("numbers", out var userNumbers) ? 10 : Convert.ToInt32(userNumbers.Value); //if user just enters !keno <wager>
-        
+        var numbers = !arguments.TryGetValue("numbers", out var userNumbers) ? 10 : Convert.ToInt32(userNumbers.Value); //if user just enters !keno <wager>
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
@@ -137,11 +136,15 @@ public class KenoCommand : ICommand
         var payoutMulti = payoutMultipliers[numbers - 1, matches.Count];
         
         await AnimatedDisplayTable(playerNumbers, casinoNumbers, matches, botInstance);
+        var colors =
+            await SettingsProvider.GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]);
         
         if (payoutMulti == 0) //you lose
         {
             await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Keno, ct: ctx);
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [COLOR=RED]lost {wager}[/COLOR]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {wager}[/color]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.", true);
             return;
         }
 
@@ -150,7 +153,7 @@ public class KenoCommand : ICommand
         // Required to avoid compiler errors when trying to format it in the win message
         var newBalance = gambler.Balance + win;
         await Money.NewWagerAsync(gambler.Id, wager, wager * (decimal)payoutMulti, WagerGame.Keno, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [COLOR=GREEN]won {wager * (decimal)payoutMulti} with a {payoutMulti}x multi![/COLOR]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {wager * (decimal)payoutMulti} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
     }
 
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
@@ -171,7 +174,14 @@ public class KenoCommand : ICommand
         }
 
         var msg = await botInstance.SendChatMessageAsync(displayMessage, true);
-        await Task.Delay(1500);
+        var i = 0;
+        while (msg.ChatMessageId == null)
+        {
+            i++;
+            if (msg.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
+            if (i > 60) return;
+            await Task.Delay(100);
+        }
         //FIRST FRAME 11111111111111111111111111111
         for (var frame = 0; frame < 10; frame++) //1 frame per casino number
         {
@@ -189,7 +199,8 @@ public class KenoCommand : ICommand
                             displayMessage += MatchRevealDisplay;
             
                         }
-                        else{
+                        else
+                        {
                             displayMessage += CasinoNumberDisplay;
                         }
                     
@@ -201,7 +212,7 @@ public class KenoCommand : ICommand
                 displayMessage += "[br]";
             }
             await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, displayMessage);
-            await Task.Delay(1000);
+            await Task.Delay(500);
         }
     }
     private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler)
