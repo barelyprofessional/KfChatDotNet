@@ -6,6 +6,8 @@ using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using NLog;
+using RandN;
+using RandN.Compat;
 
 namespace KfChatDotNetBot.Commands;
 
@@ -242,5 +244,281 @@ public class KenoCommand : ICommand
 
         return numbers;
     }
-    
+}
+
+[KasinoCommand]
+[WagerCommand]
+public class Planes : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^planes (?<amount>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^planes (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex("^planes$")
+    ];
+    public string? HelpText => "!planes <bet amount>";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public RateLimitOptionsModel? RateLimitOptions => new()
+    {
+        MaxInvocations = 3,
+        Window = TimeSpan.FromSeconds(30)
+    };
+
+    private const string PlaneUp = "🛫";
+    private const string PlaneDown = "🛬";
+    private const string Bomb = "💣";
+    private const string Multi = "💎";
+    private const string Carrier = "⛴";
+    private const string Water = "🌊";
+    private const string Air = "🌫";
+    private const string BlankSpace = "⠀"; //need 35?
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        if (!arguments.TryGetValue("amount", out var amount))
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !planes <wager>", true);
+            return;
+        }
+        var wager = Convert.ToDecimal(amount.Value);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        if (gambler == null)
+            throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        if (gambler.Balance < wager)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
+                true);
+            return;
+        }
+
+        var carrierCount = 6;
+        var planesBoard = CreatePlanesBoard(gambler);
+        var planesBoard2 = CreatePlanesBoard(gambler);
+        var plane = new Plane(gambler);
+        
+        var counter = 0;
+        var frameLength = 1056.0;
+        var noseUp = true;
+        var planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+        var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
+        //place where planes used to stop working
+        /*
+         * new goal of basic planes game
+         * static board, plane moves through the board, 25 spaces long
+         * if it gets to the end, reset the board, remember plane height, and continue playing no smooth transition
+         */
+        do
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
+            var neutral = false;
+            var frameCounter = 0;
+            while (counter % 28 < 3)
+            {
+                planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+                await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
+                await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
+                counter++;
+            }
+            while (!neutral)
+            {
+                frameCounter++;
+                switch (planesBoard[plane.Height, counter%28 - 3])
+                {
+                    case 0: //do nothing plane hit neutral space
+                        plane.Gravity();
+                        neutral = true;
+                        break;
+                    case 1: //hit rocket
+                        plane.HitRocket();
+                        noseUp = false;
+                        planesBoard[plane.Height, counter%28 - 3] = 0; //plane consumes rocket
+                        break;
+                    case 2: //hit multi
+                        plane.HitMulti();
+                        noseUp = true;
+                        planesBoard[plane.Height, counter%28 - 3] = 0; //plane consumes multi
+                        break;
+                    default:
+                        await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true);
+                        return;
+                }
+
+                if (neutral) //this will be the last frame so use all the remaining frame time left
+                {
+                    if (frameCounter == 1) await Task.Delay(TimeSpan.FromMilliseconds(frameLength * 2 / 3), ctx); //first frame used 1/3 of frame time so 2/3 is remaining
+                    else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
+                }
+                else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
+                planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+                planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
+                for (var i = 0; i < 33; i++)
+                {
+                    planesDisplay += BlankSpace;
+                }
+
+                var winnings = plane.MultiTracker * wager;
+                planesDisplay += $"Winnings: {await winnings.FormatKasinoCurrencyAsync()}";
+                await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
+                if (plane.Height >= 6)
+                {
+                    break;
+                }
+                //maybe fuckery around here       
+            }
+            counter++;
+            if (counter % 28 != 0) continue;
+            planesBoard = planesBoard2;
+            planesBoard2 = CreatePlanesBoard(gambler);
+        } while (plane.Height < 6);
+        //now plane is too low so you have either won or lost depending on your position
+        var colors =
+            await SettingsProvider.GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]);
+        var newBalance = gambler.Balance - wager;
+        if (counter % 28 % carrierCount == 0) //if you landed on the carrier
+        {
+            var win = plane.MultiTracker * wager;
+            newBalance = gambler.Balance + win;
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
+            return;
+        }
+        plane.Crash();
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
+    }
+
+    private string GetGameBoard(int counter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
+    {
+        var output = "";
+        for (var row = 0; row < 8; row++)
+        {
+            for (var column = -3; column < 25; column++) //plane starts out 3 space behind to give some space to the view,
+            {
+                if (row == plane.Height && column == counter && noseUp)
+                {
+                    output += PlaneUp;
+                }
+                else if (row == plane.Height && column == counter && !noseUp)
+                {
+                    output += PlaneDown;
+                }
+                else if (column < 0) //beginning columns have no multis or bombs or carriers just air and water
+                {
+                    if (row != 7) output += Air;
+                    else output += Water;
+                }
+                else if (row == 6)//row between the gameboard and where the carrier is displayed, should show the plane in this row on top of the boat on a win
+                {
+                    output += Air;
+                }
+                else if (row == 7) //water/carrier row
+                {
+                    if (column % carrierCount == 0) output += Carrier;
+                    else output += Water;
+                }
+                else //this leaves rows 0-5 and columns 0-24, exactly what we need for the board
+                {
+                    switch (planesBoard[row, column])
+                    {
+                        case 0:
+                            output += Air;
+                            break;
+                        case 1:
+                            output += Bomb;
+                            break;
+                        case 2:
+                            output += Multi;
+                            break;
+                    }
+                }
+            }
+
+            output += "[br]";
+        }
+        return output;
+    }
+
+    private int[,] CreatePlanesBoard(GamblerDbModel gambler)
+    {
+        var board = new int [6, 25];
+        for (var row = 0; row < 6; row++)
+        {
+            for (var column = 0; column < 25; column++)
+            {
+                var randomNum = Money.GetRandomNumber(gambler, 1, 100);
+                if (randomNum < 35)
+                {
+                    board[row, column] = 0; //neutral
+                }
+                else if (randomNum > 69)
+                {
+                    board[row, column] = 1; //rocket
+                }
+                else
+                {
+                    board[row, column] = 2; //multi
+                }
+            }
+        }
+        
+        return board;
+    }
+}
+public class Plane(GamblerDbModel gambler)
+{
+    public int Height = 1;
+    public decimal MultiTracker = 1;
+    private int _justHitMulti = 1;
+    private readonly RandomShim<StandardRng> _random = RandomShim.Create(StandardRng.Create());
+
+    public void HitRocket()
+    {
+        Gravity();
+        MultiTracker /= 2;
+    }
+
+    public void Gravity()
+    {
+        if (_justHitMulti > 0)
+        {
+            _justHitMulti--;
+            return;
+        }
+        Height++;
+    }
+
+    public void Crash()
+    {
+        MultiTracker = 0;
+    }
+
+    public void HitMulti()
+    {
+        var randomNum = Money.GetRandomNumber(gambler, 0, 1);
+        var weightedRand = WeightedRandomNumber(1, 10);
+        if (randomNum == 0)
+        {
+            MultiTracker += weightedRand;
+        }
+        else
+        {
+            MultiTracker *= weightedRand;
+        }
+
+        Height--;
+        _justHitMulti++;
+    }
+
+    private int WeightedRandomNumber(int min, int max)
+    {
+        var range = max - min + 1;
+        var weight = 4.5 + Height;
+        var r = _random.NextDouble();
+        var exp = -Math.Log(1 - r) / weight;
+        var returnVal = min + (int)Math.Round(exp * range);
+        return Math.Clamp(returnVal, min, max);
+    }
 }
