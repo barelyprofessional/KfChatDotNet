@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
 using KfChatDotNetWsClient.Models;
 using KfChatDotNetWsClient.Models.Events;
@@ -240,6 +241,8 @@ public class ChatClient
         var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
+        var msg = $"/edit {payload}";
+        _logger.Info($"Edit message will be {Encoding.UTF8.GetByteCount(msg)} bytes long");
         await _wsClient.SendInstant($"/edit {payload}");
     }
 
