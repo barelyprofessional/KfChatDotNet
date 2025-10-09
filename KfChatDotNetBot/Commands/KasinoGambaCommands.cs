@@ -398,7 +398,7 @@ public class Planes : ICommand
             }
             counter++;
             plane.Gravity();
-            if (counter % 23 != 0) continue;
+            if (counter % 13 != 0) continue;
             planesBoard = planesBoard2;
             planesBoard2 = CreatePlanesBoard(gambler);
         } while (plane.Height < 6);
