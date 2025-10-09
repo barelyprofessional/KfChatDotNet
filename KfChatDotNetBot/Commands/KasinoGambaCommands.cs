@@ -304,6 +304,14 @@ public class Planes : ICommand
         var noseUp = true;
         var planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
         var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
+        var num = 0;
+        while (msgId.ChatMessageId == null)
+        {
+            num++;
+            if (msgId.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
+            if (num > 60) return;
+            await Task.Delay(100, ctx);
+        }
         //place where planes used to stop working
         /*
          * new goal of basic planes game
@@ -408,7 +416,7 @@ public class Planes : ICommand
         }
         plane.Crash();
         await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
     }
 
     private string GetGameBoard(int counter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
