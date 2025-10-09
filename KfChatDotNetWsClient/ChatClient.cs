@@ -250,7 +250,11 @@ public class ChatClient
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         var msg = $"/edit {payload}";
-        _logger.Info($"Edit message will be {Encoding.UTF8.GetByteCount(msg)} bytes long");
+        var length = Encoding.UTF8.GetByteCount(msg);
+        if (length > 1023)
+        {
+            _logger.Error($"Edit message is too long at {length} bytes");
+        }
         await _wsClient.SendInstant($"/edit {payload}");
     }
 
