@@ -272,7 +272,7 @@ public class Planes : ICommand
     private const string Multi = "💎";
     private const string Carrier = "⛴";
     private const string Water = "🌊";
-    private const string Air = "🌫";
+    private const string Air = "\u25A1"; // White square
     private const string BlankSpace = "⠀"; //need 35?
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
