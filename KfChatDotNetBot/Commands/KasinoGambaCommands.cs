@@ -342,6 +342,7 @@ public class Planes : ICommand
                 while (!neutral)
                 {
                     frameCounter++;
+                    logger.Info($"FrameCounter: {frameCounter} Counter: {counter}");
                     try
                     {
                         switch (planesBoard[plane.Height, counter % 13 - 3])
