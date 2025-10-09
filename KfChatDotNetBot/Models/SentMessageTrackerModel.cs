@@ -10,6 +10,11 @@ public class SentMessageTrackerModel
     // Timespan from when the message was sent until we saw it come back
     public TimeSpan? Delay { get; set; }
     public DateTimeOffset? SentAt { get; set; }
+    /// <summary>
+    /// If the message was edited, this is the last edit time that Sneedchat sent us
+    /// When edited multiple times, it'll be the most recent edit
+    /// </summary>
+    public DateTimeOffset? LastEdited { get; set; } = null;
 }
 
 public enum SentMessageTrackerStatus

@@ -238,6 +238,15 @@ public class ChatBot
             {
                 _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
             }
+            // Update last edit timestamp
+            if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate != null)
+            {
+                var sentMessage = SentMessages.FirstOrDefault(x => x.ChatMessageId == message.MessageId);
+                if (sentMessage != null)
+                {
+                    sentMessage.LastEdited = message.MessageEditDate.Value;
+                }
+            }
             if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate == null)
             {
                 // MessageRaw is not actually REAL and RAW. The messages are still HTML encoded
