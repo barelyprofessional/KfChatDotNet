@@ -396,8 +396,8 @@ public class Planes : ICommand
                     }
                     //maybe fuckery around here       
                 }
+                counter++;
             }
-            counter++;
             plane.Gravity();
             if (counter % 13 != 0) continue;
             planesBoard = planesBoard2;
