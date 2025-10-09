@@ -264,9 +264,11 @@ public class Planes : ICommand
         Window = TimeSpan.FromSeconds(30)
     };
 
+    private const string Boost = "💨";
     private const string PlaneUp = "🛫";
     private const string PlaneDown = "🛬";
-    private const string Bomb = "💣";
+    private const string PlaneExplosion = "🔥";
+    private const string Bomb = "🚀";
     private const string Multi = "💎";
     private const string Carrier = "⛴";
     private const string Water = "🌊";
@@ -298,11 +300,10 @@ public class Planes : ICommand
         var planesBoard = CreatePlanesBoard(gambler);
         var planesBoard2 = CreatePlanesBoard(gambler);
         var plane = new Plane(gambler);
-       
-        var counter = 0;
         var frameLength = 1056.0;
+        var counter = 0;
         var noseUp = true;
-        var planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+        var planesDisplay = GetGameBoard(-3, planesBoard, plane, carrierCount, noseUp);
         var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
         var num = 0;
         while (msgId.ChatMessageId == null)
@@ -327,9 +328,10 @@ public class Planes : ICommand
             {
                 while (counter % 23 < 3)
                 {
-                    planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+                    planesDisplay = GetGameBoard(counter%23 - 3, planesBoard, plane, carrierCount, noseUp);
                     await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
                     await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
+                    logger.Info($"Generated preGameFrame {counter} and waited {frameLength}ms.");
                     counter++;
                 }
 
@@ -390,7 +392,7 @@ public class Planes : ICommand
                     {
                         break;
                     }
-                    //maybe fuckery around here      
+                    //maybe fuckery around here       
                 }
                 plane.Gravity();
             }
@@ -407,7 +409,7 @@ public class Planes : ICommand
         var newBalance = gambler.Balance - wager;
         if (((counter % 23) - 3) % carrierCount == 0) //if you landed on the carrier
         {
-            var win = plane.MultiTracker * wager;
+            var win = plane.MultiTracker * wager - wager;
             newBalance = gambler.Balance + win;
             await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Planes, ct: ctx);
             await botInstance.SendChatMessageAsync(
@@ -416,9 +418,13 @@ public class Planes : ICommand
         }
         plane.Crash();
         await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
+        planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+        await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
+        await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
     }
 
+    
     private string GetGameBoard(int counter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
     {
         var output = "";
@@ -426,13 +432,23 @@ public class Planes : ICommand
         {
             for (var column = -3; column < 20; column++) //plane starts out 3 space behind to give some space to the view,
             {
-                if (row == plane.Height && column == counter && noseUp)
+                if (column == counter - 1 && plane.JustHitMulti > 0)
                 {
-                    output += PlaneUp;
+                    output += Boost;
                 }
-                else if (row == plane.Height && column == counter && !noseUp)
+                else if (row == plane.Height && column == counter)
                 {
-                    output += PlaneDown;
+                    if (plane.Crashed) output += PlaneExplosion;
+                    else
+                        switch (noseUp)
+                        {
+                            case true:
+                                output += PlaneUp;
+                                break;
+                            case false:
+                                output += PlaneDown;
+                                break;
+                        }
                 }
                 else if (column < 0) //beginning columns have no multis or bombs or carriers just air and water
                 {
@@ -492,7 +508,7 @@ public class Planes : ICommand
                 }
             }
         }
-       
+        
         return board;
     }
 }
@@ -500,8 +516,9 @@ public class Plane(GamblerDbModel gambler)
 {
     public int Height = 1;
     public decimal MultiTracker = 1;
-    private int _justHitMulti = 1;
+    public int JustHitMulti = 1;
     private readonly RandomShim<StandardRng> _random = RandomShim.Create(StandardRng.Create());
+    public bool Crashed = false;
 
     public void HitRocket()
     {
@@ -511,9 +528,9 @@ public class Plane(GamblerDbModel gambler)
 
     public void Gravity()
     {
-        if (_justHitMulti > 0)
+        if (JustHitMulti > 0)
         {
-            _justHitMulti--;
+            JustHitMulti--;
             return;
         }
         Height++;
@@ -522,6 +539,7 @@ public class Plane(GamblerDbModel gambler)
     public void Crash()
     {
         MultiTracker = 0;
+        Crashed = true;
     }
 
     public void HitMulti()
@@ -537,8 +555,8 @@ public class Plane(GamblerDbModel gambler)
             MultiTracker *= weightedRand;
         }
 
-        Height--;
-        _justHitMulti++;
+        if (Height > 0) Height--;
+        JustHitMulti++;
     }
 
     private int WeightedRandomNumber(int min, int max)
