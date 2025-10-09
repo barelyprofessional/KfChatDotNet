@@ -240,10 +240,7 @@ public class ChatClient
 
     public async Task EditMessageAsync(int messageId, string newMessage)
     {
-        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage}, new JsonSerializerOptions()
-        {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
+        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         var msg = $"/edit {payload}";
