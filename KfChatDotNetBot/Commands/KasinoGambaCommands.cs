@@ -422,7 +422,7 @@ public class Planes : ICommand
         }
         plane.Crash();
         await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
-        planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+        planesDisplay = GetGameBoard(counter % 13 - 3, planesBoard, plane, carrierCount, noseUp);
         await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
         await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
