@@ -413,6 +413,8 @@ public class Planes : ICommand
         {
             var win = plane.MultiTracker * wager - wager;
             newBalance = gambler.Balance + win;
+            planesDisplay = GetGameBoard(counter% 13 - 3, planesBoard, plane, carrierCount, noseUp);
+            await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
             await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Planes, ct: ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
@@ -530,12 +532,9 @@ public class Plane(GamblerDbModel gambler)
 
     public void Gravity()
     {
-        if (JustHitMulti > 0)
-        {
-            JustHitMulti--;
-            return;
-        }
-        Height++;
+        if (JustHitMulti > 0) JustHitMulti--;
+        else if (Height >= 6) Height = 6;
+        else Height++;
     }
 
     public void Crash()
