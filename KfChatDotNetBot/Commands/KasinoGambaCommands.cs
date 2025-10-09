@@ -221,8 +221,8 @@ public class KenoCommand : ICommand
             if (displayMessage.Length <= 79 && displayMessage.Contains(BlankSpaceDisplay) &&
                 (displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay) ||
                  frame == 9)) continue; //every board should have blank spaces and casino numbers or matches. player numbers might be hidden by matches
-            logger.Info($"Casino numbers: {string.Join(",", casinoNumbers)} | Player Numbers: {string.Join(",", playerNumbers)} | Matches: {string.Join(",", matches)} | Frame: {frame - 1} | Display Board:");
-            logger.Info(displayMessage);
+            logger.Error($"Casino numbers: {string.Join(",", casinoNumbers)} | Player Numbers: {string.Join(",", playerNumbers)} | Matches: {string.Join(",", matches)} | Frame: {frame - 1} | Display Board:");
+            logger.Error(displayMessage);
             await botInstance.SendChatMessageAsync($"Keno is bugged dewd, died on frame {frame} :bossman:", true);
         }
     }
@@ -276,6 +276,7 @@ public class Planes : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !planes <wager>", true);
@@ -297,7 +298,7 @@ public class Planes : ICommand
         var planesBoard = CreatePlanesBoard(gambler);
         var planesBoard2 = CreatePlanesBoard(gambler);
         var plane = new Plane(gambler);
-        
+       
         var counter = 0;
         var frameLength = 1056.0;
         var noseUp = true;
@@ -314,61 +315,79 @@ public class Planes : ICommand
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
-            while (counter % 28 < 3)
+            if (counter % 23 < 3)
             {
-                planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
-                await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
-                await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
-                counter++;
+                while (counter % 23 < 3)
+                {
+                    planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+                    await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
+                    await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
+                    counter++;
+                }
+
+                logger.Info("Pregame frames successfully generated.");
             }
-            while (!neutral)
+            else
             {
-                frameCounter++;
-                switch (planesBoard[plane.Height, counter%28 - 3])
+                while (!neutral)
                 {
-                    case 0: //do nothing plane hit neutral space
-                        plane.Gravity();
-                        neutral = true;
-                        break;
-                    case 1: //hit rocket
-                        plane.HitRocket();
-                        noseUp = false;
-                        planesBoard[plane.Height, counter%28 - 3] = 0; //plane consumes rocket
-                        break;
-                    case 2: //hit multi
-                        plane.HitMulti();
-                        noseUp = true;
-                        planesBoard[plane.Height, counter%28 - 3] = 0; //plane consumes multi
-                        break;
-                    default:
-                        await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true);
+                    frameCounter++;
+                    try
+                    {
+                        switch (planesBoard[plane.Height, counter % 23 - 3])
+                        {
+                            case 0: //do nothing plane hit neutral space
+                                neutral = true;
+                                break;
+                            case 1: //hit rocket
+                                plane.HitRocket();
+                                noseUp = false;
+                                planesBoard[plane.Height, counter % 23 - 3] = 0; //plane consumes rocket
+                                break;
+                            case 2: //hit multi
+                                plane.HitMulti();
+                                noseUp = true;
+                                planesBoard[plane.Height, counter % 23 - 3] = 0; //plane consumes multi
+                                break;
+                            default:
+                                await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true);
+                                return;
+                        }
+                    }
+                    catch (IndexOutOfRangeException e)
+                    {
+                        await botInstance.SendChatMessageAsync($"Something went wrong, error code 2. Counter: {counter} Counter%: {counter % 23 - 3} Height: {plane.Height}", true);
+                        logger.Error(
+                            $"Something went wrong, error code 2. Counter: {counter} Counter%: {counter % 23 - 3} Height: {plane.Height}");
                         return;
-                }
+                    }
 
-                if (neutral) //this will be the last frame so use all the remaining frame time left
-                {
-                    if (frameCounter == 1) await Task.Delay(TimeSpan.FromMilliseconds(frameLength * 2 / 3), ctx); //first frame used 1/3 of frame time so 2/3 is remaining
-                    else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
-                }
-                else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
-                planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
-                planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
-                for (var i = 0; i < 33; i++)
-                {
-                    planesDisplay += BlankSpace;
-                }
+                    if (neutral) //this will be the last frame so use all the remaining frame time left
+                    {
+                        if (frameCounter == 1) await Task.Delay(TimeSpan.FromMilliseconds(frameLength * 2 / 3), ctx); //first frame used 1/3 of frame time so 2/3 is remaining
+                        else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
+                    }
+                    else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
+                    planesDisplay = GetGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+                    planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
+                    for (var i = 0; i < 33; i++)
+                    {
+                        planesDisplay += BlankSpace;
+                    }
 
-                var winnings = plane.MultiTracker * wager;
-                planesDisplay += $"Winnings: {await winnings.FormatKasinoCurrencyAsync()}";
-                await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
-                if (plane.Height >= 6)
-                {
-                    break;
+                    var winnings = plane.MultiTracker * wager;
+                    planesDisplay += $"Winnings: {await winnings.FormatKasinoCurrencyAsync()}";
+                    await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
+                    if (plane.Height >= 6)
+                    {
+                        break;
+                    }
+                    //maybe fuckery around here      
                 }
-                //maybe fuckery around here       
+                plane.Gravity();
             }
             counter++;
-            if (counter % 28 != 0) continue;
+            if (counter % 23 != 0) continue;
             planesBoard = planesBoard2;
             planesBoard2 = CreatePlanesBoard(gambler);
         } while (plane.Height < 6);
@@ -378,7 +397,7 @@ public class Planes : ICommand
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
         var newBalance = gambler.Balance - wager;
-        if (counter % 28 % carrierCount == 0) //if you landed on the carrier
+        if (((counter % 23) - 3) % carrierCount == 0) //if you landed on the carrier
         {
             var win = plane.MultiTracker * wager;
             newBalance = gambler.Balance + win;
@@ -397,7 +416,7 @@ public class Planes : ICommand
         var output = "";
         for (var row = 0; row < 8; row++)
         {
-            for (var column = -3; column < 25; column++) //plane starts out 3 space behind to give some space to the view,
+            for (var column = -3; column < 20; column++) //plane starts out 3 space behind to give some space to the view,
             {
                 if (row == plane.Height && column == counter && noseUp)
                 {
@@ -445,10 +464,10 @@ public class Planes : ICommand
 
     private int[,] CreatePlanesBoard(GamblerDbModel gambler)
     {
-        var board = new int [6, 25];
+        var board = new int [6, 20];
         for (var row = 0; row < 6; row++)
         {
-            for (var column = 0; column < 25; column++)
+            for (var column = 0; column < 20; column++)
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 100);
                 if (randomNum < 35)
@@ -465,7 +484,7 @@ public class Planes : ICommand
                 }
             }
         }
-        
+       
         return board;
     }
 }
