@@ -411,7 +411,7 @@ public class Planes : ICommand
         var newBalance = gambler.Balance - wager;
         if (((counter % 13) - 3) % carrierCount == 0) //if you landed on the carrier
         {
-            var win = plane.MultiTracker * wager - wager;
+            var win = plane.MultiTracker * wager;
             newBalance = gambler.Balance + win;
             planesDisplay = GetGameBoard(counter% 13 - 3, planesBoard, plane, carrierCount, noseUp);
             await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
