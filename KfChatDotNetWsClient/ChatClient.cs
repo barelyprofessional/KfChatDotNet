@@ -242,7 +242,7 @@ public class ChatClient
     {
         var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage}, new JsonSerializerOptions()
         {
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
         _logger.Debug($"Editing {messageId} with '{newMessage}'");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
