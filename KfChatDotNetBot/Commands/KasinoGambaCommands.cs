@@ -561,7 +561,7 @@ public class Planes : ICommand
                 }
                 else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
                 {
-                    switch (planesBoards[useBoard][row, column])
+                    switch (planesBoards[useBoard][row, column + counter])
                     {
                         case 0:
                             output += Air;
