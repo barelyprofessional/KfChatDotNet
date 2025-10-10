@@ -529,7 +529,7 @@ public class Planes : ICommand
             for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
             {
                 int useBoard;
-                if (counter + column % 26 < 13) useBoard = 0; //0 - 12
+                if (counter + column % 20 < 10) useBoard = 0;
                 else useBoard = 1; //13-25
                 
                 if (row == plane.Height && column == 2 && plane.JustHitMulti > 1)
