@@ -320,6 +320,7 @@ public class Planes : ICommand
         var plane = new Plane(gambler);
         var frameLength = 1000.0;
         var fullCounter = 0;
+        bool firstBoard = true;
         var counter = 0;
         var noseUp = true;
         var planesDisplay = GetPreGameBoard(-3, planesBoard, plane, carrierCount, noseUp);
@@ -340,7 +341,9 @@ public class Planes : ICommand
          */
         do
         {
-            counter = fullCounter % 23 - 3;
+            if (fullCounter > 20) firstBoard = false;
+            counter = fullCounter % 23-3;
+            if (!firstBoard) counter += 3;
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
@@ -389,9 +392,6 @@ public class Planes : ICommand
                     }
                     catch (IndexOutOfRangeException e)
                     {
-                        await botInstance.SendChatMessageAsync(
-                            $"Something went wrong, error code 2. Counter: {fullCounter} Counter%: {counter} Height: {plane.Height}[br]{e}",
-                            true, autoDeleteAfter: cleanupDelay);
                         logger.Error(
                             $"Something went wrong, error code 2. Counter: {fullCounter} Counter%: {counter} Height: {plane.Height}");
                         logger.Error(e);
