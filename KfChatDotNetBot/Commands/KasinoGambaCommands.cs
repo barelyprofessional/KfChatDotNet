@@ -563,7 +563,7 @@ public class Planes : ICommand
                 else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
                 {
                     logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
-                    switch (planesBoards[useBoard][row, column+counter])
+                    switch (planesBoards[useBoard][row, (column+counter) % 10])
                     {
                         case 0:
                             output += Air;
