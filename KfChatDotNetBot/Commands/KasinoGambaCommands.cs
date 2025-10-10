@@ -515,6 +515,7 @@ public class Planes : ICommand
     
     private string GetGameBoard(int fullCounter, int[,] planesBoard, int[,] planesBoard2, Plane plane, int carrierCount, bool noseUp)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         var counter = fullCounter % 13 - 3;
         var output = "";
         List<int[,]> planesBoards = new List<int[,]>() { planesBoard, planesBoard2 };
@@ -561,6 +562,7 @@ public class Planes : ICommand
                 }
                 else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
                 {
+                    logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
                     switch (planesBoards[useBoard][row, column + counter])
                     {
                         case 0:
