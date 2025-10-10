@@ -317,7 +317,7 @@ public class Planes : ICommand
         var planesBoard = CreatePlanesBoard(gambler);
         var planesBoard2 = CreatePlanesBoard(gambler);
         var plane = new Plane(gambler);
-        var frameLength = 3888.0;
+        var frameLength = 1056.0;
         var fullCounter = 0;
         var counter = 0;
         var noseUp = true;
@@ -519,7 +519,7 @@ public class Planes : ICommand
         var counter = fullCounter % 13 - 3;
         var output = "";
         List<int[,]> planesBoards = new List<int[,]>() { planesBoard, planesBoard2 };
-        if (counter < 3)
+        if (counter < 0)
         {
             output = GetPreGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
             return output;
