@@ -344,9 +344,9 @@ public class Planes : ICommand
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
-            if (counter < 0)
+            if (fullCounter < 0)
             {
-                while (counter < 0)
+                while (fullCounter < 3)
                 {
                     counter = fullCounter % 23 - 3;
                     planesDisplay = GetPreGameBoard(fullCounter, planesBoard, plane, carrierCount, noseUp);
@@ -362,20 +362,25 @@ public class Planes : ICommand
                     frameCounter++;
                     try
                     {
+                        if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
                         switch (planesBoard[plane.Height, counter])
                         {
+                            
                             case 0: //do nothing plane hit neutral space
                                 neutral = true;
+                                if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: neutral");
                                 break;
                             case 1: //hit rocket
                                 planesBoard[plane.Height, counter] = 0; //plane consumes rocket
                                 plane.HitRocket();
                                 noseUp = false;
+                                if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: bomb");
                                 break;
                             case 2: //hit multi
                                 planesBoard[plane.Height, counter] = 0; //plane consumes multi
                                 plane.HitMulti();
                                 noseUp = true;
+                                if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: multi");
                                 break;
                             default:
                                 await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true, autoDeleteAfter: cleanupDelay);
@@ -665,7 +670,8 @@ public class Plane(GamblerDbModel gambler)
         }
 
         if (Height > 0) Height--;
-        JustHitMulti++;
+        if (JustHitMulti == 0) JustHitMulti++;
+        if (JustHitMulti < 6) JustHitMulti++;
     }
 
     private int WeightedRandomNumber(int min, int max)
