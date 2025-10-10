@@ -347,7 +347,7 @@ public class Planes : ICommand
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
-            if (fullCounter < 0)
+            if (fullCounter < 3)
             {
                 while (fullCounter < 3)
                 {
