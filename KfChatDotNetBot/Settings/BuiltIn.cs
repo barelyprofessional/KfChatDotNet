@@ -1091,6 +1091,30 @@ public static class BuiltIn
             Default = "250",
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KasinoGuessWhatNumberCleanupDelay,
+            Description = "Delay in milliseconds before cleaning up the guess what result",
+            Default = "15000",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KasinoKenoCleanupDelay,
+            Description = "Delay in milliseconds before cleaning up the Keno board",
+            Default = "30000",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.KasinoPlanesCleanupDelay,
+            Description = "Delay in milliseconds before cleaning up the planes board and result",
+            Default = "60000",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
         }
     ];
     
@@ -1217,5 +1241,8 @@ public static class BuiltIn
         public static string DiscordOnlySendSummariesIncludingBmj = "Discord.OnlySendSummariesIncludingBmj";
         public static string BossmanLastSighting = "Bot.BossmanLastSighting";
         public static string KasinoKenoFrameDelay = "Kasino.Keno.FrameDelay";
+        public static string KasinoGuessWhatNumberCleanupDelay = "Kasino.GuessWhatNumber.CleanupDelay";
+        public static string KasinoKenoCleanupDelay = "Kasino.Keno.CleanupDelay";
+        public static string KasinoPlanesCleanupDelay = "Kasino.Planes.CleanupDelay";
     }
 }

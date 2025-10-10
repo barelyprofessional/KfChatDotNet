@@ -27,14 +27,20 @@ public class GuessWhatNumberCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay)).ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !guess <wager> <number between 1 and 10>", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !guess <wager> <number between 1 and 10>", true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
         var wager = Convert.ToDecimal(amount.Value);
         var guess = Convert.ToInt32(arguments["number"].Value);
+        if (guess is < 1 or > 10)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your guess must be between 1 and 10", true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
@@ -42,7 +48,7 @@ public class GuessWhatNumberCommand : ICommand
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
-                true);
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
@@ -55,7 +61,7 @@ public class GuessWhatNumberCommand : ICommand
             newBalance = gambler.Balance + effect;
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, correct! You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
-                true);
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
@@ -63,7 +69,7 @@ public class GuessWhatNumberCommand : ICommand
         newBalance = gambler.Balance - wager;
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, wrong! I was thinking of {answer}. Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
-            true);
+            true, autoDeleteAfter: cleanupDelay);
     }
 }
 
@@ -96,9 +102,12 @@ public class KenoCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoCleanupDelay)).ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount)) //if user just enters !keno
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !keno <wager> <number between 1 and 10>, or !keno <wager> and 10 will be selected automatically", true);
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, not enough arguments. !keno <wager> <number between 1 and 10>, or !keno <wager> and 10 will be selected automatically",
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
         var wager = Convert.ToDecimal(amount.Value);
@@ -110,13 +119,14 @@ public class KenoCommand : ICommand
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
-                true);
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
         
         if (numbers is < 1 or > 10) //if user picks invalid numbers
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can only pick numbers from 1 - 10", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can only pick numbers from 1 - 10",
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
         
@@ -147,7 +157,9 @@ public class KenoCommand : ICommand
         if (payoutMulti == 0) //you lose
         {
             await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Keno, ct: ctx);
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.", true);
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await gambler.Balance.FormatKasinoCurrencyAsync()}.",
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
@@ -156,11 +168,14 @@ public class KenoCommand : ICommand
         // Required to avoid compiler errors when trying to format it in the win message
         var newBalance = gambler.Balance + win;
         await Money.NewWagerAsync(gambler.Id, wager, wager * (decimal)payoutMulti, WagerGame.Keno, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.", true);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
+            true, autoDeleteAfter: cleanupDelay);
     }
     
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
     {
+        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoCleanupDelay)).ToType<int>());
         var logger = LogManager.GetCurrentClassLogger();
         var displayMessage = "";
         //keno board is 8 x 5, numbers left to right, top to bottom
@@ -177,7 +192,7 @@ public class KenoCommand : ICommand
             displayMessage += "[br]";
         }
 
-        var msg = await botInstance.SendChatMessageAsync(displayMessage, true);
+        var msg = await botInstance.SendChatMessageAsync(displayMessage, true, autoDeleteAfter: cleanupDelay);
         var i = 0;
         while (msg.ChatMessageId == null)
         {
@@ -278,10 +293,12 @@ public class Planes : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoPlanesCleanupDelay)).ToType<int>());
         var logger = LogManager.GetCurrentClassLogger();
         if (!arguments.TryGetValue("amount", out var amount))
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !planes <wager>", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !planes <wager>",
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
         var wager = Convert.ToDecimal(amount.Value);
@@ -292,7 +309,7 @@ public class Planes : ICommand
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
-                true);
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
@@ -300,10 +317,11 @@ public class Planes : ICommand
         var planesBoard = CreatePlanesBoard(gambler);
         var planesBoard2 = CreatePlanesBoard(gambler);
         var plane = new Plane(gambler);
-        var frameLength = 1056.0;
+        var frameLength = 3888.0;
+        var fullCounter = 0;
         var counter = 0;
         var noseUp = true;
-        var planesDisplay = GetGameBoard(-3, planesBoard, plane, carrierCount, noseUp);
+        var planesDisplay = GetPreGameBoard(-3, planesBoard, plane, carrierCount, noseUp);
         var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
         var num = 0;
         while (msgId.ChatMessageId == null)
@@ -321,42 +339,40 @@ public class Planes : ICommand
          */
         do
         {
+            counter = fullCounter % 13 - 3;
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
-            if (counter % 13 < 3)
+            if (counter < 0)
             {
-                while (counter % 13 < 3)
+                while (counter < 0)
                 {
-                    planesDisplay = GetGameBoard(counter%13 - 3, planesBoard, plane, carrierCount, noseUp);
+                    counter = fullCounter % 13 - 3;
+                    planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
                     await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
                     await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
-                    logger.Info($"Generated preGameFrame {counter} and waited {frameLength}ms.");
-                    counter++;
+                    fullCounter++;
                 }
-
-                logger.Info("Pregame frames successfully generated.");
             }
             else
             {
                 while (!neutral)
                 {
                     frameCounter++;
-                    logger.Info($"FrameCounter: {frameCounter} Counter: {counter}");
                     try
                     {
-                        switch (planesBoard[plane.Height, counter % 13 - 3])
+                        switch (planesBoard[plane.Height, fullCounter])
                         {
                             case 0: //do nothing plane hit neutral space
                                 neutral = true;
                                 break;
                             case 1: //hit rocket
-                                planesBoard[plane.Height, counter % 13 - 3] = 0; //plane consumes rocket
+                                planesBoard[plane.Height, fullCounter] = 0; //plane consumes rocket
                                 plane.HitRocket();
                                 noseUp = false;
                                 break;
                             case 2: //hit multi
-                                planesBoard[plane.Height, counter % 13 - 3] = 0; //plane consumes multi
+                                planesBoard[plane.Height, fullCounter] = 0; //plane consumes multi
                                 plane.HitMulti();
                                 noseUp = true;
                                 break;
@@ -367,7 +383,9 @@ public class Planes : ICommand
                     }
                     catch (IndexOutOfRangeException e)
                     {
-                        await botInstance.SendChatMessageAsync($"Something went wrong, error code 2. Counter: {counter} Counter%: {counter %13 - 3} Height: {plane.Height}[br]{e}", true);
+                        await botInstance.SendChatMessageAsync(
+                            $"Something went wrong, error code 2. Counter: {counter} Counter%: {counter % 13 - 3} Height: {plane.Height}[br]{e}",
+                            true, autoDeleteAfter: cleanupDelay);
                         logger.Error(
                             $"Something went wrong, error code 2. Counter: {counter} Counter%: {counter % 13 - 3} Height: {plane.Height}");
                         logger.Error(e);
@@ -380,7 +398,7 @@ public class Planes : ICommand
                         else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
                     }
                     else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
-                    planesDisplay = GetGameBoard(counter % 13 - 3, planesBoard, plane, carrierCount, noseUp);
+                    planesDisplay = GetGameBoard(counter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
                     planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
                     for (var i = 0; i < 10; i++)
                     {
@@ -396,10 +414,11 @@ public class Planes : ICommand
                     }
                     //maybe fuckery around here       
                 }
-                counter++;
+                fullCounter++;
             }
+            
             plane.Gravity();
-            if (counter % 13 != 0) continue;
+            if (counter != 0) continue;
             planesBoard = planesBoard2;
             planesBoard2 = CreatePlanesBoard(gambler);
         } while (plane.Height < 6);
@@ -409,34 +428,38 @@ public class Planes : ICommand
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
         var newBalance = gambler.Balance - wager;
-        if (((counter % 13) - 3) % carrierCount == 0) //if you landed on the carrier
+        if ((fullCounter - 3) % carrierCount == 0) //if you landed on the carrier
         {
             var win = plane.MultiTracker * wager;
             newBalance = gambler.Balance + win;
-            planesDisplay = GetGameBoard(counter% 13 - 3, planesBoard, plane, carrierCount, noseUp);
-            await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
             await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Planes, ct: ctx);
+            planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
+            await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
+                $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
+                true, autoDeleteAfter: cleanupDelay);
             return;
         }
         plane.Crash();
         await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
-        planesDisplay = GetGameBoard(counter % 13 - 3, planesBoard, plane, carrierCount, noseUp);
+        planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
         await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
         await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}", true);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
+            true, autoDeleteAfter: cleanupDelay);
     }
 
-    
-    private string GetGameBoard(int counter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
+    private string GetPreGameBoard(int fullCounter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
     {
+        //counter < 5
+        var counter = fullCounter % 13 - 3;
         var output = "";
         for (var row = 0; row < 8; row++)
         {
             for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
             {
-                if (row == plane.Height && column == counter - 1 && plane.JustHitMulti > 0)
+                if (row == plane.Height && column == counter - 1 && plane.JustHitMulti > 1)
                 {
                     output += Boost;
                 }
@@ -487,6 +510,75 @@ public class Planes : ICommand
 
             output += "[br]";
         }
+        return output;
+    }
+    
+    private string GetGameBoard(int fullCounter, int[,] planesBoard, int[,] planesBoard2, Plane plane, int carrierCount, bool noseUp)
+    {
+        var counter = fullCounter % 13 - 3;
+        var output = "";
+        List<int[,]> planesBoards = new List<int[,]>() { planesBoard, planesBoard2 };
+        if (counter < 3)
+        {
+            output = GetPreGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+            return output;
+        }
+        for (var row = 0; row < 8; row++)
+        {
+            for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
+            {
+                int useBoard;
+                if (counter + column % 26 < 13) useBoard = 0; //0 - 12
+                else useBoard = 1; //13-25
+                
+                if (row == plane.Height && column == 2 && plane.JustHitMulti > 1)
+                {
+                    output += Boost;
+                }
+                else if (row == plane.Height && column == 3)
+                {
+                    if (plane.Crashed) output += PlaneExplosion;
+                    else
+                        switch (noseUp)
+                        {
+                            case true:
+                                output += PlaneUp;
+                                break;
+                            case false:
+                                output += PlaneDown;
+                                break;
+                        }
+                }
+                
+                else if (row == 6)//row between the gameboard and where the carrier is displayed, should show the plane in this row on top of the boat on a win
+                {
+                    output += Air;
+                }
+                else if (row == 7) //water/carrier row
+                {
+                    if ((column + counter) % carrierCount == 0) output += Carrier;
+                    else output += Water;
+                }
+                else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
+                {
+                    switch (planesBoards[useBoard][row, column])
+                    {
+                        case 0:
+                            output += Air;
+                            break;
+                        case 1:
+                            output += Bomb;
+                            break;
+                        case 2:
+                            output += Multi;
+                            break;
+                    }
+                }
+            }
+            output += "[br]";
+            
+        }
+
         return output;
     }
 
