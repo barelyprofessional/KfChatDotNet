@@ -316,8 +316,9 @@ public class Planes : ICommand
         var carrierCount = 6;
         var planesBoard = CreatePlanesBoard(gambler);
         var planesBoard2 = CreatePlanesBoard(gambler);
+        List<int[,]> planesBoards = [planesBoard, planesBoard2];
         var plane = new Plane(gambler);
-        var frameLength = 1056.0;
+        var frameLength = 1000.0;
         var fullCounter = 0;
         var counter = 0;
         var noseUp = true;
@@ -339,7 +340,7 @@ public class Planes : ICommand
          */
         do
         {
-            counter = fullCounter % 13 - 3;
+            counter = fullCounter % 23 - 3;
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
@@ -347,7 +348,7 @@ public class Planes : ICommand
             {
                 while (counter < 0)
                 {
-                    counter = fullCounter % 13 - 3;
+                    counter = fullCounter % 23 - 3;
                     planesDisplay = GetPreGameBoard(fullCounter, planesBoard, plane, carrierCount, noseUp);
                     await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
                     await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
@@ -398,7 +399,7 @@ public class Planes : ICommand
                         else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
                     }
                     else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
-                    planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
+                    planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
                     planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
                     for (var i = 0; i < 10; i++)
                     {
@@ -418,9 +419,11 @@ public class Planes : ICommand
             }
             
             plane.Gravity();
-            if (counter != 0) continue;
-            planesBoard = planesBoard2;
-            planesBoard2 = CreatePlanesBoard(gambler);
+            if ((fullCounter-3) % 20 == 15)//removes old planesboard, adds new planeboard when necessary
+            {
+                planesBoards.RemoveAt(0);
+                planesBoards.Add(CreatePlanesBoard(gambler));
+            }
         } while (plane.Height < 6);
         //now plane is too low so you have either won or lost depending on your position
         var colors =
@@ -433,7 +436,7 @@ public class Planes : ICommand
             var win = plane.MultiTracker * wager;
             newBalance = gambler.Balance + win;
             await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Planes, ct: ctx);
-            planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
+            planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
             await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
@@ -442,7 +445,7 @@ public class Planes : ICommand
         }
         plane.Crash();
         await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
-        planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
+        planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
         await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
         await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
         await botInstance.SendChatMessageAsync(
@@ -453,7 +456,7 @@ public class Planes : ICommand
     private string GetPreGameBoard(int fullCounter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
     {
         //counter < 5
-        var counter = fullCounter % 13 - 3;
+        var counter = fullCounter % 23 - 3;
         var output = "";
         for (var row = 0; row < 8; row++)
         {
@@ -513,15 +516,14 @@ public class Planes : ICommand
         return output;
     }
     
-    private string GetGameBoard(int fullCounter, int[,] planesBoard, int[,] planesBoard2, Plane plane, int carrierCount, bool noseUp)
+    private string GetGameBoard(int fullCounter, List<int[,]> planesBoards, Plane plane, int carrierCount, bool noseUp)
     {
         var logger = LogManager.GetCurrentClassLogger();
-        var counter = fullCounter % 13 - 3;
+        var counter = fullCounter % 23 - 3;
         var output = "";
-        List<int[,]> planesBoards = new List<int[,]>() { planesBoard, planesBoard2 };
         if (counter < 0)
         {
-            output = GetPreGameBoard(counter, planesBoard, plane, carrierCount, noseUp);
+            output = GetPreGameBoard(counter, planesBoards[0], plane, carrierCount, noseUp);
             return output;
         }
         for (var row = 0; row < 8; row++)
@@ -529,10 +531,10 @@ public class Planes : ICommand
             for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
             {
                 int useBoard;
-                if (counter + column % 20 < 10) useBoard = 0;
-                else useBoard = 1; //13-25
+                if (counter + column % 40 < 20) useBoard = 0; //0 - 19
+                else useBoard = 1; //20-39
                 
-                if (row == plane.Height && column == -1 && plane.JustHitMulti > 1) 
+                if (row == plane.Height && column == -1 && plane.JustHitMulti > 1)
                 {
                     output += Boost;
                 }
@@ -557,13 +559,21 @@ public class Planes : ICommand
                 }
                 else if (row == 7) //water/carrier row
                 {
-                    if ((column + counter) % carrierCount == 0) output += Carrier;
+                    if ((column + fullCounter - 3) % carrierCount == 0) output += Carrier;
                     else output += Water;
                 }
                 else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
                 {
+                    if (column + counter < 0 && useBoard == 0)
+                    {
+                        output += Air;
+                    }
+                    else if (column + counter < 0 && useBoard == 1)
+                    {
+                        useBoard -= 1;
+                    }
                     logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
-                    switch (planesBoards[useBoard][row, (column+counter) % 10])
+                    switch (planesBoards[useBoard][row, (column+counter)%10])
                     {
                         case 0:
                             output += Air;
@@ -586,7 +596,7 @@ public class Planes : ICommand
 
     private int[,] CreatePlanesBoard(GamblerDbModel gambler)
     {
-        var board = new int [6, 10];
+        var board = new int [6, 20];
         for (var row = 0; row < 6; row++)
         {
             for (var column = 0; column < 10; column++)
