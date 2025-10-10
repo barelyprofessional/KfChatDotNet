@@ -315,11 +315,11 @@ public class Planes : ICommand
 
         var carrierCount = 6;
         var planesBoard = CreatePlanesBoard(gambler);
-        var planesBoard2 = CreatePlanesBoard(gambler);
-        List<int[,]> planesBoards = [planesBoard, planesBoard2];
+        List<int[,]> planesBoards = [planesBoard];
         var plane = new Plane(gambler);
         var frameLength = 1000.0;
         var fullCounter = 0;
+        var boardCounter = 0;
         bool firstBoard = true;
         var counter = 0;
         var noseUp = true;
@@ -344,6 +344,7 @@ public class Planes : ICommand
             if (fullCounter > 20) firstBoard = false;
             counter = fullCounter % 23-3;
             if (!firstBoard) counter += 3;
+            if (counter % 20 == 19) boardCounter++;
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
@@ -366,7 +367,7 @@ public class Planes : ICommand
                     try
                     {
                         if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
-                        switch (planesBoard[plane.Height, counter])
+                        switch (planesBoards[boardCounter % 2][plane.Height, counter])
                         {
                             
                             case 0: //do nothing plane hit neutral space
@@ -374,13 +375,13 @@ public class Planes : ICommand
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: neutral");
                                 break;
                             case 1: //hit rocket
-                                planesBoard[plane.Height, counter] = 0; //plane consumes rocket
+                                planesBoards[boardCounter % 2][plane.Height, counter] = 0; //plane consumes rocket
                                 plane.HitRocket();
                                 noseUp = false;
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: bomb");
                                 break;
                             case 2: //hit multi
-                                planesBoard[plane.Height, counter] = 0; //plane consumes multi
+                                planesBoards[boardCounter % 2][plane.Height, counter] = 0; //plane consumes multi
                                 plane.HitMulti();
                                 noseUp = true;
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: multi");
@@ -424,9 +425,13 @@ public class Planes : ICommand
             }
             
             plane.Gravity();
-            if ((fullCounter-3) % 20 == 15)//removes old planesboard, adds new planeboard when necessary
+            if ((fullCounter-3) % 20 == 10 && !firstBoard)//removes old planesboard, adds new planeboard when necessary
             {
                 planesBoards.RemoveAt(0);
+                planesBoards.Add(CreatePlanesBoard(gambler));
+            }
+            else if ((fullCounter-3) % 20 == 10 && firstBoard)//removes old planesboard, adds new planeboard when necessary
+            {
                 planesBoards.Add(CreatePlanesBoard(gambler));
             }
         } while (plane.Height < 6);
