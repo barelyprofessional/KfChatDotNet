@@ -315,7 +315,8 @@ public class Planes : ICommand
 
         var carrierCount = 6;
         var planesBoard = CreatePlanesBoard(gambler);
-        List<int[,]> planesBoards = [planesBoard];
+        var planesBoard2 = CreatePlanesBoard(gambler);
+        List<int[,]> planesBoards = [planesBoard, planesBoard2];
         var plane = new Plane(gambler);
         var frameLength = 1000.0;
         var fullCounter = 0;
@@ -425,12 +426,12 @@ public class Planes : ICommand
             }
             
             plane.Gravity();
-            if ((fullCounter-3) % 20 == 10 && !firstBoard)//removes old planesboard, adds new planeboard when necessary
+            if ((fullCounter-3) % 20 == 3 && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
             }
-            else if ((fullCounter-3) % 20 == 10 && firstBoard)//removes old planesboard, adds new planeboard when necessary
+            else if ((fullCounter-3) % 20 == 10 && firstBoard)//adds new planeboard when necessary
             {
                 planesBoards.Add(CreatePlanesBoard(gambler));
             }
@@ -574,9 +575,20 @@ public class Planes : ICommand
                 }
                 else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
                 {
+                    /*
+                     * //if it needs to check a space with a negative counter, use the previous board and reiterate backwards.
+                     * For example if its just switched to board 1 but its trying to check the space 3 back, rather than checking planesBoards[1][row, (counter+column)%20 = -3 of board 1
+                     * instead it needs to use that counter to iterate back
+                     * so in this case where the value is -3, we need planesBoards[0][row, 20 - counter]
+                     */
                     if (column + counter < 0 && useBoard == 1)
                     {
-                        useBoard -= 1;
+                        useBoard--;
+                        counter = 20 - counter;
+                    }
+                    else if (column + counter >= 20 && useBoard == 1)
+                    {
+                        useBoard++;
                     }
                     
                     if (column + counter < 0 && useBoard == 0)
@@ -586,7 +598,7 @@ public class Planes : ICommand
                     else
                     {
                         logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
-                        switch (planesBoards[useBoard][row, (column+counter)%10])
+                        switch (planesBoards[useBoard][row, (column+counter)%20])
                         {
                             case 0:
                                 output += Air;
