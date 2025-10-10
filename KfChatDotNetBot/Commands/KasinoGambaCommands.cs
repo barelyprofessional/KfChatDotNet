@@ -342,10 +342,10 @@ public class Planes : ICommand
          */
         do
         {
-            if (fullCounter > 20) firstBoard = false;
+            if ((fullCounter-3) > 19) firstBoard = false;
             counter = fullCounter % 23-3;
             if (!firstBoard) counter = (fullCounter - 3) % 20;
-            if (counter % 20 == 19) boardCounter++;
+            if ((fullCounter-3) % 20 == 0 && !firstBoard) boardCounter++;
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
@@ -367,7 +367,21 @@ public class Planes : ICommand
                     frameCounter++;
                     try
                     {
+                        /*
+                         * planesBoards starts out with board 0 and board 1
+                         * board 2 is added on fullCounter 13
+                         * board 0 is deleted, new board 2 added on fullcounter 23, and every 20 rounds after
+                         * USE AIR FILL IN: during firstBoard, when counter + column < 0
+                         * USE BOARD 0: during fullCounter 0 - 19, 24-39, 64-79, etc
+                         * USE BOARD 1: during fullCounter 20-23, 40-43, 60-63, etc
+                         * USE BOARD 2: never used for game determinations only displays
+                         */
                         if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
+                        var useBoard = -1;
+                        if (fullCounter < 20 || (fullCounter-3) % 20 > 3) useBoard = 0;
+                        else if (fullCounter >= 20 && (fullCounter - 3) % 20 < 3) useBoard = 1;
+                        else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {useBoard} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
+                        
                         switch (planesBoards[boardCounter % 2][plane.Height, counter])
                         {
                             
