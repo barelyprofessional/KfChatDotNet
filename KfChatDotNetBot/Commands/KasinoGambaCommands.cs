@@ -348,7 +348,7 @@ public class Planes : ICommand
                 while (counter < 0)
                 {
                     counter = fullCounter % 13 - 3;
-                    planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
+                    planesDisplay = GetPreGameBoard(fullCounter, planesBoard, plane, carrierCount, noseUp);
                     await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
                     await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
                     fullCounter++;
@@ -361,18 +361,18 @@ public class Planes : ICommand
                     frameCounter++;
                     try
                     {
-                        switch (planesBoard[plane.Height, fullCounter])
+                        switch (planesBoard[plane.Height, counter])
                         {
                             case 0: //do nothing plane hit neutral space
                                 neutral = true;
                                 break;
                             case 1: //hit rocket
-                                planesBoard[plane.Height, fullCounter] = 0; //plane consumes rocket
+                                planesBoard[plane.Height, counter] = 0; //plane consumes rocket
                                 plane.HitRocket();
                                 noseUp = false;
                                 break;
                             case 2: //hit multi
-                                planesBoard[plane.Height, fullCounter] = 0; //plane consumes multi
+                                planesBoard[plane.Height, counter] = 0; //plane consumes multi
                                 plane.HitMulti();
                                 noseUp = true;
                                 break;
@@ -384,10 +384,10 @@ public class Planes : ICommand
                     catch (IndexOutOfRangeException e)
                     {
                         await botInstance.SendChatMessageAsync(
-                            $"Something went wrong, error code 2. Counter: {counter} Counter%: {counter % 13 - 3} Height: {plane.Height}[br]{e}",
+                            $"Something went wrong, error code 2. Counter: {fullCounter} Counter%: {counter} Height: {plane.Height}[br]{e}",
                             true, autoDeleteAfter: cleanupDelay);
                         logger.Error(
-                            $"Something went wrong, error code 2. Counter: {counter} Counter%: {counter % 13 - 3} Height: {plane.Height}");
+                            $"Something went wrong, error code 2. Counter: {fullCounter} Counter%: {counter} Height: {plane.Height}");
                         logger.Error(e);
                         return;
                     }
@@ -398,7 +398,7 @@ public class Planes : ICommand
                         else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
                     }
                     else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
-                    planesDisplay = GetGameBoard(counter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
+                    planesDisplay = GetGameBoard(fullCounter, planesBoard, planesBoard2, plane, carrierCount, noseUp);
                     planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
                     for (var i = 0; i < 10; i++)
                     {
@@ -563,7 +563,7 @@ public class Planes : ICommand
                 else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
                 {
                     logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
-                    switch (planesBoards[useBoard][row, column + counter])
+                    switch (planesBoards[useBoard][row, column+counter])
                     {
                         case 0:
                             output += Air;
