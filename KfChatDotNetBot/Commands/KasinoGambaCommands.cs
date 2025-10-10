@@ -529,6 +529,7 @@ public class Planes : ICommand
     
     private string GetGameBoard(int fullCounter, List<int[,]> planesBoards, Plane plane, int carrierCount, bool noseUp)
     {
+        var firstBoard = fullCounter < 20;
         var logger = LogManager.GetCurrentClassLogger();
         var counter = fullCounter % 23 - 3;
         var output = "";
@@ -541,10 +542,27 @@ public class Planes : ICommand
         {
             for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
             {
+                /*
+                 * planesBoards starts out with board 0 and board 1
+                 * board 2 is added on fullCounter 13
+                 * board 0 is deleted, new board 2 added on fullcounter 23, and every 20 rounds after
+                 * USE AIR FILL IN: during firstBoard, when counter + column < 0
+                 * USE BOARD 0: during firstBoard, , when column + counter < 20, and after firstBoard, when column + counter < 3
+                 * USE BOARD 1: during firstBoard, when counter is 20 or above, and after firstBoard, when counter + column is between 0 and 19
+                 * USE BOARD 2: after firstBoard, when counter is 20 or above
+                 */
                 int useBoard;
-                if (counter + column % 40 < 20) useBoard = 0; //0 - 19
-                else useBoard = 1; //20-39
-                
+                if ((firstBoard && (counter + column < 20)) || (!firstBoard && (counter + column < 0))) useBoard = 0;
+                else if ((firstBoard && (counter + column > 19)) || (!firstBoard && (column + counter < 20)))
+                    useBoard = 1;
+                else if (!firstBoard && (counter + column > 20)) useBoard = 2;
+                else
+                {
+                    logger.Info($"Failed to properly switch to the correct board. Fullcounter: {fullCounter} | Counter: {counter} | Row: {row} | Column: {column} | FirstBoard: {firstBoard} ");
+                    useBoard = -1;
+                }
+                    
+                    
                 if (row == plane.Height && column == -1 && plane.JustHitMulti > 1)
                 {
                     output += Boost;
@@ -577,21 +595,12 @@ public class Planes : ICommand
                 {
                     /*
                      * //if it needs to check a space with a negative counter, use the previous board and reiterate backwards.
-                     * For example if its just switched to board 1 but its trying to check the space 3 back, rather than checking planesBoards[1][row, (counter+column)%20 = -3 of board 1
+                     * For example if its just switched to board 1 but its trying to check the space 3 back, rather than checking planesBoards[1][row, (counter+column)%20 = -3 of board 1 getting the first row
                      * instead it needs to use that counter to iterate back
                      * so in this case where the value is -3, we need planesBoards[0][row, 20 - counter]
                      */
-                    if (column + counter < 0 && useBoard == 1)
-                    {
-                        useBoard--;
-                        counter = 20 - counter;
-                    }
-                    else if (column + counter >= 20 && useBoard == 1)
-                    {
-                        useBoard++;
-                    }
                     
-                    if (column + counter < 0 && useBoard == 0)
+                    if (firstBoard && (counter + column < 0))
                     {
                         output += Air;
                     }
@@ -625,7 +634,7 @@ public class Planes : ICommand
         var board = new int [6, 20];
         for (var row = 0; row < 6; row++)
         {
-            for (var column = 0; column < 10; column++)
+            for (var column = 0; column < 20; column++)
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 100);
                 if (randomNum < 35)
