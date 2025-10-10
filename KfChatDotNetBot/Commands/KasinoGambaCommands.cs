@@ -343,7 +343,7 @@ public class Planes : ICommand
         {
             if (fullCounter > 20) firstBoard = false;
             counter = fullCounter % 23-3;
-            if (!firstBoard) counter += 3;
+            if (!firstBoard) counter = (fullCounter - 3) % 20;
             if (counter % 20 == 19) boardCounter++;
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
