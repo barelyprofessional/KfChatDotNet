@@ -532,11 +532,11 @@ public class Planes : ICommand
                 if (counter + column % 20 < 10) useBoard = 0;
                 else useBoard = 1; //13-25
                 
-                if (row == plane.Height && column == 2 && plane.JustHitMulti > 1)
+                if (row == plane.Height && column == -1 && plane.JustHitMulti > 1) 
                 {
                     output += Boost;
                 }
-                else if (row == plane.Height && column == 3)
+                else if (row == plane.Height && column == 0)
                 {
                     if (plane.Crashed) output += PlaneExplosion;
                     else
