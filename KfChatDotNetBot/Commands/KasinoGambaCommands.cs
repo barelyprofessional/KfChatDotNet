@@ -323,7 +323,7 @@ public class Planes : ICommand
         var counter = 0;
         var noseUp = true;
         var planesDisplay = GetPreGameBoard(-3, planesBoard, plane, carrierCount, noseUp);
-        var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
+        var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true, autoDeleteAfter: cleanupDelay);
         var num = 0;
         while (msgId.ChatMessageId == null)
         {
@@ -378,7 +378,7 @@ public class Planes : ICommand
                                 noseUp = true;
                                 break;
                             default:
-                                await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true);
+                                await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true, autoDeleteAfter: cleanupDelay);
                                 return;
                         }
                     }
