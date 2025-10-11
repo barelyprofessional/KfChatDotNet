@@ -419,7 +419,16 @@ public class Planes : ICommand
                         else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * (frameCounter - 1))), ctx);
                     }
                     else await Task.Delay(TimeSpan.FromMilliseconds(frameLength / (3 * frameCounter)), ctx); //if not the last frame use a fraction of the remaining frame time
-                    planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
+
+                    try
+                    {
+                        planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Error(e);
+                        throw;
+                    }
                     planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
                     for (var i = 0; i < 10; i++)
                     {
