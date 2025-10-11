@@ -627,7 +627,7 @@ public class Planes : ICommand
                     }
                     else
                     {
-                        logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
+                        logger.Info($"Attempting to get planeboard info while generating main frames. FullCounter: {fullCounter} | Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter} | Counter2: {counter2} | FirstBoard: {firstBoard} | PlanesBoardsCount: {planesBoards.Count}");
                         try
                         {
                             switch (planesBoards[useBoard][plane.Height, counter])
