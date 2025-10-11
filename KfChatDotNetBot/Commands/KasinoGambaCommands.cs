@@ -619,7 +619,7 @@ public class Planes : ICommand
                      * so in this case where the value is -3, we need planesBoards[0][row, 20 - counter]
                      */
                     int counter2;
-                    if ((column + counter) % 20 < 0) counter2 = 20 - (column + counter);
+                    if ((column + counter) % 20 < 0) counter2 = 20 + (column + counter);
                     else counter2 = (column + counter) % 20;
                     if (firstBoard && (counter + column < 0))
                     {
