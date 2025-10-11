@@ -553,6 +553,7 @@ public class Planes : ICommand
         var firstBoard = fullCounter < 23;
         var logger = LogManager.GetCurrentClassLogger();
         var counter = fullCounter % 23 - 3;
+        if (!firstBoard) counter = (fullCounter - 3) % 20;
         var output = "";
         
         for (var row = 0; row < 8; row++)
