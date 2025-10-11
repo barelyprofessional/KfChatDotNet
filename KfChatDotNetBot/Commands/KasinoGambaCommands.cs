@@ -383,7 +383,7 @@ public class Planes : ICommand
                         else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {useBoard} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
                         switch (planesBoards[boardCounter % 2][plane.Height, counter])
                         {
-                           
+                          
                             case 0: //do nothing plane hit neutral space
                                 neutral = true;
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: neutral");
@@ -554,11 +554,7 @@ public class Planes : ICommand
         var logger = LogManager.GetCurrentClassLogger();
         var counter = fullCounter % 23 - 3;
         var output = "";
-        if (counter < 0)
-        {
-            output = GetPreGameBoard(counter, planesBoards[0], plane, carrierCount, noseUp);
-            return output;
-        }
+        
         for (var row = 0; row < 8; row++)
         {
             for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
@@ -621,6 +617,9 @@ public class Planes : ICommand
                      * instead it needs to use that counter to iterate back
                      * so in this case where the value is -3, we need planesBoards[0][row, 20 - counter]
                      */
+                    int counter2;
+                    if ((column + counter) % 20 < 0) counter2 = 20 - (column + counter);
+                    else counter2 = (column + counter) % 20;
                     if (firstBoard && (counter + column < 0))
                     {
                         output += Air;
@@ -628,7 +627,7 @@ public class Planes : ICommand
                     else
                     {
                         logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
-                        switch (planesBoards[useBoard][row, (column+counter)%20])
+                        switch (planesBoards[useBoard][row, counter2])
                         {
                             case 0:
                                 output += Air;
