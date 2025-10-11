@@ -379,7 +379,7 @@ public class Planes : ICommand
                         if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
                         var useBoard = -1;
                         if (fullCounter < 20 || (fullCounter-3) % 20 > 3) useBoard = 0;
-                        else if (fullCounter >= 20 && (fullCounter - 3) % 20 < 3) useBoard = 1;
+                        else if (fullCounter >= 20 && (fullCounter - 3) % 20 <= 3) useBoard = 1;
                         else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {useBoard} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
                         switch (planesBoards[boardCounter % 2][plane.Height, counter])
                         {
