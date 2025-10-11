@@ -630,7 +630,7 @@ public class Planes : ICommand
                         logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
                         try
                         {
-                            switch (planesBoards[useBoard][row, counter2])
+                            switch (planesBoards[useBoard][plane.Height, counter])
                             {
                                 case 0:
                                     output += Air;
