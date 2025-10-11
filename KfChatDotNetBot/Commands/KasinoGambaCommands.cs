@@ -261,8 +261,6 @@ public class KenoCommand : ICommand
     }
 }
 
-
-
 [KasinoCommand]
 [WagerCommand]
 public class Planes : ICommand
@@ -375,27 +373,27 @@ public class Planes : ICommand
                          * USE BOARD 1: always
                          * USE BOARD 2: never used for game determinations only displays
                          */
-                        if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
+                        //if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
                         
-                        else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {1} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
+                        //else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {1} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
                         switch (planesBoards[1][plane.Height, counter])
                         {
                           
                             case 0: //do nothing plane hit neutral space
                                 neutral = true;
-                                if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: neutral");
+                                //if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: neutral");
                                 break;
                             case 1: //hit rocket
                                 planesBoards[1][plane.Height, counter] = 0; //plane consumes rocket
                                 plane.HitRocket();
                                 noseUp = false;
-                                if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: bomb");
+                                //if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: bomb");
                                 break;
                             case 2: //hit multi
                                 planesBoards[1][plane.Height, counter] = 0; //plane consumes multi
                                 plane.HitMulti();
                                 noseUp = true;
-                                if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: multi");
+                                //if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: multi");
                                 break;
                             default:
                                 await botInstance.SendChatMessageAsync("Something went wrong, error code 1.", true, autoDeleteAfter: cleanupDelay);
@@ -516,7 +514,7 @@ public class Planes : ICommand
                 }
                 else if (row == 7) //water/carrier row
                 {
-                    if (column % carrierCount == 0) output += Carrier;
+                    if (((fullCounter-3) + column) % carrierCount == 0) output += Carrier;
                     else output += Water;
                 }
                 else //this leaves rows 0-5 and columns 0-24, exactly what we need for the board
@@ -574,7 +572,7 @@ public class Planes : ICommand
                 }
                 else if (row == 7) //water/carrier row
                 {
-                    if ((fullCounter + column) % carrierCount == 0) output += Carrier;
+                    if (((fullCounter-3) + column) % carrierCount == 0) output += Carrier;
                     else output += Water;
                 }
                 else if (row == plane.Height && column == 0)
