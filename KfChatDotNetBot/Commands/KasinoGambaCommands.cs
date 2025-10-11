@@ -343,10 +343,23 @@ public class Planes : ICommand
         do
         {
             if ((fullCounter-3) > 19) firstBoard = false;
-            counter = fullCounter % 23-3;
-            if (!firstBoard) counter = (fullCounter - 3) % 20;
+            counter = (fullCounter - 3) % 20;
             
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
+
+            if (fullCounter >= 3)
+            {
+                planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
+                planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
+                for (var i = 0; i < 10; i++)
+                {
+                    planesDisplay += BlankSpace;
+                }
+                var winnings = plane.MultiTracker * wager;
+                planesDisplay += $"Winnings: {await winnings.FormatKasinoCurrencyAsync()}";
+                await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
+            }
+            
             var neutral = false;
             var frameCounter = 0;
             if (fullCounter < 3)
@@ -442,7 +455,7 @@ public class Planes : ICommand
                 fullCounter++;
             }
             plane.Gravity();
-            if (counter == 0 && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
+            if (((fullCounter - 3)%20 == 0) && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
