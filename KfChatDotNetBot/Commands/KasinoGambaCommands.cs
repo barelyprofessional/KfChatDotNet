@@ -627,17 +627,26 @@ public class Planes : ICommand
                     else
                     {
                         logger.Info($"Attempting to get planeboard info while generating main frames. Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter}");
-                        switch (planesBoards[useBoard][row, counter2])
+                        try
                         {
-                            case 0:
-                                output += Air;
-                                break;
-                            case 1:
-                                output += Bomb;
-                                break;
-                            case 2:
-                                output += Multi;
-                                break;
+                            switch (planesBoards[useBoard][row, counter2])
+                            {
+                                case 0:
+                                    output += Air;
+                                    break;
+                                case 1:
+                                    output += Bomb;
+                                    break;
+                                case 2:
+                                    output += Multi;
+                                    break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            logger.Info("Threw exception while rendering planeboard");
+                            logger.Error(e);
+                            throw;
                         }
                     }
                 }
