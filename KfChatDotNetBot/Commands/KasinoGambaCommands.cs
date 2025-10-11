@@ -261,6 +261,8 @@ public class KenoCommand : ICommand
     }
 }
 
+
+
 [KasinoCommand]
 [WagerCommand]
 public class Planes : ICommand
@@ -293,9 +295,6 @@ public class Planes : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        await botInstance.SendChatMessageAsync(
-            "Planes has been temporarily disabled until the bugs are finally sorted.", true);
-        return;
         var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoPlanesCleanupDelay)).ToType<int>());
         var logger = LogManager.GetCurrentClassLogger();
         if (!arguments.TryGetValue("amount", out var amount))
@@ -317,17 +316,17 @@ public class Planes : ICommand
         }
 
         var carrierCount = 6;
-        var planesBoard = CreatePlanesBoard(gambler);
+        var planesBoard = CreatePlanesBoard(gambler,0);
         var planesBoard2 = CreatePlanesBoard(gambler);
-        List<int[,]> planesBoards = [planesBoard, planesBoard2];
+        var planesBoard3 = CreatePlanesBoard(gambler);
+        List<int[,]> planesBoards = new List<int[,]>(){planesBoard, planesBoard2, planesBoard3};
         var plane = new Plane(gambler);
         var frameLength = 1000.0;
         var fullCounter = 0;
-        var boardCounter = 0;
         bool firstBoard = true;
         var counter = 0;
         var noseUp = true;
-        var planesDisplay = GetPreGameBoard(-3, planesBoard, plane, carrierCount, noseUp);
+        var planesDisplay = GetPreGameBoard(-3, planesBoard2, plane, carrierCount, noseUp);
         var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true, autoDeleteAfter: cleanupDelay);
         var num = 0;
         while (msgId.ChatMessageId == null)
@@ -348,7 +347,7 @@ public class Planes : ICommand
             if ((fullCounter-3) > 19) firstBoard = false;
             counter = fullCounter % 23-3;
             if (!firstBoard) counter = (fullCounter - 3) % 20;
-            if ((fullCounter-3) % 20 == 0 && !firstBoard) boardCounter++;
+            
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
             var neutral = false;
             var frameCounter = 0;
@@ -357,7 +356,7 @@ public class Planes : ICommand
                 while (fullCounter < 3)
                 {
                     counter = fullCounter % 23 - 3;
-                    planesDisplay = GetPreGameBoard(fullCounter, planesBoard, plane, carrierCount, noseUp);
+                    planesDisplay = GetPreGameBoard(fullCounter, planesBoard2, plane, carrierCount, noseUp);
                     await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
                     await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
                     fullCounter++;
@@ -371,20 +370,15 @@ public class Planes : ICommand
                     try
                     {
                         /*
-                         * planesBoards starts out with board 0 and board 1
-                         * board 2 is added on fullCounter 13
-                         * board 0 is deleted, new board 2 added on fullcounter 23, and every 20 rounds after
-                         * USE AIR FILL IN: during firstBoard, when counter + column < 0
-                         * USE BOARD 0: during fullCounter 0 - 19, 24-39, 64-79, etc
-                         * USE BOARD 1: during fullCounter 20-23, 40-43, 60-63, etc
+                         *
+                         * USE BOARD 0: only used to pull the values from the previous board, never used for game determinations
+                         * USE BOARD 1: always
                          * USE BOARD 2: never used for game determinations only displays
                          */
                         if (fullCounter == 3) logger.Info($"Generating first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter}");
-                        var useBoard = -1;
-                        if (fullCounter < 20 || (fullCounter-3) % 20 > 3) useBoard = 0;
-                        else if (fullCounter >= 20 && (fullCounter - 3) % 20 <= 3) useBoard = 1;
-                        else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {useBoard} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
-                        switch (planesBoards[boardCounter % 2][plane.Height, counter])
+                        
+                        else logger.Info($"Failed to select proper gameboard for gameplay outcome. UseBoard: {1} | FullCounter: {fullCounter} | Counter: {counter} | Height: {plane.Height} | FrameCounter: {frameCounter}");
+                        switch (planesBoards[1][plane.Height, counter])
                         {
                           
                             case 0: //do nothing plane hit neutral space
@@ -392,13 +386,13 @@ public class Planes : ICommand
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: neutral");
                                 break;
                             case 1: //hit rocket
-                                planesBoards[useBoard][plane.Height, counter] = 0; //plane consumes rocket
+                                planesBoards[1][plane.Height, counter] = 0; //plane consumes rocket
                                 plane.HitRocket();
                                 noseUp = false;
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: bomb");
                                 break;
                             case 2: //hit multi
-                                planesBoards[useBoard][plane.Height, counter] = 0; //plane consumes multi
+                                planesBoards[1][plane.Height, counter] = 0; //plane consumes multi
                                 plane.HitMulti();
                                 noseUp = true;
                                 if (fullCounter == 3) logger.Info($"Generated first plane impact outcome. Framecounter: {frameCounter} | FullCounter: {fullCounter} | Counter: {counter} | Outcome: multi");
@@ -450,13 +444,9 @@ public class Planes : ICommand
                 fullCounter++;
             }
             plane.Gravity();
-            if ((fullCounter-3) % 20 == 3 && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
+            if ((fullCounter-3) % 20 == 0 && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
                 planesBoards.RemoveAt(0);
-                planesBoards.Add(CreatePlanesBoard(gambler));
-            }
-            else if ((fullCounter-3) % 20 == 10 && firstBoard)//adds new planeboard when necessary
-            {
                 planesBoards.Add(CreatePlanesBoard(gambler));
             }
         } while (plane.Height < 6);
@@ -550,50 +540,48 @@ public class Planes : ICommand
         }
         return output;
     }
-    
+
     private string GetGameBoard(int fullCounter, List<int[,]> planesBoards, Plane plane, int carrierCount, bool noseUp)
     {
-        var firstBoard = fullCounter < 23;
-        var logger = LogManager.GetCurrentClassLogger();
-        var counter = fullCounter % 23 - 3;
-        if (!firstBoard) counter = (fullCounter - 3) % 20;
         var output = "";
+        int counter;
+        var logger = LogManager.GetCurrentClassLogger();
         
         for (var row = 0; row < 8; row++)
         {
-            for (var column = -3; column < 10; column++) //plane starts out 3 space behind to give some space to the view,
+            for (var column = -3;
+                 column < 10;
+                 column++) //plane starts out 3 space behind to give some space to the view,
             {
-                /*
-                 * planesBoards starts out with board 0 and board 1
-                 * board 2 is added on fullCounter 13
-                 * board 0 is deleted, new board 2 added on fullcounter 23, and every 20 rounds after
-                 * USE AIR FILL IN: during firstBoard, when counter + column < 0
-                 * USE BOARD 0: during firstBoard, , when column + counter < 20, and after firstBoard, when column + counter < 3
-                 * USE BOARD 1: during firstBoard, when counter is 20 or above, and after firstBoard, when counter + column is between 0 and 19
-                 * USE BOARD 2: after firstBoard, when counter is 20 or above
-                 */
-                int useBoard;
-                if ((firstBoard && (counter + column < 20)) || (!firstBoard && (counter + column < 0))) useBoard = 0;
-                else if ((firstBoard && (counter + column > 19)) || (!firstBoard && (column + counter < 20)))
-                    useBoard = 1;
-                else if (!firstBoard && (counter + column > 19)) useBoard = 2;
-                else
+                var useBoard = 1;
+                if (fullCounter < 23) counter = fullCounter % 23 - 3;
+                else counter = (fullCounter - 3) % 20;
+                //---
+                if (counter + column < 0)
                 {
-                    logger.Info($"Failed to properly switch to the correct board. Fullcounter: {fullCounter} | Counter: {counter} | Row: {row} | Column: {column} | FirstBoard: {firstBoard} ");
-                    useBoard = -1;
+                    counter = 20 + counter;
+                    useBoard = 0;
                 }
-                if (column + counter > 19)
+                else if (counter + column > 19)
                 {
-                    counter = (fullCounter - 3) % 20;
+                    useBoard = 2;
                 }
+
+                //---actual game board displays below here
                 if (row == plane.Height && column == -1 && plane.JustHitMulti > 1)
                 {
                     output += Boost;
+                }
+                else if (row == 7) //water/carrier row
+                {
+                    if ((fullCounter + column) % carrierCount == 0) output += Carrier;
+                    else output += Water;
                 }
                 else if (row == plane.Height && column == 0)
                 {
                     if (plane.Crashed) output += PlaneExplosion;
                     else
+                    {
                         switch (noseUp)
                         {
                             case true:
@@ -603,65 +591,35 @@ public class Planes : ICommand
                                 output += PlaneDown;
                                 break;
                         }
-                }
-                else if (row == 6)//row between the gameboard and where the carrier is displayed, should show the plane in this row on top of the boat on a win
-                {
-                    output += Air;
-                }
-                else if (row == 7) //water/carrier row
-                {
-                    if ((column + fullCounter - 3) % carrierCount == 0) output += Carrier;
-                    else output += Water;
-                }
-                else //this leaves rows 0-5 and columns 0-10, exactly what we need for the board
-                {
-                    /*
-                     * //if it needs to check a space with a negative counter, use the previous board and reiterate backwards.
-                     * For example if its just switched to board 1 but its trying to check the space 3 back, rather than checking planesBoards[1][row, (counter+column)%20 = -3 of board 1 getting the first row
-                     * instead it needs to use that counter to iterate back
-                     * so in this case where the value is -3, we need planesBoards[0][row, 20 - counter]
-                     */
-                    int counter2;
-                    if ((column + counter) % 20 < 0) counter2 = 20 + (column + counter);
-                    else counter2 = (column + counter) % 20;
-                    if (firstBoard && (counter + column < 0))
-                    {
-                        output += Air;
-                    }
-                    else
-                    {
-                        logger.Info($"Attempting to get planeboard info while generating main frames. FullCounter: {fullCounter} | Board: {useBoard} | Row: {row} | Column: {column} | Counter: {counter} | Counter2: {counter2} | FirstBoard: {firstBoard} | PlanesBoardsCount: {planesBoards.Count}");
-                        try
-                        {
-                            switch (planesBoards[useBoard][plane.Height, counter])
-                            {
-                                case 0:
-                                    output += Air;
-                                    break;
-                                case 1:
-                                    output += Bomb;
-                                    break;
-                                case 2:
-                                    output += Multi;
-                                    break;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            logger.Info("Threw exception while rendering planeboard");
-                            logger.Error(e);
-                            throw;
-                        }
                     }
                 }
+                else if (row == 6) output += Air;
+                else
+                {
+                    logger.Info($"GetGameBoard: attempting to access planeboard index [{row},{(column + counter) % 20}]. RawCounter: {fullCounter} | Counter: {counter} | UseBoard: {useBoard}");
+                    switch (planesBoards[useBoard][row, (counter + column) % 20])
+                    {
+                        case 0:
+                            output += Air;
+                            break;
+                        case 1:
+                            output += Bomb;
+                            break;
+                        case 2:
+                            output += Multi;
+                            break;
+                    }
+                    
+                }
+
             }
+
             output += "[br]";
         }
-
         return output;
     }
 
-    private int[,] CreatePlanesBoard(GamblerDbModel gambler)
+    private int[,] CreatePlanesBoard(GamblerDbModel gambler, int forceTiles = -1)
     {
         var board = new int [6, 20];
         for (var row = 0; row < 6; row++)
@@ -669,7 +627,8 @@ public class Planes : ICommand
             for (var column = 0; column < 20; column++)
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 100);
-                if (randomNum < 35)
+                if (forceTiles != -1) board[row, column] = forceTiles;
+                else if (randomNum < 35)
                 {
                     board[row, column] = 0; //neutral
                 }
@@ -686,6 +645,7 @@ public class Planes : ICommand
         return board;
     }
 }
+
 public class Plane(GamblerDbModel gambler)
 {
     public int Height = 1;
