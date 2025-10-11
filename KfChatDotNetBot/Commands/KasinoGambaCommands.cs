@@ -293,6 +293,9 @@ public class Planes : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        await botInstance.SendChatMessageAsync(
+            "Planes has been temporarily disabled until the bugs are finally sorted.", true);
+        return;
         var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoPlanesCleanupDelay)).ToType<int>());
         var logger = LogManager.GetCurrentClassLogger();
         if (!arguments.TryGetValue("amount", out var amount))
