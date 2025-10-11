@@ -543,7 +543,7 @@ public class Planes : ICommand
     
     private string GetGameBoard(int fullCounter, List<int[,]> planesBoards, Plane plane, int carrierCount, bool noseUp)
     {
-        var firstBoard = fullCounter < 20;
+        var firstBoard = fullCounter < 23;
         var logger = LogManager.GetCurrentClassLogger();
         var counter = fullCounter % 23 - 3;
         var output = "";
