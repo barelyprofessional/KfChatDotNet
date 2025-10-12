@@ -455,7 +455,7 @@ public class Planes : ICommand
                 fullCounter++;
             }
             plane.Gravity();
-            if (((fullCounter - 3)%20 == 0) && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
+            if ((fullCounter - 3) % 20 == 0)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
                 logger.Info($"Switching planes boards. FullCounter: {fullCounter} | Counter: {counter}");
                 planesBoards.RemoveAt(0);
