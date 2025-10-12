@@ -193,6 +193,7 @@ public class LossbackCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
@@ -209,6 +210,7 @@ public class LossbackCommand : ICommand
         {
             offset = mostRecentLossback.TimeUnixEpochSeconds;
         }
+        logger.Info($"{user.KfUsername}'s offset is {offset}");
 
         var wagers = await db.Wagers.Where(w => w.Gambler.Id == gambler.Id && w.TimeUnixEpochSeconds > offset && w.Multiplier < 1).ToListAsync(ctx);
         if (wagers.Count == 0)
@@ -217,6 +219,7 @@ public class LossbackCommand : ICommand
                 $"{user.FormatUsername()}, you don't have any losses to juice back.", true);
             return;
         }
+        logger.Info($"{user.KfUsername} has {wagers.Count} wagers to lossback");
 
         var wagered = wagers.Sum(wager => Math.Abs(wager.WagerEffect));
         var lossback = wagered * (decimal)(settings[BuiltIn.Keys.MoneyLossbackPercentage].ToType<float>() / 100.0);
