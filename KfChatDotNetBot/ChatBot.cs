@@ -34,7 +34,7 @@ public class ChatBot
     private int _joinFailures = 0;
     private Task _kfDeadBotDetection;
     private DateTime _lastReconnectAttempt = DateTime.UtcNow;
-    private List<ScheduledAutoDeleteModel> _scheduledDeletions;
+    private List<ScheduledAutoDeleteModel> _scheduledDeletions = [];
     private Task _scheduledAutoDeleteTask;
     
     public ChatBot()
