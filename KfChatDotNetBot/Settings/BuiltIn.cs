@@ -1115,6 +1115,14 @@ public static class BuiltIn
             Default = "60000",
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.BotScheduledDeletionInterval,
+            Description = "Delay in milliseconds between each check to see whether there's messages to be deleted",
+            Default = "1000",
+            ValueType = SettingValueType.Text,
+            Regex = WholeNumberRegex
         }
     ];
     
@@ -1244,5 +1252,6 @@ public static class BuiltIn
         public static string KasinoGuessWhatNumberCleanupDelay = "Kasino.GuessWhatNumber.CleanupDelay";
         public static string KasinoKenoCleanupDelay = "Kasino.Keno.CleanupDelay";
         public static string KasinoPlanesCleanupDelay = "Kasino.Planes.CleanupDelay";
+        public static string BotScheduledDeletionInterval = "Bot.ScheduledDeletionInterval";
     }
 }

@@ -34,6 +34,8 @@ public class ChatBot
     private int _joinFailures = 0;
     private Task _kfDeadBotDetection;
     private DateTime _lastReconnectAttempt = DateTime.UtcNow;
+    private List<ScheduledAutoDeleteModel> _scheduledDeletions;
+    private Task _scheduledAutoDeleteTask;
     
     public ChatBot()
     {
@@ -87,6 +89,8 @@ public class ChatBot
 
         _logger.Debug("Creating ping task");
         _kfChatPing = KfPingTask();
+        _logger.Debug("Creating scheduled auto deletion task");
+        _scheduledAutoDeleteTask = ScheduledDeletionTask();
         
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
@@ -171,6 +175,40 @@ public class ChatBot
                 _logger.Error($"inactivityTime -> {inactivityTime:g}");
                 _logger.Error($"deadTime -> {deadTime:g}");
                 if (shouldExit) Environment.Exit(1);
+            }
+        }
+    }
+
+    private async Task ScheduledDeletionTask()
+    {
+        var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotScheduledDeletionInterval)).ToType<int>();
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(interval));
+        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        {
+            if (!KfClient.IsConnected())
+            {
+                _logger.Info("Not cleaning scheduled deletions up as we're disconnected");
+                continue;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var removals = new List<ScheduledAutoDeleteModel>();
+            foreach (var deletion in _scheduledDeletions)
+            {
+                if (deletion.Message.ChatMessageId == null)
+                {
+                    _logger.Error($"Can't clean up {deletion.Message.Reference} as it doesn't have a chat message ID");
+                    continue;
+                }
+                
+                if (deletion.DeleteAt < now) continue;
+                await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageId.Value);
+                removals.Add(deletion);
+            }
+            _logger.Info($"Cleaned up {removals.Count} messages");
+            foreach (var removal in removals)
+            {
+                _scheduledDeletions.Remove(removal);
             }
         }
     }
@@ -416,7 +454,7 @@ public class ChatBot
         await KfClient.SendMessageInstantAsync(messageTracker.Message);
         if (autoDeleteAfter != null)
         {
-            _ = SendChatMessageAsyncAutoDeleteTask(messageTracker, autoDeleteAfter.Value);
+            ScheduleMessageAutoDelete(messageTracker, autoDeleteAfter.Value);
         }
         return messageTracker;
     }
@@ -429,24 +467,11 @@ public class ChatBot
     /// <param name="deleteAfter">When you want it deleted</param>
     public void ScheduleMessageAutoDelete(SentMessageTrackerModel message, TimeSpan deleteAfter)
     {
-        _ = Task.Run(() => SendChatMessageAsyncAutoDeleteTask(message, deleteAfter), _cancellationToken);
-    }
-
-    private async Task SendChatMessageAsyncAutoDeleteTask(SentMessageTrackerModel message, TimeSpan deleteAfter)
-    {
-        var i = 0;
-        while (message.ChatMessageId == null)
+        _scheduledDeletions.Add(new ScheduledAutoDeleteModel
         {
-            i++;
-            await Task.Delay(100, _cancellationToken);
-            if (message.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
-            if (i <= 120) continue;
-            _logger.Error($"Gave up waiting for message with content '{message.Message}'");
-            return;
-        }
-
-        await Task.Delay(deleteAfter, _cancellationToken);
-        await KfClient.DeleteMessageAsync(message.ChatMessageId.Value);
+            Message = message,
+            DeleteAt = DateTimeOffset.UtcNow.Add(deleteAfter)
+        });
     }
 
     /// <summary>
@@ -609,5 +634,11 @@ public class ChatBot
         RefuseToSend,
         // Try to send the message anyway, even though Sneedchat will just silently eat it
         DoNothing
+    }
+
+    private class ScheduledAutoDeleteModel
+    {
+        public required SentMessageTrackerModel Message { get; set; }
+        public required DateTimeOffset DeleteAt { get; set; }
     }
 }
