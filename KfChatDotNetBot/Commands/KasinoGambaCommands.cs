@@ -535,7 +535,7 @@ public class Planes : ICommand
                 }
                 else if (row == 7) //water/carrier row
                 {
-                    if (((fullCounter - 3) + column) % carrierCount == 0) output += Carrier;
+                    if ((counter + column) % carrierCount == 0) output += Carrier;
                     else output += Water;
                 }
                 else //this leaves rows 0-5 and columns 0-24, exactly what we need for the board
@@ -593,7 +593,7 @@ public class Planes : ICommand
                 }
                 else if (row == 7) //water/carrier row
                 {
-                    if ((counter + column) % carrierCount == 0) output += Carrier;
+                    if (((fullCounter = 3)+ column) % carrierCount == 0) output += Carrier;
                     else output += Water;
                 }
                 else if (row == plane.Height && column == 0)
