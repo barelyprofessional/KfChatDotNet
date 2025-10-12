@@ -485,6 +485,7 @@ public class Planes : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
+            botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
             return;
         }
         plane.Crash();
