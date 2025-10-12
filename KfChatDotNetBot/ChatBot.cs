@@ -427,9 +427,9 @@ public class ChatBot
     /// </summary>
     /// <param name="message">The message you want to delete</param>
     /// <param name="deleteAfter">When you want it deleted</param>
-    public async Task ScheduleMessageAutoDelete(SentMessageTrackerModel message, TimeSpan deleteAfter)
+    public void ScheduleMessageAutoDelete(SentMessageTrackerModel message, TimeSpan deleteAfter)
     {
-        _ = SendChatMessageAsyncAutoDeleteTask(message, deleteAfter);
+        _ = Task.Run(() => SendChatMessageAsyncAutoDeleteTask(message, deleteAfter), _cancellationToken);
     }
 
     private async Task SendChatMessageAsyncAutoDeleteTask(SentMessageTrackerModel message, TimeSpan deleteAfter)

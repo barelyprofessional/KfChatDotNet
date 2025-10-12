@@ -176,7 +176,7 @@ public class KenoCommand : ICommand
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
             true, autoDeleteAfter: cleanupDelay);
-        await botInstance.ScheduleMessageAutoDelete(_kenoTable, cleanupDelay);
+        botInstance.ScheduleMessageAutoDelete(_kenoTable, cleanupDelay);
     }
     
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
@@ -494,7 +494,7 @@ public class Planes : ICommand
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
-        await botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
+        botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
     }
 
     private string GetPreGameBoard(int fullCounter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
