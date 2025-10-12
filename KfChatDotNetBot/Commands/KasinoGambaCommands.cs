@@ -102,6 +102,7 @@ public class KenoCommand : ICommand
     private const string MatchRevealDisplay = "💠";
     private const string BlankSpaceDisplay = "⬛";
 
+    private SentMessageTrackerModel _kenoTable;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -175,6 +176,7 @@ public class KenoCommand : ICommand
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
             true, autoDeleteAfter: cleanupDelay);
+        await botInstance.ScheduleMessageAutoDelete(_kenoTable, cleanupDelay);
     }
     
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
@@ -196,12 +198,12 @@ public class KenoCommand : ICommand
             displayMessage += "[br]";
         }
 
-        var msg = await botInstance.SendChatMessageAsync(displayMessage, true, autoDeleteAfter: cleanupDelay);
+        _kenoTable = await botInstance.SendChatMessageAsync(displayMessage, true);
         var i = 0;
-        while (msg.ChatMessageId == null)
+        while (_kenoTable.ChatMessageId == null)
         {
             i++;
-            if (msg.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
+            if (_kenoTable.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
             if (i > 60) return;
             await Task.Delay(100);
         }
@@ -235,14 +237,14 @@ public class KenoCommand : ICommand
                 }
                 displayMessage += "[br]";
             }
-            await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, displayMessage);
+            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageId!.Value, displayMessage);
             await Task.Delay(frameDelay);
             if (displayMessage.Length <= 79 && displayMessage.Contains(BlankSpaceDisplay) &&
                 (displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay) ||
                  frame == 9)) continue; //every board should have blank spaces and casino numbers or matches. player numbers might be hidden by matches
             logger.Error($"Casino numbers: {string.Join(",", casinoNumbers)} | Player Numbers: {string.Join(",", playerNumbers)} | Matches: {string.Join(",", matches)} | Frame: {frame - 1} | Display Board:");
             logger.Error(displayMessage);
-            await botInstance.SendChatMessageAsync($"Keno is bugged dewd, died on frame {frame} :bossman:", true);
+            await botInstance.SendChatMessageAsync($"Keno is bugged dewd, died on frame {frame} :bossman:", true, autoDeleteAfter: cleanupDelay);
         }
     }
 
@@ -276,7 +278,7 @@ public class Planes : ICommand
     ];
     public string? HelpText => "!planes <bet amount>";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(120);
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 3,
@@ -329,7 +331,7 @@ public class Planes : ICommand
         var counter = 0;
         var noseUp = true;
         var planesDisplay = GetPreGameBoard(-3, planesBoard2, plane, carrierCount, noseUp);
-        var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true, autoDeleteAfter: cleanupDelay);
+        var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
         var num = 0;
         while (msgId.ChatMessageId == null)
         {
@@ -492,6 +494,7 @@ public class Planes : ICommand
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
+        await botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
     }
 
     private string GetPreGameBoard(int fullCounter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)

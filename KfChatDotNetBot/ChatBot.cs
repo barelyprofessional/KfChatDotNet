@@ -421,6 +421,17 @@ public class ChatBot
         return messageTracker;
     }
 
+    /// <summary>
+    /// Exposes the private task used to delete messages based on a TimeSpan in case you want to use it on-demand
+    /// e.g. for cleaning up a gambling message only after the game has finished
+    /// </summary>
+    /// <param name="message">The message you want to delete</param>
+    /// <param name="deleteAfter">When you want it deleted</param>
+    public async Task ScheduleMessageAutoDelete(SentMessageTrackerModel message, TimeSpan deleteAfter)
+    {
+        _ = SendChatMessageAsyncAutoDeleteTask(message, deleteAfter);
+    }
+
     private async Task SendChatMessageAsyncAutoDeleteTask(SentMessageTrackerModel message, TimeSpan deleteAfter)
     {
         var i = 0;
