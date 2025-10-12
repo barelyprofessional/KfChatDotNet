@@ -205,7 +205,6 @@ public class ChatBot
                 await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageId.Value);
                 removals.Add(deletion);
             }
-            _logger.Info($"Cleaned up {removals.Count} messages");
             foreach (var removal in removals)
             {
                 _scheduledDeletions.Remove(removal);
