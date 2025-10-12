@@ -485,7 +485,6 @@ public class Planes : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
-            botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
             return;
         }
         plane.Crash();
@@ -595,7 +594,7 @@ public class Planes : ICommand
                 }
                 else if (row == 7) //water/carrier row
                 {
-                    if ((fullCounter+ column) % carrierCount == 0) output += Carrier;
+                    if (((fullCounter - 3)+ column) % carrierCount == 0) output += Carrier;
                     else output += Water;
                 }
                 else if (row == plane.Height && column == 0)
