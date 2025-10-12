@@ -751,8 +751,13 @@ public class BotServices
     {
         _logger.Info($"Received a conversation summary update for guild {guildId}");
         var settings = SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.DiscordIcon, BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordOnlySendSummariesIncludingBmj
+            BuiltIn.Keys.DiscordIcon, BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordOnlySendSummariesIncludingBmj,
+            BuiltIn.Keys.DiscordDisableConversationSummaries
         ]).Result;
+        if (settings[BuiltIn.Keys.DiscordDisableConversationSummaries].ToBoolean())
+        {
+            return;
+        }
         var discordIcon = settings[BuiltIn.Keys.DiscordIcon];
         if (settings[BuiltIn.Keys.DiscordOnlySendSummariesIncludingBmj].ToBoolean() &&
             !summary.People.Contains(settings[BuiltIn.Keys.DiscordBmjId].Value ?? string.Empty))

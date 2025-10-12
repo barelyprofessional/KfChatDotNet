@@ -1123,6 +1123,14 @@ public static class BuiltIn
             Default = "1000",
             ValueType = SettingValueType.Text,
             Regex = WholeNumberRegex
+        },
+        new BuiltInSettingsModel
+        {
+            Key = Keys.DiscordDisableConversationSummaries,
+            Description = "Disable the conversation summaries feature",
+            Default = "false",
+            ValueType = SettingValueType.Boolean,
+            Regex = BooleanRegex
         }
     ];
     
@@ -1253,5 +1261,6 @@ public static class BuiltIn
         public static string KasinoKenoCleanupDelay = "Kasino.Keno.CleanupDelay";
         public static string KasinoPlanesCleanupDelay = "Kasino.Planes.CleanupDelay";
         public static string BotScheduledDeletionInterval = "Bot.ScheduledDeletionInterval";
+        public static string DiscordDisableConversationSummaries = "Discord.DisableConversationSummaries";
     }
 }
