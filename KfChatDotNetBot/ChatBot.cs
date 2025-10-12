@@ -201,7 +201,7 @@ public class ChatBot
                     continue;
                 }
                 
-                if (deletion.DeleteAt < now) continue;
+                if (deletion.DeleteAt > now) continue;
                 await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageId.Value);
                 removals.Add(deletion);
             }
