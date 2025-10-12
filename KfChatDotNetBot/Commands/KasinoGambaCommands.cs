@@ -457,6 +457,7 @@ public class Planes : ICommand
             plane.Gravity();
             if (((fullCounter - 3)%20 == 0) && !firstBoard)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
+                logger.Info($"Switching planes boards. FullCounter: {fullCounter} | Counter: {counter}");
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
             }
@@ -607,7 +608,7 @@ public class Planes : ICommand
                 else if (row == 6) output += Air;
                 else
                 {
-                    logger.Info($"GetGameBoard: attempting to access planeboard index [{row},{(column + counter) % 20}]. RawCounter: {fullCounter} | Counter: {counter} | UseBoard: {useBoard}");
+                    //logger.Info($"GetGameBoard: attempting to access planeboard index [{row},{(column + counter) % 20}]. RawCounter: {fullCounter} | Counter: {counter} | UseBoard: {useBoard}");
                     switch (planesBoards[useBoard][row, (counter + column) % 20])
                     {
                         case 0:
