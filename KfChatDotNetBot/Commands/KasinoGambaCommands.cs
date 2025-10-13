@@ -649,11 +649,11 @@ public class Planes : ICommand
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 100);
                 if (forceTiles != -1) board[row, column] = forceTiles;
-                else if (randomNum < 35)
+                else if (randomNum < 49)
                 {
                     board[row, column] = 0; //neutral
                 }
-                else if (randomNum > 69)
+                else if (randomNum > 79)
                 {
                     board[row, column] = 1; //rocket
                 }
@@ -696,15 +696,15 @@ public class Plane(GamblerDbModel gambler)
 
     public void HitMulti()
     {
-        var randomNum = Money.GetRandomNumber(gambler, 0, 1);
+        var randomNum = Money.GetRandomNumber(gambler, 0, 4);
         var weightedRand = WeightedRandomNumber(1, 10);
         if (randomNum == 0)
         {
-            MultiTracker += weightedRand;
+            MultiTracker *= weightedRand + (decimal)0.1;
         }
         else
         {
-            MultiTracker *= weightedRand;
+            MultiTracker += weightedRand;
         }
 
         if (Height > 0) Height--;
@@ -715,7 +715,7 @@ public class Plane(GamblerDbModel gambler)
     private int WeightedRandomNumber(int min, int max)
     {
         var range = max - min + 1;
-        var weight = 4.5 + Height;
+        var weight = 6.25 + Height;
         var r = _random.NextDouble();
         var exp = -Math.Log(1 - r) / weight;
         var returnVal = min + (int)Math.Round(exp * range);
