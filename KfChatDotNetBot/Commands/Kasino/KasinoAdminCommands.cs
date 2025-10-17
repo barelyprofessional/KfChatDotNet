@@ -7,7 +7,7 @@ using KfChatDotNetBot.Services;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 
-namespace KfChatDotNetBot.Commands;
+namespace KfChatDotNetBot.Commands.Kasino;
 
 public class TempExcludeCommand : ICommand
 {

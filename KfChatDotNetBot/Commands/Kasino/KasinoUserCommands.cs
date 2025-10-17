@@ -10,7 +10,7 @@ using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using NLog;
 
-namespace KfChatDotNetBot.Commands;
+namespace KfChatDotNetBot.Commands.Kasino;
 
 [KasinoCommand]
 public class GetBalanceCommand : ICommand
