@@ -16,7 +16,7 @@ public static class BuiltIn
         await using var db = new ApplicationDbContext();
         logger.Info("Enumerating through fields in the Keys class");
         var keysType = typeof(Keys);
-        var fields = keysType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+        var fields = keysType.GetFields();
         logger.Info($"Got {fields.Length} fields");
         foreach (var field in fields)
         {
