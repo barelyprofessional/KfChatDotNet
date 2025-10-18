@@ -362,7 +362,7 @@ public static class BuiltIn
         public static string KiwiPeerTubeEnforceWhitelist = "KiwiPeerTube.EnforceWhitelist";
         [BuiltInSetting("Interval in seconds for checking if the bot is completely dead", SettingValueType.Text, "15", WholeNumberRegex)]
         public static string BotDeadBotDetectionInterval = "Bot.DeadBotDetectionInterval";
-        [BuiltInSetting("Whether the bot should exit if it's dead and unrecoverable", SettingValueType.Boolean, BooleanRegex)]
+        [BuiltInSetting("Whether the bot should exit if it's dead and unrecoverable", SettingValueType.Boolean, "false", BooleanRegex)]
         public static string BotExitOnDeath = "Bot.ExitOnDeath";
         [BuiltInSetting("Whether to respond to Bossman impersonation", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string BotRespondToDiscordImpersonation = "Bot.RespondToDiscordImpersonation";
