@@ -183,6 +183,7 @@ public class ChatBot
     {
         var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotScheduledDeletionInterval)).ToType<int>();
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(interval));
+        var failures = new Dictionary<string, int>();
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
             if (!KfClient.IsConnected())
@@ -195,13 +196,27 @@ public class ChatBot
             var removals = new List<ScheduledAutoDeleteModel>();
             foreach (var deletion in _scheduledDeletions)
             {
+                if (deletion.DeleteAt > now) continue;
                 if (deletion.Message.ChatMessageId == null)
                 {
                     _logger.Error($"Can't clean up {deletion.Message.Reference} as it doesn't have a chat message ID");
+                    if (failures.TryGetValue(deletion.Message.Reference, out var failure))
+                    {
+                        if (failure > 20)
+                        {
+                            removals.Add(deletion);
+                            _logger.Error($"Giving up on {deletion.Message.Reference} and removing it from the deletion queue");
+                            continue;
+                        }
+
+                        failures[deletion.Message.Reference] += 1;
+                    }
+                    else
+                    {
+                        failures[deletion.Message.Reference] = 1;
+                    }
                     continue;
                 }
-                
-                if (deletion.DeleteAt > now) continue;
                 await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageId.Value);
                 removals.Add(deletion);
             }
