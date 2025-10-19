@@ -84,14 +84,14 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             nonce++;
             var input = Encoding.UTF8.GetBytes($"{challenge.Salt}{nonce}");
             if (!TestHash(SHA256.HashData(input), challenge.Difficulty)) continue;
-            _logger.Debug($"Hash passed the test, nonce: {nonce}");
+            _logger.Info($"Hash passed the test, nonce: {nonce}");
             return Task.FromResult(new KiwiFlareChallengeSolutionModel
             {
                 Nonce = nonce,
                 Salt = challenge.Salt
             });
         }
-    }
+    }   
 
     public async Task<KiwiFlareChallengeSolutionModel> SolveChallenge(KiwiFlareChallengeModel challenge)
     {
