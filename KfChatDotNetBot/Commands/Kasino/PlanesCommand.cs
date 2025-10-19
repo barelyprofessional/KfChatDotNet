@@ -39,11 +39,15 @@ public class Planes : ICommand
     private const string Water = "🌊";
     private const string Air = "\u2B1C"; // White square
     private const string BlankSpace = "⠀"; //need 35?
-
+    private bool rigged = false;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoPlanesCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoPlanesCleanupDelay, BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled,
+            BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled, BuiltIn.Keys.KasinoPlanesTargetedRiggeryVictims
+        ]);
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoPlanesCleanupDelay].ToType<int>());
         var logger = LogManager.GetCurrentClassLogger();
         if (!arguments.TryGetValue("amount", out var amount))
         {
@@ -207,9 +211,16 @@ public class Planes : ICommand
             plane.Gravity();
             if ((fullCounter - 3) % 20 == 0 && fullCounter != 3)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
+                if (Money.GetRandomNumber(gambler, 0, 100) == 0 && settings[BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled].ToBoolean()) rigged = true;
+                if (settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled].ToBoolean() && 
+                    settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryVictims].JsonDeserialize<List<int>>()!.Contains(user.KfId))
+                {
+                    rigged = true;
+                }
                 logger.Info($"Switching planes boards. FullCounter: {fullCounter} | Counter: {counter}");
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
+                if (rigged) planesBoards[1] = CreatePlanesBoard(gambler, 1);
             }
         } while (plane.Height < 6);
         //now plane is too low so you have either won or lost depending on your position
@@ -300,6 +311,8 @@ public class Planes : ICommand
                 }
             }
 
+            // Was https://i.postimg.cc/rmX59qtV/avelloonaircall2.webp previously
+            if (rigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
             output += "[br]";
         }
         return output;
