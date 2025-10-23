@@ -212,7 +212,7 @@ public class Planes : ICommand
             if ((fullCounter - 3) % 20 == 0 && fullCounter != 3)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
                 if (Money.GetRandomNumber(gambler, 0, 100) == 0 && settings[BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled].ToBoolean()) rigged = true;
-                if (settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled].ToBoolean() && 
+                if (settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled].ToBoolean() &&
                     settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryVictims].JsonDeserialize<List<int>>()!.Contains(user.KfId))
                 {
                     rigged = true;
@@ -220,7 +220,12 @@ public class Planes : ICommand
                 logger.Info($"Switching planes boards. FullCounter: {fullCounter} | Counter: {counter}");
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
-                if (rigged) planesBoards[1] = CreatePlanesBoard(gambler, 1);
+                if (rigged && Money.GetRandomNumber(gambler, 0, 100) == 0) planesBoards[1] = CreatePlanesBoard(gambler, 1); //1% chance to update to a board full of rockets if rigged
+                else if (rigged)
+                {
+                    planesBoards[1] = RigPlanesBoard(planesBoards[1], carrierCount, fullCounter);
+                    planesBoards[2] = RigPlanesBoard(planesBoards[2], carrierCount, fullCounter);
+                }
             }
         } while (plane.Height < 6);
         //now plane is too low so you have either won or lost depending on your position
@@ -311,9 +316,8 @@ public class Planes : ICommand
                 }
             }
 
-            // Was https://i.postimg.cc/rmX59qtV/avelloonaircall2.webp previously
-            if (rigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
             output += "[br]";
+
         }
         return output;
     }
@@ -390,7 +394,8 @@ public class Planes : ICommand
                 }
 
             }
-
+            // Was https://i.postimg.cc/rmX59qtV/avelloonaircall2.webp previously
+            if (rigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
             output += "[br]";
         }
         return output;
@@ -420,6 +425,42 @@ public class Planes : ICommand
             }
         }
         return board;
+    }
+
+    private int[,] RigPlanesBoard(int[,] planesBoard, int carrierCount, int fullCounter)
+    {
+        int[,] returnBoard = new int[6,20];
+        int boardCounter = (fullCounter-3) / 20;
+        var spaceToUpdate = 0;
+        bool startUpdating = true;
+        spaceToUpdate = (fullCounter-3) % 20; //how far along is the game into the current board
+        if (spaceToUpdate != 0) startUpdating = false;
+        
+        for (var row = 0; row < 6; row++)
+        {
+            for (var column = 0; column < 20; column++)
+            {
+                if (column >= spaceToUpdate) startUpdating = true;
+                else startUpdating = false;
+                if (startUpdating)
+                {
+                    if (row == 5 && column+1 == (fullCounter-3) % carrierCount)
+                    {
+                        returnBoard[row, column] = 2; //force set as multi
+                    }
+                    else
+                    {
+                        returnBoard[row, column] = planesBoard[row, column];
+                    }
+                }
+                else
+                {
+                    returnBoard[row, column] = planesBoard[row, column];
+                }
+                
+            }
+        }
+        return returnBoard;
     }
 }
 
