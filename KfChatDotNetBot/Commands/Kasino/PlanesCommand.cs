@@ -40,6 +40,7 @@ public class Planes : ICommand
     private const string Air = "\u2B1C"; // White square
     private const string BlankSpace = "⠀"; //need 35?
     private bool rigged = false;
+    private bool superRigged = false;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -71,6 +72,11 @@ public class Planes : ICommand
         var planesBoard = CreatePlanesBoard(gambler,0);
         var planesBoard2 = CreatePlanesBoard(gambler);
         var planesBoard3 = CreatePlanesBoard(gambler);
+        if (rigged)
+        {
+            planesBoard2 = RigPlanesBoard(planesBoard2, carrierCount, 0);
+            planesBoard3 = RigPlanesBoard(planesBoard3, carrierCount, 0);
+        }
         List<int[,]> planesBoards = new List<int[,]>(){planesBoard, planesBoard2, planesBoard3};
         var plane = new Plane(gambler);
         var frameLength = 1000.0;
@@ -220,7 +226,10 @@ public class Planes : ICommand
                 logger.Info($"Switching planes boards. FullCounter: {fullCounter} | Counter: {counter}");
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
-                if (rigged && Money.GetRandomNumber(gambler, 0, 100) == 0) planesBoards[1] = CreatePlanesBoard(gambler, 1); //1% chance to update to a board full of rockets if rigged
+                if (rigged && Money.GetRandomNumber(gambler, 0, 100) == 0) {
+                    planesBoards[1] = CreatePlanesBoard(gambler, 1); //1% chance to update to a board full of rockets if rigged
+                    superRigged = true;
+                }
                 else if (rigged)
                 {
                     planesBoards[1] = RigPlanesBoard(planesBoards[1], carrierCount, fullCounter);
@@ -395,7 +404,7 @@ public class Planes : ICommand
 
             }
             // Was https://i.postimg.cc/rmX59qtV/avelloonaircall2.webp previously
-            if (rigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
+            if (superRigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
             output += "[br]";
         }
         return output;
@@ -434,7 +443,7 @@ public class Planes : ICommand
         var spaceToUpdate = 0;
         bool startUpdating = true;
         spaceToUpdate = (fullCounter-3) % 20; //how far along is the game into the current board
-        if (spaceToUpdate != 0) startUpdating = false;
+        if (spaceToUpdate > 0) startUpdating = false;
         
         for (var row = 0; row < 6; row++)
         {
