@@ -150,19 +150,35 @@ public class DLive(ChatBot kfChatBot) : IDisposable
         //         }
         //     }
         // }
-        var responseData = content.GetProperty("data").GetProperty("userByDisplayName");
-        var isLive = responseData.GetProperty("livestream").ValueKind == JsonValueKind.Object;
-        string? title = null;
-        if (isLive)
+        try
         {
-            title = responseData.GetProperty("livestream").GetProperty("title").GetString();
+            var responseData = content.GetProperty("data").GetProperty("userByDisplayName");
+            if (responseData.ValueKind == JsonValueKind.Null)
+            {
+                logger.Error($"userByDisplayName was null for {username}. Just going to throw an exception because who knows what's going on");
+                logger.Error(content.GetRawText);
+                throw new NullReferenceException($"userByDisplayName for {username}");
+            }
+            var isLive = responseData.GetProperty("livestream").ValueKind == JsonValueKind.Object;
+            string? title = null;
+            if (isLive)
+            {
+                title = responseData.GetProperty("livestream").GetProperty("title").GetString();
+            }
+
+            return new DLiveIsLiveModel
+            {
+                IsLive = isLive,
+                Title = title,
+                Username = responseData.GetProperty("username").GetString() ?? "username was null in GraphQL response"
+            };
         }
-        return new DLiveIsLiveModel
+        catch (Exception e)
         {
-            IsLive = isLive,
-            Title = title,
-            Username = responseData.GetProperty("username").GetString() ?? "username was null in GraphQL response"
-        };
+            logger.Error($"Bot shit itself while trying to check if {username} is live. JSON payload follows");
+            logger.Error(content.GetRawText);
+            throw;
+        }
     }
 
     public void Dispose()
