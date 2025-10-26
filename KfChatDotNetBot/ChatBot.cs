@@ -188,7 +188,7 @@ public class ChatBot
         {
             if (!KfClient.IsConnected())
             {
-                _logger.Info("Not cleaning scheduled deletions up as we're disconnected");
+                _logger.Debug("Not cleaning scheduled deletions up as we're disconnected");
                 continue;
             }
 
