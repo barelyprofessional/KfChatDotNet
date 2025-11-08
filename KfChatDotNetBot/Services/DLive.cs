@@ -33,9 +33,11 @@ public class DLive(ChatBot kfChatBot) : IDisposable
             await using var db = new ApplicationDbContext();
             var streams = await db.Streams.Where(s => s.Service == StreamService.DLive).Include(s => s.User).ToListAsync(ct);
             var settings = await SettingsProvider.GetMultipleValuesAsync([
-                BuiltIn.Keys.DLivePersistedCurrentlyLiveStreams, BuiltIn.Keys.CaptureEnabled
+                BuiltIn.Keys.DLivePersistedCurrentlyLiveStreams, BuiltIn.Keys.CaptureEnabled,
+                BuiltIn.Keys.CaptureLockTable
             ]);
             var currentlyLive = settings[BuiltIn.Keys.DLivePersistedCurrentlyLiveStreams].JsonDeserialize<List<string>>() ?? [];
+            var locks = settings[BuiltIn.Keys.CaptureLockTable].JsonDeserialize<Dictionary<string, string>>() ?? new Dictionary<string, string>();
             foreach (var stream in streams)
             {
                 var username = stream.StreamUrl.Split('/').LastOrDefault();
@@ -43,6 +45,15 @@ public class DLive(ChatBot kfChatBot) : IDisposable
                 {
                     _logger.Error($"Could not determine the DLive username from {stream.StreamUrl} in row {stream.Id}");
                     continue;
+                }
+
+                if (locks.ContainsKey(stream.StreamUrl))
+                {
+                    if (File.Exists(locks[stream.StreamUrl]))
+                    {
+                        _logger.Debug($"{stream.StreamUrl} has an existing lock at {locks[stream.StreamUrl]}, ignoring");
+                        continue;
+                    }
                 }
 
                 DLiveIsLiveModel status;

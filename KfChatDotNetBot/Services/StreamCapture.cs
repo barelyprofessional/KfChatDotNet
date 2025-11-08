@@ -13,10 +13,16 @@ namespace KfChatDotNetBot.Services;
 public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod, CaptureOverridesModel? captureOverrides = null, CancellationToken ct = default)
 {
     private readonly Dictionary<string, Setting> _settings = SettingsProvider
-        .GetMultipleValuesAsync([BuiltIn.Keys.CaptureYtDlpBinaryPath, BuiltIn.Keys.CaptureYtDlpWorkingDirectory,
-            BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser, BuiltIn.Keys.CaptureYtDlpOutputFormat, BuiltIn.Keys.CaptureYtDlpParentTerminal,
-            BuiltIn.Keys.CaptureYtDlpScriptPath, BuiltIn.Keys.CaptureYtDlpUserAgent, BuiltIn.Keys.CaptureStreamlinkBinaryPath,
-            BuiltIn.Keys.CaptureStreamlinkOutputFormat, BuiltIn.Keys.CaptureStreamlinkRemuxScript, BuiltIn.Keys.CaptureStreamlinkTwitchOptions]).Result;
+        .GetMultipleValuesAsync([
+            BuiltIn.Keys.CaptureYtDlpBinaryPath, BuiltIn.Keys.CaptureYtDlpWorkingDirectory,
+            BuiltIn.Keys.CaptureYtDlpCookiesFromBrowser, BuiltIn.Keys.CaptureYtDlpOutputFormat,
+            BuiltIn.Keys.CaptureYtDlpParentTerminal,
+            BuiltIn.Keys.CaptureYtDlpScriptPath, BuiltIn.Keys.CaptureYtDlpUserAgent,
+            BuiltIn.Keys.CaptureStreamlinkBinaryPath,
+            BuiltIn.Keys.CaptureStreamlinkOutputFormat, BuiltIn.Keys.CaptureStreamlinkRemuxScript,
+            BuiltIn.Keys.CaptureStreamlinkTwitchOptions,
+            BuiltIn.Keys.CaptureLockTable
+        ]).Result;
 
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -97,11 +103,14 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         var random = Convert.ToHexString(Guid.NewGuid().ToByteArray()[..4]);
         var scriptPath = Path.Join(_settings[captureOverrides?.CaptureYtDlpScriptPath ?? BuiltIn.Keys.CaptureYtDlpScriptPath].Value,
             $"bot_ytdlp_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{random}.sh");
+        var lockFile = Path.Join(_settings[captureOverrides?.CaptureYtDlpScriptPath ?? BuiltIn.Keys.CaptureYtDlpScriptPath].Value,
+            $"capture_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{random}.lock");
         if (OperatingSystem.IsWindows())
         {
             Path.ChangeExtension(scriptPath, ".bat");
         }
         _logger.Info($"Generated script path: {scriptPath}");
+        _logger.Info($"Generated lock file path: {lockFile}");
 
         string captureLine;
         if (captureMethod == StreamCaptureMethods.YtDlp)
@@ -141,17 +150,21 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         {
             // GetPathRoot on Windows returns the top level directory, e.g. "C:\". Assuming the working directory is on another drive such as D:
             // we'll need to swap to that drive letter, so this just trims off the \ to transform it to D: or whatever. UNC paths not supported
-            scriptContent = $"{Path.GetPathRoot(captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value)?.TrimEnd('\\')}{Environment.NewLine}" +
+            scriptContent = $"TYPE nul > {lockFile}{Environment.NewLine}" +
+                            $"{Path.GetPathRoot(captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value)?.TrimEnd('\\')}{Environment.NewLine}" +
                             $"CD {captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
                             $"{captureLine}{Environment.NewLine}" +
+                            $"DEL /q {lockFile}{Environment.NewLine}" +
                             $"{remuxLine}{Environment.NewLine}" +
                             $"PAUSE";
         }
         else if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())
         {
             scriptContent = $"#!/bin/bash{Environment.NewLine}" +
+                            $"touch {lockFile}{Environment.NewLine}" +
                             $"cd {captureOverrides?.CaptureYtDlpWorkingDirectory ?? _settings[BuiltIn.Keys.CaptureYtDlpWorkingDirectory].Value}{Environment.NewLine}" +
                             $"{captureLine}{Environment.NewLine}" +
+                            $"rm -f {lockFile}{Environment.NewLine}" +
                             $"{remuxLine}{Environment.NewLine}" +
                             $"read -p \"Press enter to exit\"";
         }
@@ -162,6 +175,17 @@ public class StreamCapture(string streamUrl, StreamCaptureMethods captureMethod,
         
         _logger.Info("Wrote the script, contents follow this message");
         _logger.Info(scriptContent);
+        
+        _logger.Info("Updating locktable");
+        var table = _settings[BuiltIn.Keys.CaptureLockTable].JsonDeserialize<Dictionary<string, string>>() ??
+                    new Dictionary<string, string>();
+        if (!table.TryAdd(streamUrl, lockFile))
+        {
+            _logger.Info($"{streamUrl} has a lockfile already pointing to {table[streamUrl]}, updating to {lockFile}");
+            table[streamUrl] = lockFile;
+        }
+
+        await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.CaptureLockTable, table);
 
         await File.WriteAllTextAsync(scriptPath, scriptContent, ct);
         if (OperatingSystem.IsLinux() || OperatingSystem.IsFreeBSD())

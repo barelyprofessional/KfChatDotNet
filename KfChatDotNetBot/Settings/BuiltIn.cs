@@ -424,6 +424,8 @@ public static class BuiltIn
         public static string KasinoPlanesRandomRiggeryEnabled = "Kasino.Planes.RandomRiggeryEnabled";
         [BuiltInSetting("Array of forum IDs to guarantee riggery in Planes", SettingValueType.Array, "[]")]
         public static string KasinoPlanesTargetedRiggeryVictims = "Kasino.Planes.TargetedRiggeryVictims";
+        [BuiltInSetting("Table of locks to look for before checking if someone is live / initiating a capture", SettingValueType.Complex, "{}")]
+        public static string CaptureLockTable = "Capture.LockTable";
     }
 }
 
