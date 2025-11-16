@@ -34,7 +34,7 @@ public class KenoCommand : ICommand
     private const string MatchRevealDisplay = "💠";
     private const string BlankSpaceDisplay = "⬛";
 
-    private SentMessageTrackerModel _kenoTable;
+    private SentMessageTrackerModel? _kenoTable;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -97,7 +97,7 @@ public class KenoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
                 true, autoDeleteAfter: cleanupDelay);
-            botInstance.ScheduleMessageAutoDelete(_kenoTable, cleanupDelay);
+            botInstance.ScheduleMessageAutoDelete(_kenoTable ?? throw new Exception("Cannot clean up _kenoTable as it's null"), cleanupDelay);
             return;
         }
 
@@ -109,7 +109,7 @@ public class KenoCommand : ICommand
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
             true, autoDeleteAfter: cleanupDelay);
-        botInstance.ScheduleMessageAutoDelete(_kenoTable, cleanupDelay);
+        botInstance.ScheduleMessageAutoDelete(_kenoTable ?? throw new Exception("Cannot clean up _kenotable as it's null"), cleanupDelay);
     }
     
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)
@@ -139,6 +139,11 @@ public class KenoCommand : ICommand
             if (_kenoTable.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
             if (i > 60) return;
             await Task.Delay(100);
+        }
+
+        if (_kenoTable.ChatMessageId == null)
+        {
+            throw new Exception($"_kenoTable chat message ID never got populated. Tracker status is: {_kenoTable?.Status}");
         }
 
         var frameDelay = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoFrameDelay)).ToType<int>();
