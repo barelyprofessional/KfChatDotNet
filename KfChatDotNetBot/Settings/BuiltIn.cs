@@ -200,6 +200,8 @@ public static class BuiltIn
         [BuiltInSetting("Bossman's usernames on Jackpot", SettingValueType.Array, 
             "[\"TheBossmanJack\", \"Austingambless757\"]")]
         public static string JackpotBmjUsernames = "Jackpot.BmjUsernames";
+        [BuiltInSetting("Whether Jackpot is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string JackpotEnabled = "Jackpot.Enabled";
         [BuiltInSetting("Bossman's rainbet public IDs", SettingValueType.Array, 
             "[\"Ir04170wLulcjtePCL7P6lmeOlepRaNp\", \"IA9RHFR1NLHL33AVOM9GL2G2CINM9I6P\"]")]
         public static string RainbetBmjPublicIds = "Rainbet.BmjPublicIds";
