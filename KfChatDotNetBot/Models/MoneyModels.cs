@@ -85,6 +85,10 @@ public class KasinoEventModel
     /// State of the kasino event
     /// </summary>
     public required KasinoEventState EventState { get; set; } = KasinoEventState.Incomplete;
+    /// <summary>
+    /// Whether the payout is weighted based on the selection delay
+    /// </summary>
+    public required bool SelectionTimeWeightedPayout { get; set; } = false;
 }
 
 public class KasinoEventOptionModel
@@ -109,10 +113,6 @@ public enum KasinoEventType
     WinLose,
     [Description("Closest to prediction")]
     Prediction,
-    [Description("Closest to prediction (payout weighted to favor early bets)")]
-    PredictionSelectionTimeWeighted,
-    [Description("Win/Lose (payout weighted to favor early bets)")]
-    WinLoseSelectionTimeWeighted
 }
 
 public enum KasinoEventState

@@ -497,4 +497,12 @@ public static class Money
         return payout;
     }
     
+    /// <summary>
+    /// Generate a short random string based on the first 4 bytes of a GUID for event IDs
+    /// </summary>
+    /// <returns>Returns a lowercase hex representation of the 4 bytes. e.g. 7ec79eb2</returns>
+    public static string GenerateEventId()
+    {
+        return Convert.ToHexString(Guid.NewGuid().ToByteArray()[..4]).ToLower();
+    }
 }
