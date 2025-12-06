@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using Humanizer;
-using Humanizer.Localisation;
 using KfChatDotNetBot.Commands;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;

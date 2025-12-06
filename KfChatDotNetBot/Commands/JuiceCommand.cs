@@ -1,9 +1,6 @@
 using System.Text.RegularExpressions;
-using Humanizer;
-using Humanizer.Localisation;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
-using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 
