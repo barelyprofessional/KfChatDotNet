@@ -75,7 +75,7 @@ public class DiceCommand : ICommand
             await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Dice, ct: ctx);
             newBalance = gambler.Balance - wager;
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you rolled a {rolled:N2} and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
+                $"{user.FormatUsername()}, you rolled a {rolled * 100:N2} and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
                 $"Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
         }
@@ -103,18 +103,28 @@ public class DiceCommand : ICommand
         const string DICE_METER_RIGHT_COLOR = "#3dd179"; // green for win
 
         string diceMeter = "";
-        
-        // TODO: construct rigged dice display here
-        
-        // no rig scenario
-        diceMeter += $"[B][COLOR={DICE_METER_LEFT_COLOR}]";
-        diceMeter += String.Concat(Enumerable.Repeat(DICE_METER_LEFT, DICE_METER_LENGTH / 2)); // ---------
-        diceMeter += "[/COLOR]";
-        diceMeter += $"[COLOR={DICE_METER_MIDDLE_COLOR}]{DICE_METER_MIDDLE}[/COLOR]"; // |
-        diceMeter += $"[COLOR={DICE_METER_RIGHT_COLOR}]";
-        diceMeter += String.Concat(Enumerable.Repeat(DICE_METER_RIGHT, DICE_METER_LENGTH / 2)); // --------
-        diceMeter += "[/COLOR][/B]";
 
+        if (rolled > 0.5 && rolled < 0.5 + _houseEdge)
+        {
+            // rigged dice scenario
+            diceMeter += $"[B][COLOR={DICE_METER_LEFT_COLOR}]";
+            int redMeterLength = Math.Min((int)Math.Round(DICE_METER_LENGTH * rolled + 1), DICE_METER_LENGTH);
+            diceMeter += String.Concat(Enumerable.Repeat(DICE_METER_LEFT, redMeterLength));
+            diceMeter += $"[/COLOR][COLOR={DICE_METER_MIDDLE_COLOR}]{DICE_METER_MIDDLE}[/COLOR][COLOR={DICE_METER_RIGHT_COLOR}]";
+            diceMeter += String.Concat(Enumerable.Repeat(DICE_METER_RIGHT, DICE_METER_LENGTH - (diceMeter.Split(DICE_METER_LEFT).Length - 1))) + "[/COLOR][/B]  [img]https://i.ddos.lgbt/u/Nq3JXD.webp[/img]";
+        }
+        else
+        {
+            // no rig scenario
+            diceMeter += $"[B][COLOR={DICE_METER_LEFT_COLOR}]";
+            diceMeter += String.Concat(Enumerable.Repeat(DICE_METER_LEFT, DICE_METER_LENGTH / 2)); // ---------
+            diceMeter += "[/COLOR]";
+            diceMeter += $"[COLOR={DICE_METER_MIDDLE_COLOR}]{DICE_METER_MIDDLE}[/COLOR]"; // |
+            diceMeter += $"[COLOR={DICE_METER_RIGHT_COLOR}]";
+            diceMeter += String.Concat(Enumerable.Repeat(DICE_METER_RIGHT, DICE_METER_LENGTH / 2)); // --------
+            diceMeter += "[/COLOR][/B]";
+            
+        }
         return $"{diceDisplayShifted}\n{diceMeter}";
     }
 }
