@@ -440,6 +440,28 @@ public static class Money
     }
     
     /// <summary>
+    /// Get random number double [0, 1]
+    /// </summary>
+    /// <param name="gambler">Gambler entity to reference their random seed</param>
+    /// <param name="iterations">Number of random number generator iterations to run before returning a result</param>
+    /// <returns>A random number based on the given parameters</returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static double GetRandomDouble(GamblerDbModel gambler, int iterations = 10)
+    {
+        var rng = StandardRng.Create();
+        var random = RandomShim.Create(rng);
+        var result = 0.0;
+        var i = 0;
+        if (iterations <= 0) throw new ArgumentException("Iterations cannot be 0 or lower");
+        while (i < iterations)
+        {
+            i++;
+            result = random.NextDouble();
+        }
+        return result;
+    }
+    
+    /// <summary>
     /// Get the user's current VIP level
     /// </summary>
     /// <param name="gambler">Gambler entity whose VIP level you want to get</param>
