@@ -1,6 +1,5 @@
 ﻿using System.Text.RegularExpressions;
 using Humanizer;
-using Humanizer.Localisation;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -267,5 +266,37 @@ public class AbandonKasinoCommand : ICommand
         gambler!.State = GamblerState.Abandoned;
         await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, Kasino account with ID {gambler.Id} has been marked as abandoned.", true);
+    }
+}
+
+[KasinoCommand]
+public class PocketWatchCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^pocketwatch (?<user_id>\d+)", RegexOptions.IgnoreCase),
+    ];
+    public string? HelpText => "Check a user's balance";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
+        if (targetUser == null)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the user ID you gave doesn't exist.", true);
+            return;
+        }
+
+        var targetGambler = await Money.GetGamblerEntityAsync(targetUser.Id, ct: ctx);
+        if (targetGambler == null)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, this user is excluded from the kasino", true);
+            return;
+        }
+        
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {targetUser.KfUsername} has {await targetGambler.Balance.FormatKasinoCurrencyAsync()}", true);
     }
 }

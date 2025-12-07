@@ -289,7 +289,7 @@ public enum WagerGame
     /// </summary>
     Event,
     [Description("Guess what number I'm thinking of")]
-    GuessWhatNumber
+    GuessWhatNumber,
 }
 
 public enum GamblerState

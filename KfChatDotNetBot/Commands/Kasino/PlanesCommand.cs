@@ -39,8 +39,8 @@ public class Planes : ICommand
     private const string Water = "🌊";
     private const string Air = "\u2B1C"; // White square
     private const string BlankSpace = "⠀"; //need 35?
-    private bool rigged = false;
-    private bool superRigged = false;
+    private bool _rigged;
+    private bool _superRigged;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -68,21 +68,19 @@ public class Planes : ICommand
             return;
         }
 
-        var carrierCount = 6;
+        const int carrierCount = 6;
         var planesBoard = CreatePlanesBoard(gambler,0);
         var planesBoard2 = CreatePlanesBoard(gambler);
         var planesBoard3 = CreatePlanesBoard(gambler);
-        if (rigged)
+        if (_rigged)
         {
             planesBoard2 = RigPlanesBoard(planesBoard2, carrierCount, 0);
             planesBoard3 = RigPlanesBoard(planesBoard3, carrierCount, 0);
         }
-        List<int[,]> planesBoards = new List<int[,]>(){planesBoard, planesBoard2, planesBoard3};
+        List<int[,]> planesBoards = [planesBoard, planesBoard2, planesBoard3];
         var plane = new Plane(gambler);
-        var frameLength = 1000.0;
+        const double frameLength = 1000.0;
         var fullCounter = 0;
-        bool firstBoard = true;
-        var counter = 0;
         var noseUp = true;
         var planesDisplay = GetPreGameBoard(-3, planesBoard2, plane, carrierCount, noseUp);
         var msgId = await botInstance.SendChatMessageAsync(planesDisplay, true);
@@ -102,8 +100,7 @@ public class Planes : ICommand
          */
         do
         {
-            if ((fullCounter-3) > 19) firstBoard = false;
-            counter = (fullCounter - 3) % 20;
+            var counter = (fullCounter - 3) % 20;
             
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
 
@@ -217,20 +214,20 @@ public class Planes : ICommand
             plane.Gravity();
             if ((fullCounter - 3) % 20 == 0 && fullCounter != 3)//removes old planesboard, adds new planeboard when necessary **********************************************************************NEEDS MORE UPDATES
             {
-                if (Money.GetRandomNumber(gambler, 0, 100) == 0 && settings[BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled].ToBoolean()) rigged = true;
+                if (Money.GetRandomNumber(gambler, 0, 100) == 0 && settings[BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled].ToBoolean()) _rigged = true;
                 if (settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled].ToBoolean() &&
                     settings[BuiltIn.Keys.KasinoPlanesTargetedRiggeryVictims].JsonDeserialize<List<int>>()!.Contains(user.KfId))
                 {
-                    rigged = true;
+                    _rigged = true;
                 }
                 logger.Info($"Switching planes boards. FullCounter: {fullCounter} | Counter: {counter}");
                 planesBoards.RemoveAt(0);
                 planesBoards.Add(CreatePlanesBoard(gambler));
-                if (rigged && Money.GetRandomNumber(gambler, 0, 100) == 0) {
+                if (_rigged && Money.GetRandomNumber(gambler, 0, 100) == 0) {
                     planesBoards[1] = CreatePlanesBoard(gambler, 1); //1% chance to update to a board full of rockets if rigged
-                    superRigged = true;
+                    _superRigged = true;
                 }
-                else if (rigged)
+                else if (_rigged)
                 {
                     planesBoards[1] = RigPlanesBoard(planesBoards[1], carrierCount, fullCounter);
                     planesBoards[2] = RigPlanesBoard(planesBoards[2], carrierCount, fullCounter);
@@ -334,8 +331,6 @@ public class Planes : ICommand
     private string GetGameBoard(int fullCounter, List<int[,]> planesBoards, Plane plane, int carrierCount, bool noseUp)
     {
         var output = "";
-        int counter;
-        var logger = LogManager.GetCurrentClassLogger();
         
         for (var row = 0; row < 8; row++)
         {
@@ -344,6 +339,7 @@ public class Planes : ICommand
                  column++) //plane starts out 3 space behind to give some space to the view,
             {
                 var useBoard = 1;
+                int counter;
                 if (fullCounter < 23) counter = fullCounter % 23 - 3;
                 else counter = (fullCounter - 3) % 20;
                 //---
@@ -404,7 +400,7 @@ public class Planes : ICommand
 
             }
             // Was https://i.postimg.cc/rmX59qtV/avelloonaircall2.webp previously
-            if (superRigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
+            if (_superRigged && row == 0) output += "[img]https://i.ddos.lgbt/u/6v8WJ5.webp[/img]";
             output += "[br]";
         }
         return output;
@@ -419,18 +415,13 @@ public class Planes : ICommand
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 100);
                 if (forceTiles != -1) board[row, column] = forceTiles;
-                else if (randomNum < 49)
-                {
-                    board[row, column] = 0; //neutral
-                }
-                else if (randomNum > 79)
-                {
-                    board[row, column] = 1; //rocket
-                }
                 else
-                {
-                    board[row, column] = 2; //multi
-                }
+                    board[row, column] = randomNum switch
+                    {
+                        < 49 => 0,
+                        > 79 => 1,
+                        _ => 2
+                    };
             }
         }
         return board;
@@ -438,11 +429,9 @@ public class Planes : ICommand
 
     private int[,] RigPlanesBoard(int[,] planesBoard, int carrierCount, int fullCounter)
     {
-        int[,] returnBoard = new int[6,20];
-        int boardCounter = (fullCounter-3) / 20;
-        var spaceToUpdate = 0;
-        bool startUpdating = true;
-        spaceToUpdate = (fullCounter-3) % 20; //how far along is the game into the current board
+        var returnBoard = new int[6,20];
+        bool startUpdating;
+        var spaceToUpdate = (fullCounter-3) % 20; //how far along is the game into the current board
         if (spaceToUpdate > 0) startUpdating = false;
         
         for (var row = 0; row < 6; row++)

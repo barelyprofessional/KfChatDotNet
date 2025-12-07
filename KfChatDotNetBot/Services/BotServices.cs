@@ -172,7 +172,13 @@ public class BotServices
     
     private async Task BuildJackpot()
     {
-        var proxy = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy)).Value;
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.Proxy, BuiltIn.Keys.JackpotEnabled]);
+        if (!settings[BuiltIn.Keys.JackpotEnabled].ToBoolean())
+        {
+            _logger.Debug("Jackpot.bet is disabled");
+            return;
+        }
+        var proxy = settings[BuiltIn.Keys.Proxy].Value;
         _jackpot = new Jackpot(proxy, _cancellationToken);
         _jackpot.OnJackpotBet += OnJackpotBet;
         await _jackpot.StartWsClient();
@@ -378,7 +384,7 @@ public class BotServices
             var settings = await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
                 BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled,
-                BuiltIn.Keys.RainbetEnabled, BuiltIn.Keys.PartiEnabled
+                BuiltIn.Keys.RainbetEnabled, BuiltIn.Keys.PartiEnabled, BuiltIn.Keys.JackpotEnabled
             ]);
             try
             {
@@ -422,7 +428,7 @@ public class BotServices
                     await BuildHowlgg();
                 }
 
-                if (_jackpot != null && !_jackpot.IsConnected())
+                if (_jackpot != null && settings[BuiltIn.Keys.JackpotEnabled].ToBoolean() && !_jackpot.IsConnected())
                 {
                     _logger.Error("Jackpot died, recreating it");
                     _jackpot.Dispose();

@@ -200,6 +200,8 @@ public static class BuiltIn
         [BuiltInSetting("Bossman's usernames on Jackpot", SettingValueType.Array, 
             "[\"TheBossmanJack\", \"Austingambless757\"]")]
         public static string JackpotBmjUsernames = "Jackpot.BmjUsernames";
+        [BuiltInSetting("Whether Jackpot is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string JackpotEnabled = "Jackpot.Enabled";
         [BuiltInSetting("Bossman's rainbet public IDs", SettingValueType.Array, 
             "[\"Ir04170wLulcjtePCL7P6lmeOlepRaNp\", \"IA9RHFR1NLHL33AVOM9GL2G2CINM9I6P\"]")]
         public static string RainbetBmjPublicIds = "Rainbet.BmjPublicIds";
@@ -426,6 +428,19 @@ public static class BuiltIn
         public static string KasinoPlanesTargetedRiggeryVictims = "Kasino.Planes.TargetedRiggeryVictims";
         [BuiltInSetting("Table of locks to look for before checking if someone is live / initiating a capture", SettingValueType.Complex, "{}")]
         public static string CaptureLockTable = "Capture.LockTable";
+        [BuiltInSetting("Whether the win is weighted against selection time", SettingValueType.Boolean,
+            "true", BooleanRegex)]
+        public static string KasinoEventWeightWinAgainstSelectionTime = "Kasino.Event.WeightWinAgainstSelectionTime";
+        [BuiltInSetting("Kasino event data", SettingValueType.Complex, "[]")]
+        public static string KasinoEventData = "Kasino.Event.Data";
+        [BuiltInSetting("Kasino event minimum acceptable bet", SettingValueType.Text, "100", WholeNumberRegex)]
+        public static string KasinoEventBetMin = "Kasino.Event.BetMin";
+        [BuiltInSetting("Kasino event maximum acceptable bet (0 means unlimited)", SettingValueType.Text, "0", WholeNumberRegex)]
+        public static string KasinoEventBetMax = "Kasino.Event.BetMax";
+        [BuiltInSetting("Length limit for Kasino event text", SettingValueType.Text, "250", WholeNumberRegex)]
+        public static string KasinoEventTextLengthLimit = "Kasino.Event.TextLengthLimit";
+        [BuiltInSetting("Length limit for Kasino event option text", SettingValueType.Text, "250", WholeNumberRegex)]
+        public static string KasinoEventOptionTextLengthLimit = "Kasino.Event.OptionTextLengthLimit";
     }
 }
 

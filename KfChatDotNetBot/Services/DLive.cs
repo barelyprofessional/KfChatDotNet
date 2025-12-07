@@ -188,6 +188,7 @@ public class DLive(ChatBot kfChatBot) : IDisposable
         {
             logger.Error($"Bot shit itself while trying to check if {username} is live. JSON payload follows");
             logger.Error(content.GetRawText);
+            logger.Error(e);
             throw;
         }
     }
