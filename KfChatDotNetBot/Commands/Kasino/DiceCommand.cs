@@ -75,7 +75,7 @@ public class DiceCommand : ICommand
             await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Dice, ct: ctx);
             newBalance = gambler.Balance - wager;
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you rolled a {rolled:0:00} and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
+                $"{user.FormatUsername()}, you rolled a {rolled:N2} and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
                 $"Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
         }
