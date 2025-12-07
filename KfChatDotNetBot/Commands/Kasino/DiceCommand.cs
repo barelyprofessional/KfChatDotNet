@@ -23,7 +23,7 @@ public class DiceCommand : ICommand
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 3,
-        Window = TimeSpan.FromSeconds(30)
+        Window = TimeSpan.FromSeconds(15)
     };
     
     private static double _houseEdge = 0.05; // house edge hack? are we doing perfect 50/50 games?
