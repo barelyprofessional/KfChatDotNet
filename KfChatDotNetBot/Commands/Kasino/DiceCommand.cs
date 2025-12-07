@@ -20,7 +20,11 @@ public class DiceCommand : ICommand
     public string? HelpText => "!dice, roll the dice (not really, you roll between 0 - 100)";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(5);
-    public RateLimitOptionsModel? RateLimitOptions => null;
+    public RateLimitOptionsModel? RateLimitOptions => new()
+    {
+        MaxInvocations = 3,
+        Window = TimeSpan.FromSeconds(30)
+    };
     
     private static double _houseEdge = 0.05; // house edge hack? are we doing perfect 50/50 games?
 
@@ -52,6 +56,8 @@ public class DiceCommand : ICommand
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
+        // print dice game slider
+        await botInstance.SendChatMessageAsync($"{ConstructDiceGameOutput(rolled)}",true, autoDeleteAfter: cleanupDelay);
         if (rolled > 0.5 + _houseEdge)
         {
             // you win dice
