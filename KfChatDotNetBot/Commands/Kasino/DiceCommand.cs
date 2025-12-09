@@ -25,8 +25,7 @@ public class DiceCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(15)
     };
-    
-    private static double _houseEdge = 0.05; // house edge hack? are we doing perfect 50/50 games?
+    private static double _houseEdge = 0.015; // house edge hack?
 
     public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
