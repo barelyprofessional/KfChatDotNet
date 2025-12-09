@@ -370,7 +370,6 @@ public class LambchopCommand : ICommand
         lambchopFieldState += first ? SHEEP : TILE_SPACING; // first state uses sheep in front of tiles, every other state uses custom spacer string.
         lambchopFieldState += string.Join("", tiles);
         lambchopFieldState += CASTLE;
-        //
         return lambchopFieldState;
     }
 
