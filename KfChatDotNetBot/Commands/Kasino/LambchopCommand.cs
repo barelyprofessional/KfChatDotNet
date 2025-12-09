@@ -296,12 +296,12 @@ public class LambchopCommand : ICommand
                 {
                     // More rigging means death tile is more likely near the end
                     int minDeathTile = Math.Max(0, FIELD_LENGTH - 3);
-                    return Money.GetRandomNext(gambler, minDeathTile, FIELD_LENGTH); // return 15 means dying on the last tile xd
+                    return Money.GetRandomNumber(gambler, minDeathTile, FIELD_LENGTH); // return 15 means dying on the last tile xd
                 }
                 else
                 {
                     // Player fail, random tile in the path becomes death tile
-                    return Money.GetRandomNext(gambler,0, FIELD_LENGTH);
+                    return Money.GetRandomNumber(gambler,0, FIELD_LENGTH);
                 }
             }
         }
@@ -309,12 +309,12 @@ public class LambchopCommand : ICommand
         // Tiles 1 - 15
         if (_houseEdge < 0.015)
         {
-            int deathTile = Money.GetRandomNext(gambler,-1, FIELD_LENGTH); // can be any tile, including no tile! (result -1 to FIELD_LENGTH (-1 - 15))
+            int deathTile = Money.GetRandomNumber(gambler,-1, FIELD_LENGTH); // can be any tile, including no tile! (result -1 to FIELD_LENGTH (-1 - 15))
             return deathTile;
         }
 
         // game is rigged, manipulate tile placement
-        int fairDeathTile = Money.GetRandomNext(gambler,-1, FIELD_LENGTH);
+        int fairDeathTile = Money.GetRandomNumber(gambler,-1, FIELD_LENGTH);
         fairDeathTile = fairDeathTile == -1 ? FIELD_LENGTH + 1 : fairDeathTile; // shit hack, -1 means no death tile, change it to FIELD_LENGTH + 1 to compensate for next check.
         bool wouldSucceedFairly = fairDeathTile > targetTile;
         fairDeathTile = fairDeathTile == FIELD_LENGTH + 1 ? -1 : fairDeathTile;
@@ -333,7 +333,7 @@ public class LambchopCommand : ICommand
                 else
                 {
                     // rigging failed, normal tile return
-                    return Money.GetRandomNext(gambler,-1, targetTile);
+                    return Money.GetRandomNumber(gambler,-1, targetTile);
                 }
 
             }
@@ -348,7 +348,7 @@ public class LambchopCommand : ICommand
                 // Place death tile closer to target
                 // higher house edge = more likely to place closer
                 int minTile = Math.Max(0, targetTile - 3);
-                return Money.GetRandomNext(gambler,minTile, targetTile);
+                return Money.GetRandomNumber(gambler,minTile, targetTile);
             }
             return fairDeathTile;
         }
