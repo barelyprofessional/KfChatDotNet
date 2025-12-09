@@ -23,7 +23,7 @@ public class LambchopCommand : ICommand
     public string? HelpText =>
         "Tread treacherous terrain towards terrific treasures. Play using !lambchop bet, amount of tiles you want to move";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(12);
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 3,
