@@ -365,7 +365,7 @@ public class LambchopCommand : ICommand
         string lambchopFieldState = "";
         int hazardSplitIndex = hazards.Count / 2; // first half of the field uses forrest emoji which need to be alternated with hairspaces for good spacing.
         string forrestHazards = string.Join(HAIRSPACE, hazards.GetRange(0, hazardSplitIndex)); // alternate forrest emoji and hairspaces
-        string desertHazards = string.Concat(hazards.GetRange(hazardSplitIndex, hazards.Count - 1)); // add desert emojis without spacing
+        string desertHazards = string.Concat(hazards.GetRange(hazardSplitIndex, hazards.Count - hazardSplitIndex)); // add desert emojis without spacing
         lambchopFieldState += HAZARD_SPACING + forrestHazards + desertHazards + "\n"; // glue it all together with the tiles
         lambchopFieldState += first ? SHEEP : TILE_SPACING; // first state uses sheep in front of tiles, every other state uses custom spacer string.
         lambchopFieldState += string.Join("", tiles);
