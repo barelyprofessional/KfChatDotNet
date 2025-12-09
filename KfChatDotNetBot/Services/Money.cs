@@ -460,31 +460,6 @@ public static class Money
         }
         return result;
     }
-
-    /// <summary>
-    /// Get random Next number [minValue, maxValue]
-    /// </summary>
-    /// <param name="gambler">Gambler entity to reference their random seed</param>
-    /// <param name="minValue">The inclusive lower bound of the random number returned</param>
-    /// <param name="maxValue">The exclusive upper bound of the random number returned. maxValue must be greater than or equal to minValue</param>
-    /// <param name="iterations">Number of random number generator iterations to run before returning a result</param>
-    /// <returns>A random number based on the given parameters</returns>
-    /// <exception cref="ArgumentException"></exception>
-    public static int GetRandomNext(GamblerDbModel gambler, int minValue, int maxValue, int iterations = 10)
-    {
-        var rng = StandardRng.Create();
-        var random = RandomShim.Create(rng);
-        var result = 0;
-        var i = 0;
-        if (iterations <= 0) throw new ArgumentException("Iterations cannot be 0 or lower");
-        while (i < iterations)
-        {
-            i++;
-            result = random.Next(minValue, maxValue);
-        }
-
-        return result;
-    }
     
     /// <summary>
     /// Get the user's current VIP level
