@@ -38,7 +38,7 @@ public class WheelCommand : ICommand
     private const string HIGH_DIFFICULTY_WHEEL = "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫🔴";
     private const string MIDDLE_WHEEL_FILL = "....................⮝....................";
     // game settings
-    private const int MIN_WHEELSPIN_DELAY = 200;
+    private const int MIN_WHEELSPIN_DELAY = 100;
     private const int MAX_WHEELSPIN_DELAY = 1000;
     private static readonly Dictionary<string, decimal> LOW_DIFF_MULTIS = new()
     {
@@ -113,9 +113,17 @@ public class WheelCommand : ICommand
         // main loop
         for (int i = 0; i < stepsToTarget; i++)
         {
-            double t = (double)i / (stepsToTarget - 1);
-            double easeOut = 1 - Math.Pow(1 - t, 3); // cubic ease-out curve for 'realistic' wheelspin animation
-
+            double t = (double)i / Math.Max(stepsToTarget - 1, 1);
+            
+            // Combine sine wave for smooth deceleration with exponential ease-out
+            double sineEase = Math.Sin(t * Math.PI / 2); // 0 to 1, smooth acceleration
+            double expEase = 1 - Math.Pow(1 - t, 4);      // Quartic ease-out for dramatic slow-down
+            
+            // Blend both curves: start follows sine, end follows exponential
+            double blendFactor = t * t; // Quadratic blend - more exp influence as we progress
+            double easeOut = (1 - blendFactor) * sineEase + blendFactor * expEase;
+            
+            // Early spins are fast, late spins are slow 
             int delay = (int)(MIN_WHEELSPIN_DELAY + easeOut * (MAX_WHEELSPIN_DELAY - MIN_WHEELSPIN_DELAY));
             await Task.Delay(delay, ctx);
             wheel.RotateWheelOnce();
