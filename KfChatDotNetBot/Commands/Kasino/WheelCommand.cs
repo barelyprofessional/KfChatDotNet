@@ -137,15 +137,13 @@ public class WheelCommand : ICommand
         if (win)
         {
             var wheelPayout = Math.Round(wager * multi - wager, 2);
-            await Money.NewWagerAsync(gambler.Id, wager, wheelPayout, WagerGame.Wheel, ct: ctx);
-            newBalance = gambler.Balance + wheelPayout;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, wheelPayout, WagerGame.Wheel, ct: ctx);
             wheelResultMessage = $"{user.FormatUsername()}, you spun a {multi}x and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]WON[/COLOR][/B]" +
                                  $" your balance is {await newBalance.FormatKasinoCurrencyAsync()}";
         }
         else
         {
-            await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Wheel, ct: ctx);
-            newBalance = gambler.Balance - wager;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Wheel, ct: ctx);
             wheelResultMessage = $"{user.FormatUsername()}, you spun a {multi}x and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST[/COLOR][/B]" +
                                  $", better luck next time. Your balance is  {await newBalance.FormatKasinoCurrencyAsync()}";
             
