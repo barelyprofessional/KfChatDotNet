@@ -399,18 +399,16 @@ public class LambchopCommand : ICommand
     private static decimal LambchopPayoutMultiplier(int targetTile)
     {
         targetTile -= 1; // make it 0 indexed xd
-        // I cba to make a nice maths forumla for multi that follows the nonlinear payout trend, enjoy hardcoded multis copied from yeet.
-        // ASSUMES GAME HAS 16 TILES
-        if (FIELD_LENGTH != 16)
-        {
-            // macgyvered try catch finally if someone changed the tilecount to not 16
-            return 1.0m;
-        }
         List<double> lambChopMultis =
         [
             1.072, 1.191, 1.331, 1.498, 1.698, 1.940, 2.238, 2.612, 3.086,
             3.704, 4.527, 5.658, 7.275, 9.700, 13.580, 20.370
         ];
+        if (FIELD_LENGTH != lambChopMultis.Count)
+        {
+            throw new InvalidOperationException("FIELD_LENGTH doesn't match lambChopMultis array size. " +
+                                                "Update the multees for the new field length");
+        }
         return (decimal)lambChopMultis[targetTile];
     }
 
