@@ -25,6 +25,7 @@
       <PackageReference Include="NLog" Version="6.0.7" />
       <PackageReference Include="Raffinert.FuzzySharp" Version="3.0.6" />
       <PackageReference Include="RandN" Version="0.5.0" />
+      <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
       <PackageReference Include="System.Runtime.Caching" Version="10.0.1" />
       <PackageReference Include="Websocket.Client" Version="5.3.0" />
       <PackageReference Include="Zalgo" Version="0.3.0" />
