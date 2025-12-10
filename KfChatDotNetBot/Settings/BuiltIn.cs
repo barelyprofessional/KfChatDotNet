@@ -441,6 +441,10 @@ public static class BuiltIn
         public static string KasinoEventTextLengthLimit = "Kasino.Event.TextLengthLimit";
         [BuiltInSetting("Length limit for Kasino event option text", SettingValueType.Text, "250", WholeNumberRegex)]
         public static string KasinoEventOptionTextLengthLimit = "Kasino.Event.OptionTextLengthLimit";
+        [BuiltInSetting("Connection string for YouTube PubSub Redis", SettingValueType.Text, "localhost:6379")]
+        public static string YouTubePubSubRedisConnectionString = "YouTube.PubSub.RedisConnectionString";
+        [BuiltInSetting("Channel for YouTube PubSub with Redis", SettingValueType.Text, "yt-pubsub")]
+        public static string YouTubePubSubRedisChannel = "YouTube.PubSub.RedisChannel";
     }
 }
 
