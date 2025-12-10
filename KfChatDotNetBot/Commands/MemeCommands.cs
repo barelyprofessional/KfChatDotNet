@@ -96,7 +96,7 @@ public class CleanCommand : ICommand
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been clean {timespan.Humanize(precision: 5)}", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been clean {timespan.Humanize(precision:5)}", true);
     }
 }
 
@@ -124,10 +124,10 @@ public class RehabCommand : ICommand
         var timespan = endDate - DateTimeOffset.UtcNow;
         if (endDate > DateTimeOffset.UtcNow)
         {
-            await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} should finish rehab in {timespan.Humanize(precision: 3)}", true);
+            await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} should finish rehab in {timespan.Humanize(precision:3)}", true);
             return;
         }
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} left rehab {timespan.Humanize(precision: 3)} ago", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} left rehab {timespan.Humanize(precision:3)} ago", true);
     }
 }
 
@@ -196,7 +196,7 @@ public class NextCourtHearingCommand : ICommand
             return;
         }
 
-        var sent = await botInstance.SendChatMessageAsync(RenderHearings(hearings), true);
+        var sent = await botInstance.SendChatMessageAsync(RenderHearings(hearings),true);
         while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
         {
             await Task.Delay(250, ctx);
@@ -247,7 +247,7 @@ public class JailCommand : ICommand
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been in jail {timespan.Humanize(precision: 5)}", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been in jail {timespan.Humanize(precision:5)}", true);
     }
 }
 
@@ -356,6 +356,11 @@ public class HostessCommand : ICommand
         "Stop harrassing me",
     ];
 
+    private static string[] LLMPrompts = [
+        "You are a hostess for a virtual casino. You've just gotten a message from a customer with cripling gambling addiction issues. Respond in a smug and condescending manner.",
+        "You are an overworked fastfood worker at a drive-thru. A confused gambling addict just arrived. Respond with at most two sentences."
+    ];
+
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
@@ -367,7 +372,41 @@ public class HostessCommand : ICommand
         }
 
         var random = new Random();
-        var response = StaticResponses[random.Next(0, StaticResponses.Length)];
-        await botInstance.SendChatMessageAsync(response, true);
+
+        if (random.NextDouble() < 0.06)
+        {
+            // ignore 6% of requests like the old hostess command
+            return;
+        }
+
+        if (botInstance.BotServices.OpenRouter == null || random.NextDouble() < 0.3)
+        {
+            var response = StaticResponses[random.Next(0, StaticResponses.Length)];
+            await botInstance.SendChatMessageAsync(response, true);
+        }
+        else
+        {
+            var msg = message.MessageRaw.Replace("hostess", "").Trim();
+            if (string.IsNullOrWhiteSpace(msg))
+            {
+                msg = "I need help with my gambling addiction.";
+            }
+
+            var llmResponse = await botInstance.BotServices.OpenRouter.GetResponseAsync(
+                LLMPrompts[random.Next(0, LLMPrompts.Length)],
+                msg,
+                model: "deepseek/deepseek-v3.2",
+                Temperature: 1.0f + (float)((random.NextDouble() - 0.3) * 0.5)
+            );
+            if (llmResponse == null)
+            {
+                var fallback = StaticResponses[random.Next(0, StaticResponses.Length)];
+                await botInstance.SendChatMessageAsync(fallback, true);
+            }
+            else
+            {
+                await botInstance.SendChatMessageAsync(llmResponse, true, ChatBot.LengthLimitBehavior.TruncateExactly);
+            }
+        }
     }
 }
