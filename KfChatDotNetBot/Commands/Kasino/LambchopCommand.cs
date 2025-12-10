@@ -247,15 +247,13 @@ public class LambchopCommand : ICommand
         {
             var multi = LambchopPayoutMultiplier(targetTile);
             var lambchopPayout = Math.Round(wager * multi - wager, 2);
-            await Money.NewWagerAsync(gambler.Id, wager, lambchopPayout, WagerGame.LambChop, ct: ctx);
-            newBalance = gambler.Balance + lambchopPayout;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, lambchopPayout, WagerGame.LambChop, ct: ctx);
             lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]WON[/COLOR][/B]" +
                                     $" | Multi {multi} | Balance {await newBalance.FormatKasinoCurrencyAsync()}";
         }
         else
         {
-            await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.LambChop, ct: ctx);
-            newBalance = gambler.Balance - wager;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.LambChop, ct: ctx);
             lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]LOST[/COLOR][/B]" +
                                     $", better luck next time | Balance {await newBalance.FormatKasinoCurrencyAsync()}";
             

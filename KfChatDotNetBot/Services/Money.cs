@@ -282,7 +282,8 @@ public static class Money
     /// <param name="comment">Optional comment to provide for the transaction</param>
     /// <param name="fromId">If applicable, who sent the transaction (e.g. if a juicer)</param>
     /// <param name="ct">Cancellation token</param>
-    public static async Task ModifyBalanceAsync(int gamblerId, decimal effect,
+    /// <returns>New balance after modification</returns>
+    public static async Task<decimal> ModifyBalanceAsync(int gamblerId, decimal effect,
         TransactionSourceEventType eventSource, string? comment = null, int? fromId = null,
         CancellationToken ct = default)
     {
@@ -308,6 +309,7 @@ public static class Money
             TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         }, ct);
         await db.SaveChangesAsync(ct);
+        return gambler.Balance;
     }
     
     /// <summary>
@@ -328,7 +330,8 @@ public static class Money
     /// <param name="isComplete">Whether the game is 'complete'. Set to false for wagers with unknown outcomes.
     /// NOTE: wagerEffect will be ignored, instead value will be derived from the wagerAmount</param>
     /// <param name="ct">Cancellation token</param>
-    public static async Task NewWagerAsync(int gamblerId, decimal wagerAmount, decimal wagerEffect,
+    /// <returns>Returns the gambler's balance</returns>
+    public static async Task<decimal> NewWagerAsync(int gamblerId, decimal wagerAmount, decimal wagerEffect,
         WagerGame game, bool autoModifyBalance = true, dynamic? gameMeta = null, bool isComplete = true,
         CancellationToken ct = default)
     {
@@ -378,8 +381,8 @@ public static class Money
         }, ct);
         await db.SaveChangesAsync(ct);
         _logger.Info($"Added wager row with ID {wager.Entity.Id}");
+        if (!autoModifyBalance) return gambler.Balance;
         gambler.Balance += wagerEffect;
-        if (!autoModifyBalance) return;
 
         var txn = await db.Transactions.AddAsync(new TransactionDbModel
         {
@@ -394,6 +397,7 @@ public static class Money
         }, ct);
         await db.SaveChangesAsync(ct);
         _logger.Info($"Added transaction with ID {txn.Entity.Id}");
+        return gambler.Balance;
     }
     
     /// <summary>

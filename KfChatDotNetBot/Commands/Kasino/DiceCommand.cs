@@ -50,19 +50,18 @@ public class DiceCommand : ICommand
             return;
         }
         var rolled = Money.GetRandomDouble(gambler);
-        decimal newBalance;
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
         // print dice game slider
         await botInstance.SendChatMessageAsync($"{ConstructDiceGameOutput(rolled)}",true, autoDeleteAfter: cleanupDelay);
+        decimal newBalance;
         if (rolled > 0.5 + _houseEdge)
         {
             // you win dice
             var effect = wager;
-            await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.Dice, ct: ctx);
-            newBalance = gambler.Balance + effect;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.Dice, ct: ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you rolled a {rolled * 100:N2} and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]WON![/COLOR][/B] " +
                 $"You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
@@ -71,8 +70,7 @@ public class DiceCommand : ICommand
         else
         {
             // you lose dice
-            await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Dice, ct: ctx);
-            newBalance = gambler.Balance - wager;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Dice, ct: ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you rolled a {rolled * 100:N2} and [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
                 $"Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",

@@ -239,12 +239,11 @@ public class Planes : ICommand
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
-        var newBalance = gambler.Balance - wager;
+        decimal newBalance;
         if ((fullCounter - 3) % carrierCount == 0) //if you landed on the carrier
         {
             var win = plane.MultiTracker * wager;
-            newBalance = gambler.Balance + win;
-            await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Planes, ct: ctx);
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Planes, ct: ctx);
             planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
             await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
             await botInstance.SendChatMessageAsync(
@@ -254,7 +253,7 @@ public class Planes : ICommand
             return;
         }
         plane.Crash();
-        await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Planes, ct: ctx);
         planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, carrierCount, noseUp);
         await Task.Delay(TimeSpan.FromMilliseconds(frameLength), ctx);
         await botInstance.KfClient.EditMessageAsync(msgId.ChatMessageId!.Value, planesDisplay);
