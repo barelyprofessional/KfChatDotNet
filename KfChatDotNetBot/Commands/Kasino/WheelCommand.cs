@@ -73,7 +73,7 @@ public class WheelCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
-        var difficulty = arguments["difficulty"].Success ? Convert.ToString(arguments["difficulty"].Value) : new[] {"low", "medium", "high"}[Money.GetRandomNumber(gambler, 0,3)];
+        var difficulty = arguments["difficulty"].Success ? Convert.ToString(arguments["difficulty"].Value) : new[] {"low", "medium", "high"}[Money.GetRandomNumber(gambler, 0,2)];
         if (difficulty.ToLower() is not ("l" or "low" or "m" or "medium" or "h" or "high"))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, unrecognized difficulty selection, please choose between: low, medium, high", true, autoDeleteAfter: cleanupDelay);
@@ -116,7 +116,7 @@ public class WheelCommand : ICommand
             double t = (double)i / (stepsToTarget - 1);
             double easeOut = 1 - Math.Pow(1 - t, 3); // cubic ease-out curve for 'realistic' wheelspin animation
 
-            int delay = (int)(MIN_WHEELSPIN_DELAY + easeOut * (MAX_WHEELSPIN_DELAY - MAX_WHEELSPIN_DELAY));
+            int delay = (int)(MIN_WHEELSPIN_DELAY + easeOut * (MAX_WHEELSPIN_DELAY - MIN_WHEELSPIN_DELAY));
             await Task.Delay(delay, ctx);
             wheel.RotateWheelOnce();
             await botInstance.KfClient.EditMessageAsync(wheelDisplayMessage.ChatMessageId!.Value,
@@ -186,7 +186,7 @@ public class Wheel
 
     private void RandomizeInitialState()
     {
-        int shift = Money.GetRandomNumber(_gambler, 0, 20);
+        int shift = Money.GetRandomNumber(_gambler, 0, 19);
         RotateWheel(shift);
     }
 
@@ -207,7 +207,7 @@ public class Wheel
     public int ComputeGameStepsToTarget(string target)
     {
         // start by first doing 1-3 full rotations of the wheel
-        int fullRotations = Money.GetRandomNumber(_gambler, 1, 4);
+        int fullRotations = Money.GetRandomNumber(_gambler, 1, 3);
         int steps = fullRotations * 20;
         // find how many more steps until wheel index 4 (top middle) == target
         int extra = StepsUntilIndex4Match(target);
