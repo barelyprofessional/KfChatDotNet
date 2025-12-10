@@ -110,7 +110,8 @@ public class LambchopCommand : ICommand
         }
         // first game state
         var lambChopDisplayMessage =
-            await botInstance.SendChatMessageAsync(ConvertLambchopFieldToString(tiles, hazards, true));
+            await botInstance.SendChatMessageAsync(ConvertLambchopFieldToString(tiles, hazards, true), true,
+                autoDeleteAfter: cleanupDelay);
         while (lambChopDisplayMessage.Status != SentMessageTrackerStatus.ResponseReceived)
         {
             await Task.Delay(50, ctx); // wait until first message is fully sent
