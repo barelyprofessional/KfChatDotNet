@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="NLog" Version="6.0.6" />
-      <PackageReference Include="Websocket.Client" Version="5.2.0" />
+      <PackageReference Include="NLog" Version="6.0.7" />
+      <PackageReference Include="Websocket.Client" Version="5.3.0" />
     </ItemGroup>
 
 </Project>

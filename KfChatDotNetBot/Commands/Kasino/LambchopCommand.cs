@@ -110,10 +110,13 @@ public class LambchopCommand : ICommand
         }
         // first game state
         var lambChopDisplayMessage =
-            await botInstance.SendChatMessageAsync(ConvertLambchopFieldToString(tiles, hazards, true));
-        while (lambChopDisplayMessage.Status != SentMessageTrackerStatus.ResponseReceived)
+            await botInstance.SendChatMessageAsync(ConvertLambchopFieldToString(tiles, hazards, true), true,
+                autoDeleteAfter: cleanupDelay);
+        while (lambChopDisplayMessage.ChatMessageId == null)
         {
             await Task.Delay(50, ctx); // wait until first message is fully sent
+            if (lambChopDisplayMessage.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending)
+                return;
         }
 
         for (int i = -1; i <= steps;)       // main game loop, if/else "state machine"
@@ -244,15 +247,13 @@ public class LambchopCommand : ICommand
         {
             var multi = LambchopPayoutMultiplier(targetTile);
             var lambchopPayout = Math.Round(wager * multi - wager, 2);
-            await Money.NewWagerAsync(gambler.Id, wager, lambchopPayout, WagerGame.LambChop, ct: ctx);
-            newBalance = gambler.Balance + lambchopPayout;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, lambchopPayout, WagerGame.LambChop, ct: ctx);
             lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]WON[/COLOR][/B]" +
                                     $" | Multi {multi} | Balance {await newBalance.FormatKasinoCurrencyAsync()}";
         }
         else
         {
-            await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.LambChop, ct: ctx);
-            newBalance = gambler.Balance - wager;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.LambChop, ct: ctx);
             lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST[/COLOR][/B]" +
                                     $", better luck next time | Balance {await newBalance.FormatKasinoCurrencyAsync()}";
             
@@ -398,18 +399,16 @@ public class LambchopCommand : ICommand
     private static decimal LambchopPayoutMultiplier(int targetTile)
     {
         targetTile -= 1; // make it 0 indexed xd
-        // I cba to make a nice maths forumla for multi that follows the nonlinear payout trend, enjoy hardcoded multis copied from yeet.
-        // ASSUMES GAME HAS 16 TILES
-        if (FIELD_LENGTH != 16)
-        {
-            // macgyvered try catch finally if someone changed the tilecount to not 16
-            return 1.0m;
-        }
         List<double> lambChopMultis =
         [
             1.072, 1.191, 1.331, 1.498, 1.698, 1.940, 2.238, 2.612, 3.086,
             3.704, 4.527, 5.658, 7.275, 9.700, 13.580, 20.370
         ];
+        if (FIELD_LENGTH != lambChopMultis.Count)
+        {
+            throw new InvalidOperationException("FIELD_LENGTH doesn't match lambChopMultis array size. " +
+                                                "Update the multees for the new field length");
+        }
         return (decimal)lambChopMultis[targetTile];
     }
 

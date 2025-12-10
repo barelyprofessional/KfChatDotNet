@@ -58,16 +58,14 @@ public class GuessWhatNumberCommand : ICommand
         if (guess == answer)
         {
             var effect = wager * 9;
-            await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.GuessWhatNumber, ct: ctx);
-            newBalance = gambler.Balance + effect;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.GuessWhatNumber, ct: ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]correct![/color] You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
-        await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.GuessWhatNumber, ct: ctx);
-        newBalance = gambler.Balance - wager;
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.GuessWhatNumber, ct: ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]wrong![/color] I was thinking of {answer}. Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
