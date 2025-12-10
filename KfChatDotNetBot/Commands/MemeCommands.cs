@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
+using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using NLog;
@@ -95,7 +96,7 @@ public class CleanCommand : ICommand
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been clean {timespan.Humanize(precision:5)}", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been clean {timespan.Humanize(precision: 5)}", true);
     }
 }
 
@@ -123,10 +124,10 @@ public class RehabCommand : ICommand
         var timespan = endDate - DateTimeOffset.UtcNow;
         if (endDate > DateTimeOffset.UtcNow)
         {
-            await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} should finish rehab in {timespan.Humanize(precision:3)}", true);
+            await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} should finish rehab in {timespan.Humanize(precision: 3)}", true);
             return;
         }
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} left rehab {timespan.Humanize(precision:3)} ago", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} left rehab {timespan.Humanize(precision: 3)} ago", true);
     }
 }
 
@@ -195,7 +196,7 @@ public class NextCourtHearingCommand : ICommand
             return;
         }
 
-        var sent = await botInstance.SendChatMessageAsync(RenderHearings(hearings),true);
+        var sent = await botInstance.SendChatMessageAsync(RenderHearings(hearings), true);
         while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
         {
             await Task.Delay(250, ctx);
@@ -246,7 +247,7 @@ public class JailCommand : ICommand
             return;
         }
         var timespan = DateTimeOffset.UtcNow - DateTimeOffset.Parse(start.Value);
-        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been in jail {timespan.Humanize(precision:5)}", true);
+        await botInstance.SendChatMessageAsync($"{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has been in jail {timespan.Humanize(precision: 5)}", true);
     }
 }
 
@@ -319,5 +320,54 @@ public class JuiceSportsCommand : ICommand
         await botInstance.SendChatMessageAsync(":juice: [img]https://i.ddos.lgbt/u/3GJtHq.gif[/img] :juice: [br]⠀⠀⠀⠀⠀⠀⠀" +
                                                "[img]https://i.ddos.lgbt/u/KAwWMW.webp[/img][br]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀" +
                                                "[img]https://i.ddos.lgbt/u/uCuSOw.gif[/img][br]", true);
+    }
+}
+
+
+public class HostessCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^hostess", RegexOptions.IgnoreCase),
+    ];
+    public string? HelpText => "Ask the hostess for help";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 1,
+        Window = TimeSpan.FromSeconds(30)
+    };
+
+    private static string[] StaticResponses = [
+        "For questions regarding your current contract please contact us at contact@bossmanjack.com",
+        "Unspecified error",
+        "Have you considered giving us a review on TrustPilot?",
+        "We are sincerely sorry to hear that you are not having a positive experience on our platform. Please be assured that we take matters of fairness and transparency very seriously.",
+        "At the Kasino, we prioritize strict adherence to regulatory requirements to maintain the security and integrity of our platform.",
+        "There are currently no hosts online to serve your request.",
+        "We would like to assist you further and understand better the issue. Due to that, we have requested further information.",
+        "When it comes to RTP, it is important to understand that this number is calculated based on at least 1 million bets. So, over a session of a few thousand bets, anything can happen, which is exactly what makes gambling exciting.",
+        "We understand that gambling involves risks, and while some players may experience periods of winning and losing, we strive to provide resources and tools to support responsible gambling practices.",
+        "Thank you for taking the time to leave a 5-star review! We're thrilled to have provided you with a great experience.",
+        "Please rest assured that our platform operates with certified random number generators to ensure fairness and transparency in all gaming outcomes. We do not manipulate the odds or monitor games to favor any particular outcome.",
+        "We would like to inform you that we have responded to your recent post.",
+        "All of our Kasino originals are 100% probably fair and each and every single bet placed at our any games are verifiable.",
+        "We want to emphasize that our games are developed with the highest standards of integrity and fairness.",
+        "Stop harrassing me",
+    ];
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var activeExclusion = await Money.GetActiveExclusionAsync(user.Id, ctx);
+        if (db.Exclusions.Any(e => e.Id == user.Id))
+        {
+            await botInstance.SendChatMessageAsync("You are currently excluded from using hostess service.", true);
+            return;
+        }
+
+        var random = new Random();
+        var response = StaticResponses[random.Next(0, StaticResponses.Length)];
+        await botInstance.SendChatMessageAsync(response, true);
     }
 }
