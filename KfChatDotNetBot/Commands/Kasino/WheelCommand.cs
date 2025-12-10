@@ -123,7 +123,7 @@ public class WheelCommand : ICommand
                 wheel.ConvertWheelToOvalString());
         }
         
-        // payout logic
+        // payout logics
         var multi = -1.0m;
         if (wheel.GetDifficulty() == 0) multi = LOW_DIFF_MULTIS[target];
         if (wheel.GetDifficulty() == 1) multi = MEDIUM_DIFF_MULTIS[target];
