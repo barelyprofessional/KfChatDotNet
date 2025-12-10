@@ -204,7 +204,7 @@ public class LambchopCommand : ICommand
                     continue;
                 }
             }
-            if (Random.Shared.NextDouble() <= 0.15)
+            if (Money.GetRandomDouble(gambler) <= 0.15)
             {
                 //fakeouts
                 // forrest or desert
@@ -253,7 +253,7 @@ public class LambchopCommand : ICommand
         {
             await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.LambChop, ct: ctx);
             newBalance = gambler.Balance - wager;
-            lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]LOST[/COLOR][/B]" +
+            lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST[/COLOR][/B]" +
                                     $", better luck next time | Balance {await newBalance.FormatKasinoCurrencyAsync()}";
             
         }
