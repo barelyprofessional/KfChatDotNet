@@ -254,7 +254,7 @@ public class LambchopCommand : ICommand
         else
         {
             newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.LambChop, ct: ctx);
-            lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]LOST[/COLOR][/B]" +
+            lambchopResultMessage = $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST[/COLOR][/B]" +
                                     $", better luck next time | Balance {await newBalance.FormatKasinoCurrencyAsync()}";
             
         }
