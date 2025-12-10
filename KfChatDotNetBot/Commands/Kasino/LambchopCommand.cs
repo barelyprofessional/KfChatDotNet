@@ -129,13 +129,18 @@ public class LambchopCommand : ICommand
                 i++; // increase step counter by 1
                 continue;
             }
+            // boundary check for sheep movement
+            if (i >= tiles.Count)
+            {
+                break; // exit if we've gone past the field
+            }
             // normal "move" state
 
             // let alien follow player
             if (i > FIELD_LENGTH / 2 - 1)
             {
                 hazards[i] = ALIEN; // alien follows you in later part of the map
-                if (hazards[i - 1] == ALIEN)
+                if (i > 0 && hazards[i - 1] == ALIEN)
                 {
                     // update previous hazard tile back to desert
                     hazards[i - 1] = DESERT_TILE;
@@ -153,8 +158,9 @@ public class LambchopCommand : ICommand
                     await UpdateGameAsync();
                     tiles[i] = SKULL;   // skull
                     await UpdateGameAsync();
-                    i++;
-                    continue;
+                    break;
+                    // i++;
+                    //continue;
                 }
                 else
                 {
@@ -166,8 +172,9 @@ public class LambchopCommand : ICommand
                     await UpdateGameAsync();
                     tiles[i] = SKULL;   // skull
                     await UpdateGameAsync();
-                    i++;
-                    continue;
+                    break;
+                    //i++;
+                    //continue;
                 }
             }
             if (i == (targetTile - 1) && win) // trigger win animation
@@ -182,29 +189,35 @@ public class LambchopCommand : ICommand
                     await UpdateGameAsync(lambChopFieldEndState);
                     lambChopFieldEndState += CELEBRATION;
                     await UpdateGameAsync(lambChopFieldEndState);
-                    i++;
-                    continue;
+                    break;
+                    //i++;
+                    //continue;
                 }
                 if (i > FIELD_LENGTH / 2 - 1)
                 {
                     // win in the tundra, moneybags
                     hazards[i] = MONEYBAG; // add moneybag
-                    tiles[deathTile] = RED_TILE; // add deathTile indicator
+                    if (deathTile >= 0 && deathTile < tiles.Count)
+                    {
+                        tiles[deathTile] = RED_TILE; // add deathTile indicator
+                    }
                     await UpdateGameAsync();
-                    i++;
-                    continue;
+                    break;
+                    //i++;
+                    //continue;
                 }
                 else
                 {
                     // win in the forrest, medal
                     hazards[i] = MEDAL; // add medal
-                    if (deathTile != -1)
+                    if (deathTile != -1 && deathTile < tiles.Count)
                     {
                         tiles[deathTile] = RED_TILE; // add deathTile indicator
                     }
                     await UpdateGameAsync();
-                    i++;
-                    continue;
+                    break;
+                    //i++;
+                    //continue;
                 }
             }
             if (Money.GetRandomDouble(gambler) <= 0.15)
