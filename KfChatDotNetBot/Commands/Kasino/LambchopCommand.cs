@@ -207,7 +207,7 @@ public class LambchopCommand : ICommand
                     continue;
                 }
             }
-            if (Random.Shared.NextDouble() <= 0.15)
+            if (Money.GetRandomDouble(gambler) <= 0.15)
             {
                 //fakeouts
                 // forrest or desert
