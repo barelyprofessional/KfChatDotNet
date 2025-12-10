@@ -38,7 +38,7 @@ public class WheelCommand : ICommand
     private const string HIGH_DIFFICULTY_WHEEL = "⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫🔴";
     private const string MIDDLE_WHEEL_FILL = "....................⮝....................";
     // game settings
-    private const int MIN_WHEELSPIN_DELAY = 200;
+    private const int MIN_WHEELSPIN_DELAY = 100;
     private const int MAX_WHEELSPIN_DELAY = 1000;
     private static readonly Dictionary<string, decimal> LOW_DIFF_MULTIS = new()
     {
