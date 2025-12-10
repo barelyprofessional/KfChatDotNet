@@ -123,14 +123,14 @@ public class WheelCommand : ICommand
                 wheel.ConvertWheelToOvalString());
         }
         
-        // payout logic
+        // payout logics
         var multi = -1.0m;
         if (wheel.GetDifficulty() == 0) multi = LOW_DIFF_MULTIS[target];
         if (wheel.GetDifficulty() == 1) multi = MEDIUM_DIFF_MULTIS[target];
         if (wheel.GetDifficulty() == 2) multi = HIGH_DIFF_MULTIS[target];
         if (multi == -1.0m)
             throw new InvalidOperationException($"Could not derrive multi from target: {target} on wheel diff {wheel.GetDifficulty()}");
-        var win = multi == 0.00m;
+        var win = multi != 0.00m;
         
         string wheelResultMessage;
         decimal newBalance;
@@ -238,7 +238,7 @@ public class Wheel
         string middle = _wheelElements[19] + _middleFill + _wheelElements[9];
         // bottom row indices 10..18 but reversed so 18..10
         var reversedBottom = new List<string>(9);
-        for (int i = 19; i >= 10; i--)
+        for (int i = 18; i >= 10; i--)
             reversedBottom.Add(_wheelElements[i]);
         string bottom = string.Concat(reversedBottom);
         return $"{top}\n{middle}\n{bottom}";
