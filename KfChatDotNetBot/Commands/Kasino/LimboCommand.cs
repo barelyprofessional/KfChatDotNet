@@ -15,10 +15,10 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class LimboCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^limbo (?<amount>\d+)$ (?<number>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+\.\d+)$ (?<number>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+\.\d+)$ (?<number>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+)$ (?<number>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^limbo (?<amount>\d+) (?<number>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^limbo (?<amount>\d+\.\d+) (?<number>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^limbo (?<amount>\d+\.\d+) (?<number>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^limbo (?<amount>\d+) (?<number>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^limbo (?<amount>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^limbo (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
         new Regex("^limbo")
@@ -82,9 +82,10 @@ public class LimboCommand : ICommand
             //you win
             colorToUse = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!;
             newBalance = await Money.NewWagerAsync(gambler.Id, wager, wager * limboNumber, WagerGame.Limbo, ct: ctx);
-            await botInstance.SendChatMessageAsync(
-                $"[b][color={colorToUse}] {casinoNumbers[1]}", true, autoDeleteAfter: cleanupDelay);
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}] won {wager * limboNumber}![/color] Your balance is now: {newBalance}.", true, autoDeleteAfter: cleanupDelay);
+            var win = await (wager * limboNumber).FormatKasinoCurrencyAsync();
+            await botInstance.SendChatMessageAsync($"[b][color={colorToUse}] {casinoNumbers[1]:N2}[/color][/b][br]{user.FormatUsername()}, you " +
+                                                   $"[color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}] won {win}![/color] " +
+                                                   $"Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}!", true, autoDeleteAfter: cleanupDelay);
 
         }
         else
@@ -95,9 +96,9 @@ public class LimboCommand : ICommand
             else colorToUse = "orange"; //use orange for mid range guess
             //you lose
             newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Limbo, ct: ctx);
-            await botInstance.SendChatMessageAsync($"[b][color={colorToUse}] {casinoNumbers}", true, autoDeleteAfter: cleanupDelay);
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {newBalance}.",
+                $"[b][color={colorToUse}] {casinoNumbers[1]:N2}[/color][/b][br]{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}]" +
+                $"lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
                 true, autoDeleteAfter: cleanupDelay);
         }
 
