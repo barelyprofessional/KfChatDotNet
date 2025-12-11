@@ -24,7 +24,7 @@ public class WheelCommand : ICommand
     public string? HelpText =>
         "Its wheel but oval shaped and shit";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(12);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(30);
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 3,
@@ -64,7 +64,7 @@ public class WheelCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay)).ToType<int>());
+        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoWheelCleanupDelay)).ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !wheel <wager> <difficulty: low, medium, high>", true, autoDeleteAfter: cleanupDelay);

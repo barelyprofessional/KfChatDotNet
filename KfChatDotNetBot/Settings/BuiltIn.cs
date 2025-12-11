@@ -447,6 +447,12 @@ public static class BuiltIn
         public static string YouTubePubSubRedisChannel = "YouTube.PubSub.RedisChannel";
         [BuiltInSetting("Delay in milliseconds before cleaning up limbo", SettingValueType.Text, "15000", WholeNumberRegex)]
         public static string KasinoLimboCleanupDelay = "Kasino.Limbo.CleanupDelay";
+        [BuiltInSetting("Delay in milliseconds before cleaning up lambchop", SettingValueType.Text, "15000", WholeNumberRegex)]
+        public static string KasinoLambchopCleanupDelay = "Kasino.Lambchop.CleanupDelay";
+        [BuiltInSetting("Delay in milliseconds before cleaning up dice", SettingValueType.Text, "15000", WholeNumberRegex)]
+        public static string KasinoDiceCleanupDelay = "Kasino.Dice.CleanupDelay";
+        [BuiltInSetting("Delay in milliseconds before cleaning up wheel", SettingValueType.Text, "30000", WholeNumberRegex)]
+        public static string KasinoWheelCleanupDelay = "Kasino.Wheel.CleanupDelay";
     }
 }
 
