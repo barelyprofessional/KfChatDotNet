@@ -445,6 +445,8 @@ public static class BuiltIn
         public static string YouTubePubSubRedisConnectionString = "YouTube.PubSub.RedisConnectionString";
         [BuiltInSetting("Channel for YouTube PubSub with Redis", SettingValueType.Text, "yt-pubsub")]
         public static string YouTubePubSubRedisChannel = "YouTube.PubSub.RedisChannel";
+        [BuiltInSetting("Delay in milliseconds before cleaning up limbo", SettingValueType.Text, "15000", WholeNumberRegex)]
+        public static string KasinoLimboCleanupDelay = "Kasino.Limbo.CleanupDelay";
     }
 }
 
