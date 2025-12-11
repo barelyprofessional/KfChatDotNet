@@ -61,7 +61,7 @@ public class LambchopCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay)).ToType<int>());
+        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoLambchopCleanupDelay)).ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !lambchop <wager> <number between 1 and {FIELD_LENGTH}>", true, autoDeleteAfter: cleanupDelay);
