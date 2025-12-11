@@ -122,21 +122,37 @@ internal class BotCommands
 
     private async Task ProcessMessageAsync(ICommand command, MessageModel message, UserDbModel user, GroupCollection arguments)
     {
-        var task = Task.Run(() => command.RunCommand(_bot, message, user, arguments, _cancellationToken), _cancellationToken);
+        var cts = new CancellationTokenSource(command.Timeout);
+        var task = Task.Run(() => command.RunCommand(_bot, message, user, arguments, cts.Token), cts.Token);
         try
         {
-            await task.WaitAsync(command.Timeout, _cancellationToken);
+            await task.WaitAsync(command.Timeout, cts.Token);
+        }
+        catch (OperationCanceledException e)
+        {
+            _logger.Error($"{command.GetType().Name} invoked by {user.KfUsername} timed out");
+            _logger.Error(e);
+            await _bot.SendChatMessageAsync(
+                $"{user.FormatUsername()}, {command.GetType().Name} failed due to a timeout :(", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(10));
+            return;
         }
         catch (Exception e)
         {
-            _logger.Error("Caught an exception while waiting for the command to complete");
+            _logger.Error($"{command.GetType().Name} invoked by {user.KfUsername} failed");
             _logger.Error(e);
+            await _bot.SendChatMessageAsync(
+                $"{user.FormatUsername()}, {command.GetType().Name} failed due to a retarded error :(", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(10));
             return;
         }
         if (task.IsFaulted)
         {
-            _logger.Error("Command task failed");
+            _logger.Error($"{command.GetType().Name} invoked by {user.KfUsername} faulted");
             _logger.Error(task.Exception);
+            await _bot.SendChatMessageAsync(
+                $"{user.FormatUsername()}, {command.GetType().Name} failed due to shitty coding :(", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(10));
             return;
         }
 
