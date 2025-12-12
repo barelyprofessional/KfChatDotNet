@@ -453,6 +453,8 @@ public static class BuiltIn
         public static string KasinoDiceCleanupDelay = "Kasino.Dice.CleanupDelay";
         [BuiltInSetting("Delay in milliseconds before cleaning up wheel", SettingValueType.Text, "30000", WholeNumberRegex)]
         public static string KasinoWheelCleanupDelay = "Kasino.Wheel.CleanupDelay";
+        [BuiltInSetting("Openrouter API key for hostess command", SettingValueType.Text, isSecret: true)]
+        public static string OpenrouterApiKey = "Openrouter.ApiKey";
     }
 }
 
