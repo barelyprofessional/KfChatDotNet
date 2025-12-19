@@ -39,6 +39,7 @@ public class BotServices
     private PeerTube? _peerTubeStatusCheck;
     private Owncast? _owncastStatusCheck;
     private ShuffleDotUs? _shuffleDotUs;
+    private YouTubePubSub? _youTubePubSub;
     public OpenRouter? OpenRouter;
     
     private Task? _websocketWatchdog;
@@ -129,6 +130,20 @@ public class BotServices
         _shuffleDotUs = new ShuffleDotUs((await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy)).Value, _cancellationToken);
         _shuffleDotUs.OnLatestBetUpdated += ShuffleOnLatestBetUpdated;
         await _shuffleDotUs.StartWsClient();
+    }
+    
+    private async Task BuildYouTubePubSub()
+    {
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.YouTubePubSubEnabled]);
+        if (!settings[BuiltIn.Keys.YouTubePubSubEnabled].ToBoolean())
+        {
+            _logger.Debug("YouTube PubSub is disabled");
+            return;
+        }
+        _youTubePubSub = new YouTubePubSub(_cancellationToken);
+        _youTubePubSub.OnNewVideo += YouTubePubSubOnNewVideo;
+        await _youTubePubSub.Connect();
+        _logger.Info("Built YouTube PubSub");
     }
 
     private async Task BuildDiscord()
@@ -393,7 +408,8 @@ public class BotServices
             var settings = await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
                 BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled,
-                BuiltIn.Keys.RainbetEnabled, BuiltIn.Keys.PartiEnabled, BuiltIn.Keys.JackpotEnabled
+                BuiltIn.Keys.RainbetEnabled, BuiltIn.Keys.PartiEnabled, BuiltIn.Keys.JackpotEnabled,
+                BuiltIn.Keys.YouTubePubSubEnabled
             ]);
             try
             {
@@ -507,6 +523,15 @@ public class BotServices
                     _shuffleDotUs.Dispose();
                     _shuffleDotUs = null!;
                     await BuildShuffleDotUs();
+                }
+
+                if (settings[BuiltIn.Keys.YouTubePubSubEnabled].ToBoolean() && _youTubePubSub != null &&
+                    !_youTubePubSub.IsConnected())
+                {
+                    _logger.Error("YouTube PubSub died, recreating it");
+                    _youTubePubSub.Dispose();
+                    _youTubePubSub = null;
+                    await BuildYouTubePubSub();
                 }
             }
             catch (Exception e)
@@ -1252,5 +1277,32 @@ public class BotServices
             Activity = activity
         };
         await SettingsProvider.SetValueAsJsonObjectAsync(BuiltIn.Keys.BossmanLastSighting, sighting);
+    }
+    
+    private void YouTubePubSubOnNewVideo(object sender, YouTubePubSubNotificationModel data)
+    {
+        var video = YouTubeApi.GetVideoDetails(data.Id).Result;
+        if (video == null)
+        {
+            _logger.Error($"Caught a null when getting video details for {data.Id} which we were just notified about");
+            return;
+        }
+
+        if (video.Snippet.LiveBroadcastContent == "live")
+        {
+            _chatBot.SendChatMessageAsync($"@{video.Snippet.ChannelTitle} has gone live! {data.Title} {data.Url}", true).Wait(_cancellationToken);
+        }
+        else if (video.Snippet.LiveBroadcastContent == "upcoming")
+        {
+            _chatBot.SendChatMessageAsync($"@{video.Snippet.ChannelTitle} has scheduled a live stream! {data.Title} {data.Url}", true).Wait(_cancellationToken);
+        }
+        else if (video.Snippet.LiveBroadcastContent == "none")
+        {
+            _chatBot.SendChatMessageAsync($"@{video.Snippet.ChannelTitle} has uploaded a new video! {data.Title} {data.Url}", true).Wait(_cancellationToken);
+        }
+        else
+        {
+            _logger.Error($"YouTube live broadcast content '{video.Snippet.LiveBroadcastContent}' was unhandled for {data.Id}");
+        }
     }
 }

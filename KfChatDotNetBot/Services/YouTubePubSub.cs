@@ -60,6 +60,7 @@ public class YouTubePubSub : IDisposable
             _logger.Error(e);
             _logger.Error("--- Payload ---");
             _logger.Error(message.ToString());
+            _logger.Error("---------------");
         }
     }
 
@@ -79,14 +80,4 @@ public class YouTubePubSubNotificationModel
     public required string Title { get; set; }
     [JsonPropertyName("url")]
     public required string Url { get; set; }
-    [JsonPropertyName("channel")]
-    public required YouTubePubSubNotificationChannelModel Channel { get; set; }
-}
-
-public class YouTubePubSubNotificationChannelModel
-{
-    [JsonPropertyName("id")]
-    public required string Id { get; set; }
-    [JsonPropertyName("name")]
-    public required string Name { get; set; }
 }
