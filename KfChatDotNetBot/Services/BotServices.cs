@@ -39,6 +39,7 @@ public class BotServices
     private PeerTube? _peerTubeStatusCheck;
     private Owncast? _owncastStatusCheck;
     private ShuffleDotUs? _shuffleDotUs;
+    public OpenRouter? OpenRouter;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -89,7 +90,8 @@ public class BotServices
             BuildDLiveStatusCheck(),
             BuildPeerTubeLiveStatusCheck(),
             BuildOwncastLiveStatusCheck(),
-            BuildShuffleDotUs()
+            BuildShuffleDotUs(),
+            BuildOpenRouter()
         ];
         try
         {
@@ -104,6 +106,13 @@ public class BotServices
         _logger.Info("Starting websocket watchdog and Howl.gg user stats timer");
         _websocketWatchdog = WebsocketWatchdog();
         _howlggGetUserTimer = HowlggGetUserTimer();
+    }
+
+    private async Task BuildOpenRouter()
+    {
+        _logger.Debug("Building OpenRouter client");
+        var proxySetting = await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy);
+        OpenRouter = new OpenRouter(proxySetting.Value);
     }
     
     private async Task BuildShuffle()
