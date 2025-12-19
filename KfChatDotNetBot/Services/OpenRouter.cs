@@ -1,14 +1,15 @@
 using System.Net;
-using NLog;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using KfChatDotNetBot.Settings;
+using NLog;
 
-public class OpenRouter(string? proxy = null)
+namespace KfChatDotNetBot.Services;
+
+public static class OpenRouter
 {
-
     class OrResponse
     {
         [JsonPropertyName("id")] public string Id { get; set; } = string.Empty;
@@ -45,19 +46,18 @@ public class OpenRouter(string? proxy = null)
     }
 
 
-    private Logger _logger = LogManager.GetCurrentClassLogger();
-    private Uri _orEndpoint = new Uri("https://openrouter.ai/api/v1/chat/completions");
-    private string? _proxy = proxy;
+    private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    public async Task<string?> GetResponseAsync(string prompt, string question, string model = "openrouter-gpt4-1106", float Temperature = 0.7f)
+    public static async Task<string?> GetResponseAsync(string prompt, string question, string model = "openrouter-gpt4-1106", float Temperature = 0.7f)
     {
-        _logger.Info("Sending request to OpenRouter");
+        Logger.Info("Sending request to OpenRouter");
+        var proxy = await SettingsProvider.GetValueAsync(BuiltIn.Keys.Proxy);
         var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
-        if (_proxy != null)
+        if (proxy.Value != null)
         {
             handler.UseProxy = true;
-            handler.Proxy = new WebProxy(_proxy);
-            _logger.Debug($"Configured to use proxy {_proxy}");
+            handler.Proxy = new WebProxy(proxy.Value);
+            Logger.Debug($"Configured to use proxy {proxy.Value}");
         }
         using var client = new HttpClient(handler);
 
@@ -65,9 +65,9 @@ public class OpenRouter(string? proxy = null)
         {
             List<(string role, string content)> msg = [("system", prompt), ("user", question)];
             var keySetting = await SettingsProvider.GetValueAsync(BuiltIn.Keys.OpenrouterApiKey);
-            if (keySetting == null || string.IsNullOrWhiteSpace(keySetting.Value))
+            if (string.IsNullOrEmpty(keySetting.Value))
             {
-                _logger.Error("OpenRouter API key is not set in settings.");
+                Logger.Error("OpenRouter API key is not set in settings.");
                 return null;
             }
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", keySetting.Value);
@@ -89,7 +89,7 @@ public class OpenRouter(string? proxy = null)
 
             if (responseData == null || responseData.Choices.Count == 0)
             {
-                _logger.Error("No response from OpenRouter.");
+                Logger.Error("No response from OpenRouter.");
                 return null;
             }
             return responseData.Choices[0].Message.Content;
@@ -97,7 +97,7 @@ public class OpenRouter(string? proxy = null)
         }
         catch (Exception ex)
         {
-            _logger.Error(ex, "Error while communicating with OpenRouter.");
+            Logger.Error(ex, "Error while communicating with OpenRouter.");
         }
 
         return null;
