@@ -453,6 +453,12 @@ public static class BuiltIn
         public static string KasinoDiceCleanupDelay = "Kasino.Dice.CleanupDelay";
         [BuiltInSetting("Delay in milliseconds before cleaning up wheel", SettingValueType.Text, "30000", WholeNumberRegex)]
         public static string KasinoWheelCleanupDelay = "Kasino.Wheel.CleanupDelay";
+        [BuiltInSetting("Whether the YouTube PubSub Redis client is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string YouTubePubSubEnabled = "YouTube.PubSub.Enabled";
+        [BuiltInSetting("YouTube API Key", SettingValueType.Text, isSecret: true)]
+        public static string YouTubeApiKey = "YouTube.ApiKey";
+        [BuiltInSetting("Openrouter API key for hostess command", SettingValueType.Text, isSecret: true)]
+        public static string OpenrouterApiKey = "Openrouter.ApiKey";
     }
 }
 

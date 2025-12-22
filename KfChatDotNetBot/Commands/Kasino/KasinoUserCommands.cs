@@ -8,6 +8,8 @@ using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using NLog;
+using RandN;
+using RandN.Compat;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
@@ -298,5 +300,85 @@ public class PocketWatchCommand : ICommand
         }
         
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {targetUser.KfUsername} has {await targetGambler.Balance.FormatKasinoCurrencyAsync()}", true);
+    }
+}
+
+[KasinoCommand]
+[WagerCommand]
+public class HostessCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^hostess", RegexOptions.IgnoreCase),
+    ];
+    public string? HelpText => "Ask the hostess for help";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public RateLimitOptionsModel? RateLimitOptions => new()
+    {
+        MaxInvocations = 1,
+        Window = TimeSpan.FromSeconds(30)
+    };
+
+    private static readonly string[] StaticResponses = [
+        "For questions regarding your current contract please contact us at contact@bossmanjack.com",
+        "Unspecified error",
+        "Have you considered giving us a review on TrustPilot?",
+        "We are sincerely sorry to hear that you are not having a positive experience on our platform. Please be assured that we take matters of fairness and transparency very seriously.",
+        "At the Kasino, we prioritize strict adherence to regulatory requirements to maintain the security and integrity of our platform.",
+        "There are currently no hosts online to serve your request.",
+        "We would like to assist you further and understand better the issue. Due to that, we have requested further information.",
+        "When it comes to RTP, it is important to understand that this number is calculated based on at least 1 million bets. So, over a session of a few thousand bets, anything can happen, which is exactly what makes gambling exciting.",
+        "We understand that gambling involves risks, and while some players may experience periods of winning and losing, we strive to provide resources and tools to support responsible gambling practices.",
+        "Thank you for taking the time to leave a 5-star review! We're thrilled to have provided you with a great experience.",
+        "Please rest assured that our platform operates with certified random number generators to ensure fairness and transparency in all gaming outcomes. We do not manipulate the odds or monitor games to favor any particular outcome.",
+        "We would like to inform you that we have responded to your recent post.",
+        "All of our Kasino originals are 100% probably fair and each and every single bet placed at our any games are verifiable.",
+        "We want to emphasize that our games are developed with the highest standards of integrity and fairness.",
+        "Stop harrassing me",
+    ];
+
+    private static readonly string[] LlmPrompts = [
+        "You are a hostess for a virtual casino. You've just gotten a message from a customer with cripling gambling addiction issues. Respond in a smug and condescending manner.",
+        "You are an overworked fastfood worker at a drive-thru. A confused gambling addict just arrived. Respond with at most two sentences."
+    ];
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        var random = RandomShim.Create(StandardRng.Create());
+
+        if (random.NextDouble() < 0.06)
+        {
+            // ignore 6% of requests like the old hostess command
+            return;
+        }
+
+        var orKeySet = await SettingsProvider.GetValueAsync(BuiltIn.Keys.OpenrouterApiKey);
+        if (orKeySet.Value == null || random.NextDouble() < 0.3)
+        {
+            var response = StaticResponses[random.Next(0, StaticResponses.Length)];
+            await botInstance.SendChatMessageAsync(response, true);
+            return;
+        }
+
+        var msg = message.MessageRaw.Replace("hostess", "").Trim();
+        if (string.IsNullOrWhiteSpace(msg))
+        {
+            msg = "I need help with my gambling addiction.";
+        }
+
+        var llmResponse = await OpenRouter.GetResponseAsync(
+            LlmPrompts[random.Next(0, LlmPrompts.Length)],
+            msg,
+            model: "deepseek/deepseek-v3.2",
+            Temperature: 1.0f + (float)((random.NextDouble() - 0.3) * 0.5)
+        );
+        if (llmResponse == null)
+        {
+            var fallback = StaticResponses[random.Next(0, StaticResponses.Length)];
+            await botInstance.SendChatMessageAsync(fallback, true);
+            return;
+        }
+
+        await botInstance.SendChatMessageAsync(llmResponse, true, ChatBot.LengthLimitBehavior.TruncateExactly);
     }
 }
