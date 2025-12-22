@@ -46,7 +46,9 @@ public class AddImageCommand : ICommand
 
         await db.Images.AddAsync(new ImageDbModel { Key = key, Url = url, LastSeen = DateTimeOffset.MinValue }, ctx);
         await db.SaveChangesAsync(ctx);
-        await botInstance.SendChatMessageAsync("Added image to database", true);
+        //await botInstance.SendChatMessageAsync("Added image to database", true);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you added the following media to the {key} carousel\n[img]{url}[/img]", true);
     }
 }
 
@@ -86,7 +88,9 @@ public class RemoveImageCommand : ICommand
 
         db.Images.Remove(image);
         await db.SaveChangesAsync(ctx);
-        await botInstance.SendChatMessageAsync("Removed image from database", true);
+        // await botInstance.SendChatMessageAsync("Removed image from database", true);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you removed the following media from the {key} carousel\n[img]{url}[/img]", true);
     }
 }
 
