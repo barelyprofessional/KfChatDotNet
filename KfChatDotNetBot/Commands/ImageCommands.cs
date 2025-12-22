@@ -48,7 +48,7 @@ public class AddImageCommand : ICommand
         await db.SaveChangesAsync(ctx);
         //await botInstance.SendChatMessageAsync("Added image to database", true);
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, you added the following media to the {key} carrousel\n[img]{url}[/img]", true);
+            $"{user.FormatUsername()}, you added the following media to the {key} carousel\n[img]{url}[/img]", true);
     }
 }
 
@@ -90,7 +90,7 @@ public class RemoveImageCommand : ICommand
         await db.SaveChangesAsync(ctx);
         // await botInstance.SendChatMessageAsync("Removed image from database", true);
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, you removed the following media from the {key} carrousel\n[img]{url}[/img]", true);
+            $"{user.FormatUsername()}, you removed the following media from the {key} carousel\n[img]{url}[/img]", true);
     }
 }
 
