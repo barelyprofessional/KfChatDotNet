@@ -88,7 +88,9 @@ public class RemoveImageCommand : ICommand
 
         db.Images.Remove(image);
         await db.SaveChangesAsync(ctx);
-        await botInstance.SendChatMessageAsync("Removed image from database", true);
+        // await botInstance.SendChatMessageAsync("Removed image from database", true);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you removed the following media from the {key} carrousel\n[img]{url}[/img]", true);
     }
 }
 
