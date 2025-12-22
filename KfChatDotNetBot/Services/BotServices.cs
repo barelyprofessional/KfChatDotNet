@@ -90,7 +90,8 @@ public class BotServices
             BuildDLiveStatusCheck(),
             BuildPeerTubeLiveStatusCheck(),
             BuildOwncastLiveStatusCheck(),
-            BuildShuffleDotUs()
+            BuildShuffleDotUs(),
+            BuildYouTubePubSub()
         ];
         try
         {
