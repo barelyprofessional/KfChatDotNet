@@ -46,7 +46,9 @@ public class AddImageCommand : ICommand
 
         await db.Images.AddAsync(new ImageDbModel { Key = key, Url = url, LastSeen = DateTimeOffset.MinValue }, ctx);
         await db.SaveChangesAsync(ctx);
-        await botInstance.SendChatMessageAsync("Added image to database", true);
+        //await botInstance.SendChatMessageAsync("Added image to database", true);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you added the folling media to the {key} carrousel\n[img]{url}[/img]", true);
     }
 }
 
