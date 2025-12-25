@@ -33,7 +33,7 @@ public static class Zipline
         using var formContent = new MultipartFormDataContent();
         var fileContent = new StreamContent(content);
         fileContent.Headers.ContentType = mimeType;
-        formContent.Add(fileContent);
+        formContent.Add(fileContent, "upload", Money.GenerateEventId());
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", settings[BuiltIn.Keys.ZiplineKey].Value);
         if (expiration != null)
         {
