@@ -459,6 +459,10 @@ public static class BuiltIn
         public static string YouTubeApiKey = "YouTube.ApiKey";
         [BuiltInSetting("Openrouter API key for hostess command", SettingValueType.Text, isSecret: true)]
         public static string OpenrouterApiKey = "Openrouter.ApiKey";
+        [BuiltInSetting("API key for Zipline", SettingValueType.Text, isSecret: true)]
+        public static string ZiplineKey = "Zipline.Key";
+        [BuiltInSetting("Base URL for Zipline", SettingValueType.Text, defaultValue: "https://i.ddos.lgbt")]
+        public static string ZiplineUrl = "Zipline.Url";
     }
 }
 
