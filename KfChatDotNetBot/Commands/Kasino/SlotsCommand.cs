@@ -99,7 +99,7 @@ public class SlotsCommand : ICommand
         //if you win
         var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
         newBalance = await Money.NewWagerAsync(gambler.Id, wager, Convert.ToDecimal(winnings), WagerGame.Keno, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}win[/color]! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]win[/color]! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
                                                $"{featureAddOn}", true, autoDeleteAfter:TimeSpan.FromSeconds(30));
     }
 
