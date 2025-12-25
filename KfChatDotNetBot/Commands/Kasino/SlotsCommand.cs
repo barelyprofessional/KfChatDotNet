@@ -29,7 +29,7 @@ public class SlotsCommand : ICommand
 
     public string? HelpText => "!slots [bet amount]";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(5);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(30);
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 1,
