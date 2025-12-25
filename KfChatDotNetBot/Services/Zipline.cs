@@ -45,7 +45,7 @@ public static class Zipline
         string url;
         try
         {
-            url = json.GetProperty("files")[0].GetString() ??
+            url = json.GetProperty("files")[0].GetProperty("url").GetString() ??
                   throw new InvalidOperationException("Caught null when grabbing Zipline result");
         }
         catch (Exception e)
