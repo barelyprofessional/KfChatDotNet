@@ -510,12 +510,12 @@ public class SlotsCommand : ICommand
             using var animated = new Image<Rgba32>(500, 900);
     
             foreach (var rImg in frames) {
-                var bytes = new byte[rImg.Width * rImg.Height * 4];
-                Marshal.Copy((IntPtr)rImg.Data, bytes, 0, bytes.Length);
-                using var frame = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(bytes, rImg.Width, rImg.Height);
+                // FIX: Use Span to wrap unmanaged memory directly - NO ALLOCATION!
+                var span = new Span<byte>(rImg.Data, rImg.Width * rImg.Height * 4);
+                // LoadPixelData can work with Span directly
+                using var frame = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(span, rImg.Width, rImg.Height);
                 frame.Frames.RootFrame.Metadata.GetWebpMetadata().FrameDelay = 2;
                 animated.Frames.AddFrame(frame.Frames.RootFrame);
-                // Note: frame is disposed automatically via 'using'
             }
     
             if (animated.Frames.Count > 1) animated.Frames.RemoveFrame(0);
