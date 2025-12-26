@@ -1,3 +1,5 @@
+
+
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -68,21 +70,18 @@ public class SlotsCommand : ICommand
         var board = new KiwiSlotBoard(wager);
         board.LoadAssets();
         board.ExecuteGameLoop();
-        var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
+        //var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
+        using (var finalImage = board.GenerateAnimatedWebp(board.SlotFrames))
+        {
+            if (finalImage == null) throw new InvalidOperationException("finalimage was null");
+            var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
+            if (imageUrl == null) throw new InvalidOperationException("Image failed to upload/failed to get URL");
+            await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true, autoDeleteAfter:TimeSpan.FromMinutes(3));
+        }
         
         board.UnloadAssets();
         Raylib.CloseWindow();
-        if (finalImage == null)
-        {
-            throw new InvalidOperationException("finalImage was null");
-        }
-        var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
-        if (imageUrl is null)
-        {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, failed to upload slot image.", true, autoDeleteAfter:TimeSpan.FromSeconds(30));
-            return;
-        }
-        await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true, autoDeleteAfter:TimeSpan.FromMinutes(3)); //posts image to chat
+
         var winnings = board.RunningTotalDisplay;
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
@@ -182,6 +181,8 @@ public class SlotsCommand : ICommand
             Raylib.UnloadTexture(_headerTexture);
             foreach (var t in _symbolTextures.Values) Raylib.UnloadTexture(t);
             foreach (var t in _expanderTextures.Values) Raylib.UnloadTexture(t);
+            foreach (var img in SlotFrames) Raylib.UnloadImage(img);
+            SlotFrames.Clear();
         }
 
         public void ExecuteGameLoop(int featureSpins = 0)
