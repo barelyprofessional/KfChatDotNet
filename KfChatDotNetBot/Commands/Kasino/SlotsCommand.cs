@@ -60,25 +60,29 @@ public class SlotsCommand : ICommand
         
         Raylib.SetConfigFlags(ConfigFlags.HiddenWindow);
         Raylib.InitWindow(500,900,"KiwiSlot");
-        
-        var board = new KiwiSlotBoard(wager);
-        board.LoadAssets();
-        board.ExecuteGameLoop();
-        //var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
-        using (var finalImage = board.GenerateAnimatedWebp(board.SlotFrames))
+
+        decimal winnings;
+        string featureAddOn;
+        try
         {
-            board.UnloadAssets(); // beep boop says to more aggressively destroy every frame
+            var board = new KiwiSlotBoard(wager);
+            board.LoadAssets();
+            board.ExecuteGameLoop();
+            using var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
+            winnings = board.RunningTotalDisplay;
+            featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
+            board.Dispose();
             if (finalImage == null) throw new InvalidOperationException("finalimage was null");
             var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
             if (imageUrl == null) throw new InvalidOperationException("Image failed to upload/failed to get URL");
             await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true,
                 autoDeleteAfter: TimeSpan.FromMinutes(3));
         }
-
-        board.UnloadAssets();
-        Raylib.CloseWindow();
-
-        var winnings = board.RunningTotalDisplay;
+        finally
+        {
+            Raylib.CloseWindow();
+        }
+        
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
@@ -93,8 +97,6 @@ public class SlotsCommand : ICommand
             return;
         }
 
-        //if you win
-        var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
         winnings -= wager;
         newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
         await botInstance.SendChatMessageAsync(
@@ -102,7 +104,7 @@ public class SlotsCommand : ICommand
             $"{featureAddOn}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
 
-    private class KiwiSlotBoard
+    private class KiwiSlotBoard : IDisposable
     {
         private const char WILD = 'K', FEATURE = 'L', EXPANDER = 'M';
         public readonly List<Raylib_cs.Image> SlotFrames = [];
@@ -173,18 +175,6 @@ public class SlotsCommand : ICommand
             _headerTexture = Raylib.LoadTexture(Path.Combine(assetPath, "header.png"));
             foreach (var c in "ABCDEFGHIJKL") _symbolTextures[c] = Raylib.LoadTexture(Path.Combine(assetPath, $"{c}.png"));
             for (var i = 1; i <= 5; i++) _expanderTextures[i] = Raylib.LoadTexture(Path.Combine(assetPath, $"exp{i}.png"));
-        }
-
-        public void UnloadAssets()
-        {
-            Raylib.UnloadTexture(_headerTexture);
-            foreach (var t in _symbolTextures.Values) Raylib.UnloadTexture(t);
-            foreach (var t in _expanderTextures.Values) Raylib.UnloadTexture(t);
-            foreach (var img in SlotFrames) // claude edited this for some reason
-            {
-                Raylib.UnloadImage(img);
-            }
-            SlotFrames.Clear();
         }
 
         public void ExecuteGameLoop(int featureSpins = 0)
@@ -526,6 +516,27 @@ public class SlotsCommand : ICommand
             animated.Save(outputStream, new WebpEncoder { Quality = 80 });
             outputStream.Position = 0;
             return outputStream;
+        }
+
+        public void Dispose()
+        {
+            foreach (var img in SlotFrames)
+                Raylib.UnloadImage(img);
+            SlotFrames.Clear();
+
+            foreach (var t in _expanderTextures.Values) 
+                Raylib.UnloadTexture(t);
+            _expanderTextures.Clear();
+
+            foreach (var t in _symbolTextures.Values) 
+                Raylib.UnloadTexture(t);
+            _symbolTextures.Clear();
+
+            if (_headerTexture.Id != 0)
+            {
+                Raylib.UnloadTexture(_headerTexture);
+                _headerTexture = default;
+            }
         }
     }
 
