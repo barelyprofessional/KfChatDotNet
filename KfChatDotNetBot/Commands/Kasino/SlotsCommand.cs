@@ -516,7 +516,9 @@ public class SlotsCommand : ICommand
                 using var frame = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(span, rImg.Width, rImg.Height);
                 frame.Frames.RootFrame.Metadata.GetWebpMetadata().FrameDelay = 2;
                 animated.Frames.AddFrame(frame.Frames.RootFrame);
+                Raylib.UnloadImage(rImg);
             }
+            frames.Clear();
     
             if (animated.Frames.Count > 1) animated.Frames.RemoveFrame(0);
     
