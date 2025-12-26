@@ -1,5 +1,3 @@
-
-
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -38,11 +36,8 @@ public class SlotsCommand : ICommand
         Window = TimeSpan.FromSeconds(30)
     };
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user,
-        GroupCollection arguments,
-        CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
-        
         if (!arguments.TryGetValue("amount", out var amount)) //if user just enters !keno
         {
             await botInstance.SendChatMessageAsync(
@@ -62,59 +57,49 @@ public class SlotsCommand : ICommand
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             return;
         }
-
         
         Raylib.SetConfigFlags(ConfigFlags.HiddenWindow);
         Raylib.InitWindow(500,900,"KiwiSlot");
         
         var board = new KiwiSlotBoard(wager);
-        try
+        board.LoadAssets();
+        board.ExecuteGameLoop();
+        //var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
+        using (var finalImage = board.GenerateAnimatedWebp(board.SlotFrames))
         {
+            board.UnloadAssets(); // beep boop says to more aggressively destroy every frame
+            if (finalImage == null) throw new InvalidOperationException("finalimage was null");
+            var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
+            if (imageUrl == null) throw new InvalidOperationException("Image failed to upload/failed to get URL");
+            await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true,
+                autoDeleteAfter: TimeSpan.FromMinutes(3));
+        }
 
-            board.LoadAssets();
-            board.ExecuteGameLoop();
-            //var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
-            using (var finalImage = board.GenerateAnimatedWebp(board.SlotFrames))
-            {
-                board.UnloadAssets(); // beep boop says to more aggressively destroy every frame
-                if (finalImage == null) throw new InvalidOperationException("finalimage was null");
-                var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
-                if (imageUrl == null) throw new InvalidOperationException("Image failed to upload/failed to get URL");
-                await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true,
-                    autoDeleteAfter: TimeSpan.FromMinutes(3));
-            }
+        board.UnloadAssets();
+        Raylib.CloseWindow();
 
-            board.UnloadAssets();
-            Raylib.CloseWindow();
-
-            var winnings = board.RunningTotalDisplay;
-            var colors =
-                await SettingsProvider.GetMultipleValuesAsync([
-                    BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
-                ]);
-            decimal newBalance;
-            if (winnings == 0) //dud spin
-            {
-                newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Slots, ct: ctx);
-                await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
-                    true, autoDeleteAfter: TimeSpan.FromSeconds(30));
-                return;
-            }
-
-            //if you win
-            var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
-            winnings -= wager;
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
+        var winnings = board.RunningTotalDisplay;
+        var colors =
+            await SettingsProvider.GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]);
+        decimal newBalance;
+        if (winnings == 0) //dud spin
+        {
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Slots, ct: ctx);
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]win[/color]! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
-                $"{featureAddOn}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
+                true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            return;
         }
-        finally
-        {
-            board.UnloadAssets(); // beep boop wanted a try catch
-            Raylib.CloseWindow();
-        }
+
+        //if you win
+        var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
+        winnings -= wager;
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await winnings.FormatKasinoCurrencyAsync()}! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
+            $"{featureAddOn}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
 
     private class KiwiSlotBoard
