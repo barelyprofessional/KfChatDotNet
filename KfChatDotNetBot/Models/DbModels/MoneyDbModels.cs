@@ -290,7 +290,8 @@ public enum WagerGame
     Event,
     [Description("Guess what number I'm thinking of")]
     GuessWhatNumber,
-    Wheel
+    Wheel,
+    Slots
 }
 
 public enum GamblerState

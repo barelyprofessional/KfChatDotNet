@@ -83,7 +83,7 @@ public class SlotsCommand : ICommand
             return;
         }
         await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true, autoDeleteAfter:TimeSpan.FromMinutes(3)); //posts image to chat
-        var winnings = Convert.ToDecimal(board.RunningTotalDisplay);
+        var winnings = board.RunningTotalDisplay;
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
@@ -91,14 +91,15 @@ public class SlotsCommand : ICommand
         decimal newBalance;
         if (winnings == 0) //dud spin
         {
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Keno, ct: ctx);
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Slots, ct: ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter:TimeSpan.FromSeconds(30));
             return;
         }
         //if you win
         var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
-        newBalance = await Money.NewWagerAsync(gambler.Id, wager, Convert.ToDecimal(winnings), WagerGame.Keno, ct: ctx);
+        winnings -= wager;
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]win[/color]! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
                                                $"{featureAddOn}", true, autoDeleteAfter:TimeSpan.FromSeconds(30));
     }
