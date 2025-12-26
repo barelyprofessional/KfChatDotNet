@@ -68,39 +68,53 @@ public class SlotsCommand : ICommand
         Raylib.InitWindow(500,900,"KiwiSlot");
         
         var board = new KiwiSlotBoard(wager);
-        board.LoadAssets();
-        board.ExecuteGameLoop();
-        //var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
-        using (var finalImage = board.GenerateAnimatedWebp(board.SlotFrames))
+        try
         {
-            if (finalImage == null) throw new InvalidOperationException("finalimage was null");
-            var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
-            if (imageUrl == null) throw new InvalidOperationException("Image failed to upload/failed to get URL");
-            await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true, autoDeleteAfter:TimeSpan.FromMinutes(3));
-        }
-        
-        board.UnloadAssets();
-        Raylib.CloseWindow();
 
-        var winnings = board.RunningTotalDisplay;
-        var colors =
-            await SettingsProvider.GetMultipleValuesAsync([
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
-            ]);
-        decimal newBalance;
-        if (winnings == 0) //dud spin
-        {
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Slots, ct: ctx);
+            board.LoadAssets();
+            board.ExecuteGameLoop();
+            //var finalImage = board.GenerateAnimatedWebp(board.SlotFrames);
+            using (var finalImage = board.GenerateAnimatedWebp(board.SlotFrames))
+            {
+                board.UnloadAssets(); // beep boop says to more aggressively destroy every frame
+                if (finalImage == null) throw new InvalidOperationException("finalimage was null");
+                var imageUrl = await Zipline.Upload(finalImage, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
+                if (imageUrl == null) throw new InvalidOperationException("Image failed to upload/failed to get URL");
+                await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true,
+                    autoDeleteAfter: TimeSpan.FromMinutes(3));
+            }
+
+            board.UnloadAssets();
+            Raylib.CloseWindow();
+
+            var winnings = board.RunningTotalDisplay;
+            var colors =
+                await SettingsProvider.GetMultipleValuesAsync([
+                    BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                ]);
+            decimal newBalance;
+            if (winnings == 0) //dud spin
+            {
+                newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Slots, ct: ctx);
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
+                    true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+                return;
+            }
+
+            //if you win
+            var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
+            winnings -= wager;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter:TimeSpan.FromSeconds(30));
-            return;
+                $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]win[/color]! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
+                $"{featureAddOn}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
         }
-        //if you win
-        var featureAddOn = board.GotFeature ? "Congrats on the feature." : "";
-        winnings -= wager;
-        newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]win[/color]! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}" +
-                                               $"{featureAddOn}", true, autoDeleteAfter:TimeSpan.FromSeconds(30));
+        finally
+        {
+            board.UnloadAssets(); // beep boop wanted a try catch
+            Raylib.CloseWindow();
+        }
     }
 
     private class KiwiSlotBoard
@@ -181,7 +195,10 @@ public class SlotsCommand : ICommand
             Raylib.UnloadTexture(_headerTexture);
             foreach (var t in _symbolTextures.Values) Raylib.UnloadTexture(t);
             foreach (var t in _expanderTextures.Values) Raylib.UnloadTexture(t);
-            foreach (var img in SlotFrames) Raylib.UnloadImage(img);
+            foreach (var img in SlotFrames) // claude edited this for some reason
+            {
+                Raylib.UnloadImage(img);
+            }
             SlotFrames.Clear();
         }
 
@@ -506,19 +523,20 @@ public class SlotsCommand : ICommand
         {
             if (frames.Count == 0) return null;
             using var animated = new Image<Rgba32>(500, 900);
+    
             foreach (var rImg in frames) {
                 var bytes = new byte[rImg.Width * rImg.Height * 4];
                 Marshal.Copy((IntPtr)rImg.Data, bytes, 0, bytes.Length);
                 using var frame = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(bytes, rImg.Width, rImg.Height);
                 frame.Frames.RootFrame.Metadata.GetWebpMetadata().FrameDelay = 2;
                 animated.Frames.AddFrame(frame.Frames.RootFrame);
+                // Note: frame is disposed automatically via 'using'
             }
+    
             if (animated.Frames.Count > 1) animated.Frames.RemoveFrame(0);
-            // Create a MemoryStream that stays open for the caller
+    
             var outputStream = new MemoryStream();
             animated.Save(outputStream, new WebpEncoder { Quality = 80 });
-        
-            // IMPORTANT: Reset position to the start so the uploader reads the whole file
             outputStream.Position = 0;
             return outputStream;
         }
