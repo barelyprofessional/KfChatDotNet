@@ -70,6 +70,10 @@ public class SlotsCommand : ICommand
             board.ExecuteGameLoop();
             using (var finalImageStream = board.ExportAndCleanup())
             {
+                if (finalImageStream == null)
+                {
+                    throw new InvalidOperationException("board.ExportAndCleanup returned null");
+                }
                 var imageUrl = await Zipline.Upload(finalImageStream, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
                 await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true,
                     autoDeleteAfter: TimeSpan.FromSeconds(150));
@@ -103,10 +107,10 @@ public class SlotsCommand : ICommand
     private class KiwiSlotBoard : IDisposable
     {
         private const char WILD = 'K', FEATURE = 'L', EXPANDER = 'M';
-        private Image<Rgba32> _headerImg;
+        private Image<Rgba32>? _headerImg;
         private Dictionary<char, Image<Rgba32>> _symbolImgs = new();
         private Dictionary<int, Image<Rgba32>> _expanderImgs = new();
-        private Font _font;
+        private Font? _font;
 
         // Optimized Animation Container
         private Image<Rgba32> AnimatedImage { get; set; }
@@ -157,6 +161,10 @@ public class SlotsCommand : ICommand
 
         private void RenderFrame(int dropOffset = 500, List<WinDetail>? activeWins = null)
         {
+            if (_font == null || _headerImg == null)
+            {
+                throw new InvalidOperationException("_font or _headerImg was null");
+            }
             using var frame = new Image<Rgba32>(600, 800);
             frame.Mutate(ctx => {
                 ctx.Fill(Color.Black);
@@ -260,7 +268,7 @@ public class SlotsCommand : ICommand
             AnimatedImage.Frames.AddFrame(frame.Frames.RootFrame);
         }
 
-        public MemoryStream ExportAndCleanup()
+        public MemoryStream? ExportAndCleanup()
         {
             if (AnimatedImage.Frames.Count <= 1) return null;
 
@@ -312,7 +320,7 @@ public class SlotsCommand : ICommand
                         for (var c = i; c < 5; c++) if (_preboard[c, j] == WILD) hitWild = true;
                         var mSym = hitWild ? multis[_rand.Next(multis.Count)] : EXPANDER;
                         for (var r = i; r < 5; r++) _board[r, j] = mSym;
-                        RenderFrame(500); break;
+                        RenderFrame(); break;
                     }
                 }
             }
@@ -322,7 +330,7 @@ public class SlotsCommand : ICommand
                 var inc = win.Amount / 10.0;
                 for (var f = 0; f < 10; f++) { RunningTotalDisplay += inc; RenderFrame(500, [win]); }
             }
-            RunningTotalDisplay = target; RenderFrame(500);
+            RunningTotalDisplay = target; RenderFrame();
         }
 
         private List<WinDetail> GetWinningLinesCoordsWithPayouts()
