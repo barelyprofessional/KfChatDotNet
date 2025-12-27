@@ -149,7 +149,7 @@ public class SlotsCommand : ICommand
 
         public void LoadAssets()
         {
-            var assetPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Default", "Assets");
+            var assetPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Default");
 
             if (!Directory.Exists(assetPath)) throw new DirectoryNotFoundException($"Assets folder missing at {assetPath}");
 
