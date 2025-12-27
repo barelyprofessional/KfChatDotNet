@@ -81,26 +81,24 @@ public class LimboCommand : ICommand
         {
             //you win
             colorToUse = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!;
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, wager * limboNumber, WagerGame.Limbo, ct: ctx);
-            var win = await (wager * limboNumber).FormatKasinoCurrencyAsync();
+            var win = wager * limboNumber - wager;
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Limbo, ct: ctx);
             await botInstance.SendChatMessageAsync($"[b][color={colorToUse}] {casinoNumbers[1]:N2}[/color][/b][br]{user.FormatUsername()}, you " +
-                                                   $"[color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}] won {win}![/color] " +
+                                                   $"[color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value}] won {await win.FormatKasinoCurrencyAsync()}![/color] " +
                                                    $"Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}!", true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
 
-        }
-        else
-        {
-            if (limboNumber < casinoNumbers[1] / 2) colorToUse = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!; //use red for the number if you're not close
-            else if (limboNumber > casinoNumbers[1] * 3 / 4)
-                colorToUse = "yellow"; //use yellow for the number if you're pretty close
-            else colorToUse = "orange"; //use orange for mid range guess
-            //you lose
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Limbo, ct: ctx);
-            await botInstance.SendChatMessageAsync(
-                $"[b][color={colorToUse}] {casinoNumbers[1]:N2}[/color][/b][br]{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}]" +
-                $"lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
-                true, autoDeleteAfter: cleanupDelay);
-        }
+        if (limboNumber < casinoNumbers[1] / 2) colorToUse = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!; //use red for the number if you're not close
+        else if (limboNumber > casinoNumbers[1] * 3 / 4)
+            colorToUse = "yellow"; //use yellow for the number if you're pretty close
+        else colorToUse = "orange"; //use orange for mid range guess
+        //you lose
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Limbo, ct: ctx);
+        await botInstance.SendChatMessageAsync(
+            $"[b][color={colorToUse}] {casinoNumbers[1]:N2}[/color][/b][br]{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value}]" +
+            $"lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
+            true, autoDeleteAfter: cleanupDelay);
 
     }
     
