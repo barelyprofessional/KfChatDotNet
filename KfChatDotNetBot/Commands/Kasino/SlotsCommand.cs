@@ -103,7 +103,7 @@ public class SlotsCommand : ICommand
     public class WinDetail
     {
         public required (int row, int col)[] Path { get; set; }
-        public double Amount { get; set; }
+        public decimal Amount { get; set; }
     }
 
     private class KiwiSlotBoard : IDisposable
@@ -120,7 +120,7 @@ public class SlotsCommand : ICommand
         private readonly char[,] _preboard = new char[5, 5];
         private char[,] _board = new char[5, 5];
         private readonly decimal _userBet;
-        public double RunningTotalDisplay = 0;
+        public decimal RunningTotalDisplay = 0;
         private int _activeFeatureTier = 0, _currentFeatureSpin = 0;
         private bool _showGoldCircle = false;
 
@@ -256,8 +256,8 @@ public class SlotsCommand : ICommand
                         
                 }
 
-                DrawAutoScaledText($"BET: ${_userBet:F2}", largeFont, Color.White, new RectangleF(20, 700, 180, 100));
-                DrawAutoScaledText($"WIN: ${RunningTotalDisplay:F2}", largeFont, Color.Gold, new RectangleF(380, 700, 200, 100));
+                DrawAutoScaledText($"BET: ${_userBet.FormatKasinoCurrencyAsync().Result}", largeFont, Color.White, new RectangleF(20, 700, 180, 100));
+                DrawAutoScaledText($"WIN: ${RunningTotalDisplay.FormatKasinoCurrencyAsync().Result}", largeFont, Color.Gold, new RectangleF(380, 700, 200, 100));
 
                 if (_currentFeatureSpin > 0) {
                     var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
@@ -329,7 +329,7 @@ public class SlotsCommand : ICommand
             var winners = GetWinningLinesCoordsWithPayouts();
             var target = RunningTotalDisplay + winners.Sum(w => w.Amount);
             foreach (var win in winners) {
-                var inc = win.Amount / 10.0;
+                var inc = win.Amount / (decimal)10.0;
                 for (var f = 0; f < 10; f++) { RunningTotalDisplay += inc; RenderFrame(500, [win]); }
             }
             RunningTotalDisplay = target; RenderFrame();
@@ -356,7 +356,7 @@ public class SlotsCommand : ICommand
                     if (m == 0) m = 1;
                     if (_payoutTable.TryGetValue($"{ch}{count}", out var baseW)) {
                         var path = new (int, int)[count]; Array.Copy(line, path, count);
-                        res.Add(new WinDetail { Path = path, Amount = (double)_userBet * baseW * m });
+                        res.Add(new WinDetail { Path = path, Amount = _userBet * (decimal)baseW * (decimal)m });
                     }
                 }
             }
