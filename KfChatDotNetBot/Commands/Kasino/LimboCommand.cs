@@ -90,7 +90,7 @@ public class LimboCommand : ICommand
         }
 
         if (limboNumber < casinoNumbers[1] / 2) colorToUse = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!; //use red for the number if you're not close
-        else if (limboNumber > casinoNumbers[1] * 3 / 4)
+        else if (limboNumber *3 / 4 > casinoNumbers[1])
             colorToUse = "yellow"; //use yellow for the number if you're pretty close
         else colorToUse = "orange"; //use orange for mid range guess
         //you lose
