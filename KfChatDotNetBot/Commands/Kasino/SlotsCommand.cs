@@ -256,8 +256,8 @@ public class SlotsCommand : ICommand
                         
                 }
 
-                DrawAutoScaledText($"BET: ${_userBet.FormatKasinoCurrencyAsync().Result}", largeFont, Color.White, new RectangleF(20, 700, 180, 100));
-                DrawAutoScaledText($"WIN: ${RunningTotalDisplay.FormatKasinoCurrencyAsync().Result}", largeFont, Color.Gold, new RectangleF(380, 700, 200, 100));
+                DrawAutoScaledText($"BET: ${_userBet.FormatKasinoCurrencyAsync(wrapInPlainBbCode: false).Result}", largeFont, Color.White, new RectangleF(20, 700, 180, 100));
+                DrawAutoScaledText($"WIN: ${RunningTotalDisplay.FormatKasinoCurrencyAsync(wrapInPlainBbCode: false).Result}", largeFont, Color.Gold, new RectangleF(380, 700, 200, 100));
 
                 if (_currentFeatureSpin > 0) {
                     var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
