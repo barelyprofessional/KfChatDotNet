@@ -313,5 +313,12 @@ public enum GamblerState
     /// Entity was permanently banned. This will prevent future gambler entities being created for this user
     /// and will effectively lock them out of the game entirely
     /// </summary>
-    PermanentlyBanned
+    PermanentlyBanned,
+    /// <summary>
+    /// Gambler rendered inactive by the End of Year 2025 Great Reset
+    /// This is treated no different to abandonment, state exists for
+    /// the purposes of tracking statistics later to see how much KKK
+    /// was erased by this event
+    /// </summary>
+    EndOfYear2025Liquidated
 }
