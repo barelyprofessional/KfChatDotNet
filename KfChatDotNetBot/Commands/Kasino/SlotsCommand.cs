@@ -36,8 +36,8 @@ public class SlotsCommand : ICommand
     public TimeSpan Timeout => TimeSpan.FromSeconds(30);
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
-        MaxInvocations = 1,
-        Window = TimeSpan.FromSeconds(30)
+        MaxInvocations = 2,
+        Window = TimeSpan.FromSeconds(15)
     };
 
     public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user,
