@@ -11,6 +11,26 @@ public static class Zipline
 {
     public static async Task<string?> Upload(Stream content, MediaTypeHeaderValue mimeType, string? expiration = null, CancellationToken ct = default)
     {
+        using var formContent = new MultipartFormDataContent();
+        var fileContent = new StreamContent(content);
+        fileContent.Headers.ContentType = mimeType;
+        formContent.Add(fileContent, "upload", Money.GenerateEventId());
+        var url = await DoUpload(formContent, expiration, ct);
+        return url;
+    }
+    
+    public static async Task<string?> Upload(string content, MediaTypeHeaderValue mimeType, string? expiration = null, CancellationToken ct = default)
+    {
+        using var formContent = new MultipartFormDataContent();
+        var fileContent = new StringContent(content);
+        fileContent.Headers.ContentType = mimeType;
+        formContent.Add(fileContent, "upload", Money.GenerateEventId());
+        var url = await DoUpload(formContent, expiration, ct);
+        return url;
+    }
+    
+    private static async Task<string?> DoUpload(MultipartFormDataContent content, string? expiration = null, CancellationToken ct = default)
+    {
         var logger = LogManager.GetCurrentClassLogger();
         var settings =
             await SettingsProvider.GetMultipleValuesAsync([
@@ -30,17 +50,13 @@ public static class Zipline
         }
 
         using var client = new HttpClient(handler);
-        using var formContent = new MultipartFormDataContent();
-        var fileContent = new StreamContent(content);
-        fileContent.Headers.ContentType = mimeType;
-        formContent.Add(fileContent, "upload", Money.GenerateEventId());
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", settings[BuiltIn.Keys.ZiplineKey].Value);
         if (expiration != null)
         {
             client.DefaultRequestHeaders.Add("x-zipline-expiration", expiration);
         }
 
-        var response = await client.PostAsync($"{settings[BuiltIn.Keys.ZiplineUrl].Value}/api/upload", formContent, ct);
+        var response = await client.PostAsync($"{settings[BuiltIn.Keys.ZiplineUrl].Value}/api/upload", content, ct);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
         string url;
         try
@@ -57,5 +73,11 @@ public static class Zipline
         }
 
         return url;
+    }
+
+    public static async Task<bool> IsZiplineEnabled()
+    {
+        var key = await SettingsProvider.GetValueAsync(BuiltIn.Keys.ZiplineKey);
+        return !string.IsNullOrEmpty(key.Value);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -104,11 +105,13 @@ public class ListImageCommand : ICommand
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public RateLimitOptionsModel? RateLimitOptions => null;
+
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var imageKeys = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotImageAcceptableKeys)).JsonDeserialize<List<string>>();
+        var imageKeys = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotImageAcceptableKeys))
+            .JsonDeserialize<List<string>>();
         if (imageKeys == null) throw new InvalidOperationException($"{BuiltIn.Keys.BotImageAcceptableKeys} was null");
         var key = arguments["key"].Value;
         if (!imageKeys.Contains(key))
@@ -119,6 +122,18 @@ public class ListImageCommand : ICommand
         }
 
         var images = db.Images.Where(i => i.Key == key);
+        if (await images.CountAsync(cancellationToken: ctx) > 20 && await Zipline.IsZiplineEnabled())
+        {
+            var content = string.Empty;
+            foreach (var image in images)
+            {
+                content += image.Url + Environment.NewLine;
+            }
+
+            var paste = await Zipline.Upload(content, new MediaTypeHeaderValue("text/plain"), "1d", ctx);
+            await botInstance.SendChatMessageAsync($"List of images for {key}: {paste}", true);
+        }
+
         var i = 0;
         var result = $"List of images for {key}:";
         foreach (var image in images)
