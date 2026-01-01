@@ -132,6 +132,7 @@ public class ListImageCommand : ICommand
 
             var paste = await Zipline.Upload(content, new MediaTypeHeaderValue("text/plain"), "1d", ctx);
             await botInstance.SendChatMessageAsync($"List of images for {key}: {paste}", true);
+            return;
         }
 
         var i = 0;
