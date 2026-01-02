@@ -291,7 +291,8 @@ public enum WagerGame
     [Description("Guess what number I'm thinking of")]
     GuessWhatNumber,
     Wheel,
-    Slots
+    Slots,
+    Blackjack
 }
 
 public enum GamblerState
