@@ -1,7 +1,7 @@
 ﻿using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models.DbModels;
-using Newtonsoft.Json;
 
 namespace KfChatDotNetBot.Extensions;
 
@@ -140,7 +140,7 @@ public static class Extensions
     }
     
     /// <summary>
-    /// Deserialize a JSON string to the specified type using Newtonsoft.Json
+    /// Deserialize a JSON string to the specified type
     /// </summary>
     /// <typeparam name="T">Type to deserialize to</typeparam>
     /// <param name="jsonString">JSON string to deserialize</param>
@@ -152,16 +152,16 @@ public static class Extensions
             return null;
         }
 
-        return JsonConvert.DeserializeObject<T>(jsonString);
+        return JsonSerializer.Deserialize<T>(jsonString);
     }
 
     /// <summary>
-    /// Serialize an object to JSON string using Newtonsoft.Json
+    /// Serialize an object to JSON string
     /// </summary>
     /// <param name="obj">Object to serialize</param>
     /// <returns>JSON string representation</returns>
     public static string JsonSerialize(this object obj)
     {
-        return JsonConvert.SerializeObject(obj, Formatting.Indented);
+        return JsonSerializer.Serialize(obj, new JsonSerializerOptions { WriteIndented = true });
     }
 }
