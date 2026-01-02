@@ -18,12 +18,8 @@ public class BlackjackCommand : ICommand
     private static readonly TimeSpan GameTimeout = TimeSpan.FromMinutes(5);
     
     public List<Regex> Patterns => [
-        new Regex(@"^blackjack (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^blackjack (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^bj (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^bj (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^blackjack (?<action>hit|stand|double)$", RegexOptions.IgnoreCase),
-        new Regex(@"^bj (?<action>hit|stand|double)$", RegexOptions.IgnoreCase)
+        new Regex(@"^(?:blackjack|bj) (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
+        new Regex(@"^(?:blackjack|bj) (?<action>hit|stand|double)$", RegexOptions.IgnoreCase)
     ];
 
     public string? HelpText => "!blackjack <amount> or !bj <amount> to start, then !bj hit/stand/double";
@@ -42,23 +38,14 @@ public class BlackjackCommand : ICommand
         var cleanupDelay = TimeSpan.FromMilliseconds(
             (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoDiceCleanupDelay)).ToType<int>());
         
-        try
+        // Check if this is a new game or continuing existing game
+        if (arguments.TryGetValue("amount", out var amountGroup))
         {
-            // Check if this is a new game or continuing existing game
-            if (arguments.TryGetValue("amount", out var amountGroup))
-            {
-                await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
-            }
-            else if (arguments.TryGetValue("action", out var actionGroup))
-            {
-                await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
-            }
+            await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
         }
-        catch (Exception ex)
-        { 
-            await botInstance.SendChatMessageAsync(
-                $"[DEBUG] Blackjack error for {user.FormatUsername()}: {ex.Message}", true);
-            throw;
+        else if (arguments.TryGetValue("action", out var actionGroup))
+        {
+            await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
         }
     }
     
@@ -291,12 +278,13 @@ public class BlackjackCommand : ICommand
         if (playerValue > 21)
         {
             // Bust - player loses
+            var redColor = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsRedColor)).Value;
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()} hit and drew {card}[br]" +
                 $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
-                $"[B][COLOR=red]BUST![/COLOR][/B]",
+                $"[B][COLOR={redColor}]BUST![/COLOR][/B]",
                 true, autoDeleteAfter: cleanupDelay);
-            
+
             await ResolveGame(botInstance, user, gambler, wager, gameState, false, cleanupDelay, ctx);
         }
         else if (gameState.HasDoubledDown)
