@@ -1,4 +1,4 @@
-﻿using Humanizer;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
@@ -311,7 +311,38 @@ public static class Money
         await db.SaveChangesAsync(ct);
         return gambler.Balance;
     }
-    
+    /// <summary>
+    /// Adds 100.00 to gamblers balance when daily dollar command is used
+    /// </summary>
+    /// <param name="gamblerId">Gambler entity who is getting the daily dollar</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns></returns>
+    public static async Task<decimal> DailyDollar(int gamblerId, CancellationToken ct = default)
+    {
+        await using var db = new ApplicationDbContext();
+        var gambler = await db.Gamblers.FirstOrDefaultAsync(x => x.Id == gamblerId, cancellationToken: ct);
+        if (gambler == null)
+        {
+            throw new Exception($"Could not find gambler entity with given ID {gamblerId}");
+        }
+        _logger.Info($"Giving daily dollar $100.00 KKK to {gambler.Id}. Balance was: {gambler.Balance:N} | Balance should become: {gambler.Balance + 100:N}");
+        gambler.Balance += 100;
+        _logger.Info($"Daily dollar report: {gambler.Id}'s balance is now {gambler.Balance:N}");
+        
+        await db.Transactions.AddAsync(new TransactionDbModel
+        {
+            Gambler = gambler,
+            EventSource = TransactionSourceEventType.Other,
+            Effect = 100,
+            Time = DateTimeOffset.UtcNow,
+            Comment = "Daily dollar.",
+            From = null,
+            NewBalance = gambler.Balance,
+            TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        }, ct);
+        await db.SaveChangesAsync(ct);
+        return gambler.Balance;
+    }
     /// <summary>
     /// Add a wager to the database
     /// Will also issue a balance update unless you explicitly disable autoModifyBalance
