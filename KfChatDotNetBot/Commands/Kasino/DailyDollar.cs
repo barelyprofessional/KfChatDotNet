@@ -1,6 +1,10 @@
 using System.Text.RegularExpressions;
+using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
+using KfChatDotNetBot.Services;
+using KfChatDotNetBot.Settings;
+using KfChatDotNetWsClient.Models.Events;
 
 using KfChatDotNetWsClient.Models.Events;
 
@@ -26,6 +30,10 @@ public class DailyDollar : ICommand
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
-        await botInstance.SendChatMessageAsync($"!juice {user.Id} 100");
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        if (gambler == null)
+            throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        await Money.DailyDollar(gambler.Id, ctx);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, 100.00 KKK has been sent.", autoDeleteAfter: cleanupDelay);
     }
 }
