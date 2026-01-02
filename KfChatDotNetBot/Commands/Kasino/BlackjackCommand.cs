@@ -6,7 +6,6 @@ using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
-using NLog;
 using RandN.Compat;
 using RandN;
 
@@ -98,7 +97,6 @@ public class BlackjackCommand : ICommand
             if (existingGame.GameMeta == null)
             {
                 // Mark as complete with loss and continue
-                db.Attach(existingGame);
                 existingGame.IsComplete = true;
                 existingGame.WagerEffect = -existingGame.WagerAmount;
                 existingGame.Multiplier = 0m;
@@ -107,10 +105,9 @@ public class BlackjackCommand : ICommand
             else
             {
                 var existingGameState = existingGame.GameMeta.JsonDeserialize<BlackjackGameMetaModel>();
-                
+
                 if (existingGameState == null)
                 {
-                    db.Attach(existingGame);
                     existingGame.IsComplete = true;
                     existingGame.WagerEffect = -existingGame.WagerAmount;
                     existingGame.Multiplier = 0m;
@@ -123,7 +120,7 @@ public class BlackjackCommand : ICommand
                     
                     if (timeSinceStart > GameTimeout)
                     {
-                        await ForfeitGame(botInstance, user, gambler, existingGame, cleanupDelay, ctx);
+                        await ForfeitGame(botInstance, user, existingGame, cleanupDelay, ctx);
                     }
                     else
                     {
@@ -174,9 +171,8 @@ public class BlackjackCommand : ICommand
             .Where(w => w.Gambler.Id == gambler.Id && w.Game == WagerGame.Blackjack && !w.IsComplete)
             .OrderByDescending(w => w.Id)
             .FirstAsync(ctx);
-        
+
         newGameState.WagerId = createdWager.Id;
-        db.Attach(createdWager);
         createdWager.GameMeta = newGameState.JsonSerialize();
         await db.SaveChangesAsync(ctx);
         
@@ -254,29 +250,26 @@ public class BlackjackCommand : ICommand
         var timeSinceStart = DateTimeOffset.UtcNow - currentGameState.GameStarted;
         if (timeSinceStart > GameTimeout)
         {
-            await ForfeitGame(botInstance, user, gambler, activeWager, cleanupDelay, ctx);
+            await ForfeitGame(botInstance, user, activeWager, cleanupDelay, ctx);
             return;
         }
-        
-        var rng = StandardRng.Create();
-        var random = RandomShim.Create(rng);
         
         switch (action)
         {
             case "hit":
-                await HandleHit(botInstance, user, gambler, activeWager, currentGameState, random, cleanupDelay, ctx);
+                await HandleHit(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
             case "stand":
                 await HandleStand(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
             case "double":
-                await HandleDouble(botInstance, user, gambler, activeWager, currentGameState, random, cleanupDelay, ctx);
+                await HandleDouble(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
         }
     }
 
     private async Task HandleHit(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
-        WagerDbModel wager, BlackjackGameMetaModel gameState, Random random, TimeSpan cleanupDelay, CancellationToken ctx)
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
         
         if (gameState.Deck.Count == 0)
@@ -284,7 +277,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, game error: no cards left in deck. Game forfeited.",
                 true, autoDeleteAfter: cleanupDelay);
-            await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
+            await ForfeitGame(botInstance, user, wager, cleanupDelay, ctx);
             return;
         }
         
@@ -346,7 +339,7 @@ public class BlackjackCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, game error: dealer ran out of cards. Game forfeited.",
                     true, autoDeleteAfter: cleanupDelay);
-                await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
+                await ForfeitGame(botInstance, user, wager, cleanupDelay, ctx);
                 return;
             }
             
@@ -360,7 +353,7 @@ public class BlackjackCommand : ICommand
     }
 
     private async Task HandleDouble(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
-        WagerDbModel wager, BlackjackGameMetaModel gameState, Random random, TimeSpan cleanupDelay, CancellationToken ctx)
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
         // Check if player can double (only on first action with 2 cards)
         if (gameState.PlayerHand.Count != 2)
@@ -399,7 +392,7 @@ public class BlackjackCommand : ICommand
             true, autoDeleteAfter: cleanupDelay);
         
         // Draw one card and auto-stand
-        await HandleHit(botInstance, user, gambler, wager, gameState, random, cleanupDelay, ctx);
+        await HandleHit(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
     private async Task ResolveGame(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
@@ -515,7 +508,7 @@ public class BlackjackCommand : ICommand
         await botInstance.SendChatMessageAsync(message, true, autoDeleteAfter: cleanupDelay);
     }
 
-    private async Task ForfeitGame(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
+    private async Task ForfeitGame(ChatBot botInstance, UserDbModel user,
         WagerDbModel wager, TimeSpan cleanupDelay, CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
