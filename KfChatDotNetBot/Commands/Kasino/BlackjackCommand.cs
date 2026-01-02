@@ -43,16 +43,26 @@ public class BlackjackCommand : ICommand
         var cleanupDelay = TimeSpan.FromMilliseconds(
             (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoDiceCleanupDelay)).ToType<int>());
         
-        // Check if this is a new game or continuing existing game
-        if (arguments.TryGetValue("amount", out var amountGroup))
+        try
         {
-            await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
+            // Check if this is a new game or continuing existing game
+            if (arguments.TryGetValue("amount", out var amountGroup))
+            {
+                await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
+            }
+            else if (arguments.TryGetValue("action", out var actionGroup))
+            {
+                await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
+            }
         }
-        else if (arguments.TryGetValue("action", out var actionGroup))
-        {
-            await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
+        catch (Exception ex)
+        { 
+            await botInstance.SendChatMessageAsync(
+                $"[DEBUG] Blackjack error for {user.FormatUsername()}: {ex.Message}", true);
+            throw;
         }
     }
+    
 
     private async Task StartNewGame(ChatBot botInstance, UserDbModel user, string amountStr, 
         TimeSpan cleanupDelay, CancellationToken ctx)
@@ -61,7 +71,9 @@ public class BlackjackCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         
         if (gambler == null)
+        {
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        }
         
         // Check if user has enough balance
         if (gambler.Balance < wager)
@@ -96,21 +108,35 @@ public class BlackjackCommand : ICommand
             {
                 var existingGameState = existingGame.GameMeta.JsonDeserialize<BlackjackGameMetaModel>();
                 
-                // Check if game has timed out
-                if (DateTimeOffset.UtcNow - existingGameState!.GameStarted > GameTimeout)
+                if (existingGameState == null)
                 {
-                    await ForfeitGame(botInstance, user, gambler, existingGame, cleanupDelay, ctx);
+                    db.Attach(existingGame);
+                    existingGame.IsComplete = true;
+                    existingGame.WagerEffect = -existingGame.WagerAmount;
+                    existingGame.Multiplier = 0m;
+                    await db.SaveChangesAsync(ctx);
                 }
                 else
                 {
-                    await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, you already have an active blackjack game. Use !bj hit or !bj stand to continue.",
-                        true, autoDeleteAfter: cleanupDelay);
-                    return;
+                    // Check if game has timed out
+                    var timeSinceStart = DateTimeOffset.UtcNow - existingGameState.GameStarted;
+                    
+                    if (timeSinceStart > GameTimeout)
+                    {
+                        await ForfeitGame(botInstance, user, gambler, existingGame, cleanupDelay, ctx);
+                    }
+                    else
+                    {
+                        await botInstance.SendChatMessageAsync(
+                            $"{user.FormatUsername()}, you already have an active blackjack game. Use !bj hit or !bj stand to continue.",
+                            true, autoDeleteAfter: cleanupDelay);
+                        return;
+                    }
                 }
             }
         }
         
+       
         // Create deck and deal initial hands
         var rng = StandardRng.Create();
         var random = RandomShim.Create(rng);
@@ -185,7 +211,9 @@ public class BlackjackCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         
         if (gambler == null)
+        {
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        }
         
         // Find active game
         await using var db = new ApplicationDbContext();
@@ -215,6 +243,7 @@ public class BlackjackCommand : ICommand
         var currentGameState = activeWager.GameMeta.JsonDeserialize<BlackjackGameMetaModel>();
         if (currentGameState == null)
         {
+
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your game data is corrupted. Please start a new game.",
                 true, autoDeleteAfter: cleanupDelay);
@@ -222,7 +251,8 @@ public class BlackjackCommand : ICommand
         }
         
         // Check timeout
-        if (DateTimeOffset.UtcNow - currentGameState.GameStarted > GameTimeout)
+        var timeSinceStart = DateTimeOffset.UtcNow - currentGameState.GameStarted;
+        if (timeSinceStart > GameTimeout)
         {
             await ForfeitGame(botInstance, user, gambler, activeWager, cleanupDelay, ctx);
             return;
@@ -248,6 +278,16 @@ public class BlackjackCommand : ICommand
     private async Task HandleHit(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, BlackjackGameMetaModel gameState, Random random, TimeSpan cleanupDelay, CancellationToken ctx)
     {
+        
+        if (gameState.Deck.Count == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, game error: no cards left in deck. Game forfeited.",
+                true, autoDeleteAfter: cleanupDelay);
+            await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
+            return;
+        }
+        
         // Draw card
         var card = gameState.Deck[0];
         gameState.Deck.RemoveAt(0);
@@ -295,11 +335,21 @@ public class BlackjackCommand : ICommand
     private async Task HandleStand(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
+        
         // Dealer plays
         var dealerValue = BlackjackHelper.CalculateHandValue(gameState.DealerHand);
         
         while (dealerValue < 17)
         {
+            if (gameState.Deck.Count == 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, game error: dealer ran out of cards. Game forfeited.",
+                    true, autoDeleteAfter: cleanupDelay);
+                await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
+                return;
+            }
+            
             var card = gameState.Deck[0];
             gameState.Deck.RemoveAt(0);
             gameState.DealerHand.Add(card);
@@ -335,9 +385,10 @@ public class BlackjackCommand : ICommand
         db.Attach(wager);
         db.Attach(gambler);
         
-        gambler.Balance -= wager.WagerAmount;
+        var additionalWager = wager.WagerAmount;
+        gambler.Balance -= additionalWager;
         wager.WagerAmount *= 2;
-        wager.WagerEffect -= wager.WagerAmount / 2; // Subtract the additional wager
+        wager.WagerEffect -= additionalWager; // Subtract the additional wager
         
         gameState.HasDoubledDown = true;
         
@@ -371,56 +422,48 @@ public class BlackjackCommand : ICommand
         // Determine outcome
         if (playerBlackjack && dealerBlackjack)
         {
-            // Push
             finalEffect = 0;
             multiplier = 1m;
             result = $"[B][COLOR=orange]PUSH![/COLOR][/B] Both have blackjack";
         }
         else if (playerBlackjack)
         {
-            // Player blackjack wins 3:2
             finalEffect = wager.WagerAmount * 1.5m;
             multiplier = 2.5m;
             result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]BLACKJACK![/COLOR][/B]";
         }
         else if (dealerBlackjack)
         {
-            // Dealer blackjack, player loses
             finalEffect = -wager.WagerAmount;
             multiplier = 0m;
             result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DEALER BLACKJACK![/COLOR][/B]";
         }
         else if (playerValue > 21)
         {
-            // Player bust
             finalEffect = -wager.WagerAmount;
             multiplier = 0m;
             result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]BUST![/COLOR][/B]";
         }
         else if (dealerValue > 21)
         {
-            // Dealer bust, player wins
             finalEffect = wager.WagerAmount;
             multiplier = 2m;
             result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]DEALER BUST - YOU WIN![/COLOR][/B]";
         }
         else if (playerValue > dealerValue)
         {
-            // Player wins
             finalEffect = wager.WagerAmount;
             multiplier = 2m;
             result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]YOU WIN![/COLOR][/B]";
         }
         else if (playerValue < dealerValue)
         {
-            // Dealer wins
             finalEffect = -wager.WagerAmount;
             multiplier = 0m;
             result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DEALER WINS![/COLOR][/B]";
         }
         else
         {
-            // Push
             finalEffect = 0;
             multiplier = 1m;
             result = $"[B][COLOR=orange]PUSH![/COLOR][/B]";
@@ -435,7 +478,8 @@ public class BlackjackCommand : ICommand
         wager.WagerEffect = finalEffect;
         wager.Multiplier = multiplier;
         
-        gambler.Balance += finalEffect + wager.WagerAmount; // Return original wager + winnings
+        var balanceAdjustment = finalEffect + wager.WagerAmount;
+        gambler.Balance += balanceAdjustment;
         
         // Create transaction for the outcome
         await db.Transactions.AddAsync(new TransactionDbModel
@@ -443,7 +487,7 @@ public class BlackjackCommand : ICommand
             Gambler = gambler,
             EventSource = TransactionSourceEventType.Gambling,
             Time = DateTimeOffset.UtcNow,
-            Effect = finalEffect + wager.WagerAmount,
+            Effect = balanceAdjustment,
             Comment = $"Blackjack outcome from wager {wager.Id}",
             NewBalance = gambler.Balance,
             TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
