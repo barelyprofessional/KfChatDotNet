@@ -43,23 +43,14 @@ public class BlackjackCommand : ICommand
         var cleanupDelay = TimeSpan.FromMilliseconds(
             (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoDiceCleanupDelay)).ToType<int>());
         
-        try
+        // Check if this is a new game or continuing existing game
+        if (arguments.TryGetValue("amount", out var amountGroup))
         {
-            // Check if this is a new game or continuing existing game
-            if (arguments.TryGetValue("amount", out var amountGroup))
-            {
-                await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
-            }
-            else if (arguments.TryGetValue("action", out var actionGroup))
-            {
-                await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
-            }
+            await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
         }
-        catch (Exception ex)
-        { 
-            await botInstance.SendChatMessageAsync(
-                $"[DEBUG] Blackjack error for {user.FormatUsername()}: {ex.Message}", true);
-            throw;
+        else if (arguments.TryGetValue("action", out var actionGroup))
+        {
+            await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
         }
     }
     
