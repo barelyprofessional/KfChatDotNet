@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text.Json;
+using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -6,7 +7,6 @@ using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
-using NLog;
 using RandN.Compat;
 using RandN;
 
@@ -106,7 +106,7 @@ public class BlackjackCommand : ICommand
             }
             else
             {
-                var existingGameState = existingGame.GameMeta.JsonDeserialize<BlackjackGameMetaModel>();
+                var existingGameState = JsonSerializer.Deserialize<BlackjackGameMetaModel>(existingGame.GameMeta);
                 
                 if (existingGameState == null)
                 {
@@ -177,7 +177,7 @@ public class BlackjackCommand : ICommand
         
         newGameState.WagerId = createdWager.Id;
         db.Attach(createdWager);
-        createdWager.GameMeta = newGameState.JsonSerialize();
+        createdWager.GameMeta = JsonSerializer.Serialize(newGameState);
         await db.SaveChangesAsync(ctx);
         
         // Check for immediate blackjacks
@@ -240,7 +240,7 @@ public class BlackjackCommand : ICommand
             return;
         }
         
-        var currentGameState = activeWager.GameMeta.JsonDeserialize<BlackjackGameMetaModel>();
+        var currentGameState = JsonSerializer.Deserialize<BlackjackGameMetaModel>(activeWager.GameMeta);
         if (currentGameState == null)
         {
 
@@ -321,7 +321,7 @@ public class BlackjackCommand : ICommand
             // Continue game
             await using var db = new ApplicationDbContext();
             db.Attach(wager);
-            wager.GameMeta = gameState.JsonSerialize();
+            wager.GameMeta = JsonSerializer.Serialize(gameState);
             await db.SaveChangesAsync(ctx);
             
             await botInstance.SendChatMessageAsync(
