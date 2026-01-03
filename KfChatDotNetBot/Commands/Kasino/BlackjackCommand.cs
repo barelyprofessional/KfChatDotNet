@@ -86,6 +86,7 @@ public class BlackjackCommand : ICommand
         
         // Check for existing incomplete blackjack game
         var existingGame = await _dbContext.Wagers
+            .OrderBy(x => x.Id)
             .LastOrDefaultAsync(w => w.Gambler.Id == gambler.Id &&
                                       w.Game == WagerGame.Blackjack &&
                                       !w.IsComplete && w.GameMeta != null,
@@ -157,6 +158,7 @@ public class BlackjackCommand : ICommand
         
         // Update wager ID in game state
         var createdWager = await _dbContext.Wagers
+            .OrderBy(x => x.Id)
             .LastOrDefaultAsync(
                 w => w.Gambler.Id == gambler.Id && w.Game == WagerGame.Blackjack && !w.IsComplete && w.GameMeta != null,
                 cancellationToken: ctx) ?? throw new InvalidOperationException();
@@ -200,6 +202,7 @@ public class BlackjackCommand : ICommand
         
         // Find active game
         var activeWager = await _dbContext.Wagers
+            .OrderBy(x => x.Id)
             .LastOrDefaultAsync(w => w.Gambler.Id == gambler.Id &&
                         w.Game == WagerGame.Blackjack &&
                         !w.IsComplete && w.GameMeta != null, cancellationToken: ctx);
