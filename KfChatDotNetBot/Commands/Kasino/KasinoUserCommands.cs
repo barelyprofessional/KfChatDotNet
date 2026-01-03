@@ -246,7 +246,12 @@ public class AbandonKasinoCommand : ICommand
     public string? HelpText => "Abandon your Keno Kasino gambler account";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public RateLimitOptionsModel? RateLimitOptions => null;
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        Window = TimeSpan.FromSeconds(60),
+        MaxInvocations = 1
+    };
+
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
