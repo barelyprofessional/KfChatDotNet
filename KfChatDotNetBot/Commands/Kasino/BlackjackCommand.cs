@@ -7,6 +7,7 @@ using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
+using NLog;
 using RandN.Compat;
 using RandN;
 
@@ -37,6 +38,8 @@ public class BlackjackCommand : ICommand
         Flags = RateLimitFlags.NoAutoDeleteCooldownResponse
     };
 
+    private ApplicationDbContext _dbContext = new();
+
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
@@ -47,17 +50,23 @@ public class BlackjackCommand : ICommand
         if (arguments.TryGetValue("amount", out var amountGroup))
         {
             await StartNewGame(botInstance, user, amountGroup.Value, cleanupDelay, ctx);
+            return;
         }
-        else if (arguments.TryGetValue("action", out var actionGroup))
+
+        if (arguments.TryGetValue("action", out var actionGroup))
         {
             await ContinueGame(botInstance, user, actionGroup.Value.ToLower(), cleanupDelay, ctx);
+            return;
         }
+
+        throw new InvalidOperationException($"User {user.KfUsername} somehow ran blackjack without an amount or action: {message.MessageRaw}");
     }
     
 
     private async Task StartNewGame(ChatBot botInstance, UserDbModel user, string amountStr, 
         TimeSpan cleanupDelay, CancellationToken ctx)
     {
+        var logger = LogManager.GetCurrentClassLogger();
         var wager = Convert.ToDecimal(amountStr);
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         
@@ -76,55 +85,43 @@ public class BlackjackCommand : ICommand
         }
         
         // Check for existing incomplete blackjack game
-        await using var db = new ApplicationDbContext();
-        var existingGame = await db.Wagers
-            .Where(w => w.Gambler.Id == gambler.Id && 
-                       w.Game == WagerGame.Blackjack && 
-                       !w.IsComplete)
-            .OrderByDescending(w => w.Id)
-            .FirstOrDefaultAsync(ctx);
+        var existingGame = await _dbContext.Wagers
+            .LastOrDefaultAsync(w => w.Gambler.Id == gambler.Id &&
+                                      w.Game == WagerGame.Blackjack &&
+                                      !w.IsComplete && w.GameMeta != null,
+                cancellationToken: ctx);
         
         if (existingGame != null)
         {
-            if (existingGame.GameMeta == null)
+            try
             {
-                // Mark as complete with loss and continue
-                db.Attach(existingGame);
+                _ = JsonSerializer.Deserialize<BlackjackGameMetaModel>(existingGame.GameMeta!) ??
+                    throw new InvalidOperationException();
+            }
+            catch (Exception e)
+            {
+                logger.Error($"Caught error when deserializing meta for wager ID {existingGame.Id}");
+                logger.Error(e);
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, somehow your previous blackjack game state got messed up. Please try again",
+                    true, autoDeleteAfter: cleanupDelay);
                 existingGame.IsComplete = true;
-                existingGame.WagerEffect = -existingGame.WagerAmount;
-                existingGame.Multiplier = 0m;
-                await db.SaveChangesAsync(ctx);
+                await _dbContext.SaveChangesAsync(ctx);
+                throw;
             }
-            else
+            // Check if game has timed out
+            var timeSinceStart = DateTimeOffset.UtcNow - existingGame.Time;
+            
+            if (timeSinceStart > GameTimeout)
             {
-                var existingGameState = JsonSerializer.Deserialize<BlackjackGameMetaModel>(existingGame.GameMeta);
-                
-                if (existingGameState == null)
-                {
-                    db.Attach(existingGame);
-                    existingGame.IsComplete = true;
-                    existingGame.WagerEffect = -existingGame.WagerAmount;
-                    existingGame.Multiplier = 0m;
-                    await db.SaveChangesAsync(ctx);
-                }
-                else
-                {
-                    // Check if game has timed out
-                    var timeSinceStart = DateTimeOffset.UtcNow - existingGameState.GameStarted;
-                    
-                    if (timeSinceStart > GameTimeout)
-                    {
-                        await ForfeitGame(botInstance, user, gambler, existingGame, cleanupDelay, ctx);
-                    }
-                    else
-                    {
-                        await botInstance.SendChatMessageAsync(
-                            $"{user.FormatUsername()}, you already have an active blackjack game. Use !bj hit or !bj stand to continue.",
-                            true, autoDeleteAfter: cleanupDelay);
-                        return;
-                    }
-                }
+                await ForfeitGame(botInstance, user, gambler, existingGame, cleanupDelay, ctx);
+                return;
             }
+
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you already have an active blackjack game. Use !bj hit or !bj stand to continue.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
         }
         
        
@@ -140,16 +137,14 @@ public class BlackjackCommand : ICommand
         // Create game state
         var newGameState = new BlackjackGameMetaModel
         {
-            WagerId = 0, // Will be set after wager is created
             PlayerHand = playerHand,
             DealerHand = dealerHand,
             Deck = deck,
-            GameStarted = DateTimeOffset.UtcNow,
             HasDoubledDown = false
         };
         
         // Create incomplete wager
-        var newBalance = await Money.NewWagerAsync(
+        await Money.NewWagerAsync(
             gambler.Id,
             wager,
             -wager, // This will be the effect for incomplete wagers
@@ -161,15 +156,12 @@ public class BlackjackCommand : ICommand
         );
         
         // Update wager ID in game state
-        var createdWager = await db.Wagers
-            .Where(w => w.Gambler.Id == gambler.Id && w.Game == WagerGame.Blackjack && !w.IsComplete)
-            .OrderByDescending(w => w.Id)
-            .FirstAsync(ctx);
-        
-        newGameState.WagerId = createdWager.Id;
-        db.Attach(createdWager);
+        var createdWager = await _dbContext.Wagers
+            .LastOrDefaultAsync(
+                w => w.Gambler.Id == gambler.Id && w.Game == WagerGame.Blackjack && !w.IsComplete && w.GameMeta != null,
+                cancellationToken: ctx) ?? throw new InvalidOperationException();
         createdWager.GameMeta = JsonSerializer.Serialize(newGameState);
-        await db.SaveChangesAsync(ctx);
+        await _dbContext.SaveChangesAsync(ctx);
         
         // Check for immediate blackjacks
         var playerValue = BlackjackHelper.CalculateHandValue(playerHand);
@@ -207,13 +199,10 @@ public class BlackjackCommand : ICommand
         }
         
         // Find active game
-        await using var db = new ApplicationDbContext();
-        var activeWager = await db.Wagers
-            .Where(w => w.Gambler.Id == gambler.Id && 
-                       w.Game == WagerGame.Blackjack && 
-                       !w.IsComplete)
-            .OrderByDescending(w => w.Id)
-            .FirstOrDefaultAsync(ctx);
+        var activeWager = await _dbContext.Wagers
+            .LastOrDefaultAsync(w => w.Gambler.Id == gambler.Id &&
+                        w.Game == WagerGame.Blackjack &&
+                        !w.IsComplete && w.GameMeta != null, cancellationToken: ctx);
         
         if (activeWager == null)
         {
@@ -223,26 +212,19 @@ public class BlackjackCommand : ICommand
             return;
         }
         
-        if (activeWager.GameMeta == null)
-        {
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, your game data is corrupted. Please start a new game.",
-                true, autoDeleteAfter: cleanupDelay);
-            return;
-        }
-        
-        var currentGameState = JsonSerializer.Deserialize<BlackjackGameMetaModel>(activeWager.GameMeta);
+        var currentGameState = JsonSerializer.Deserialize<BlackjackGameMetaModel>(activeWager.GameMeta!);
         if (currentGameState == null)
         {
-
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your game data is corrupted. Please start a new game.",
                 true, autoDeleteAfter: cleanupDelay);
+            activeWager.IsComplete = true;
+            await _dbContext.SaveChangesAsync(ctx);
             return;
         }
         
         // Check timeout
-        var timeSinceStart = DateTimeOffset.UtcNow - currentGameState.GameStarted;
+        var timeSinceStart = DateTimeOffset.UtcNow - activeWager.Time;
         if (timeSinceStart > GameTimeout)
         {
             await ForfeitGame(botInstance, user, gambler, activeWager, cleanupDelay, ctx);
@@ -296,8 +278,10 @@ public class BlackjackCommand : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             
             await ResolveGame(botInstance, user, gambler, wager, gameState, false, cleanupDelay, ctx);
+            return;
         }
-        else if (gameState.HasDoubledDown)
+
+        if (gameState.HasDoubledDown)
         {
             // Auto-stand after double down hit
             await botInstance.SendChatMessageAsync(
@@ -306,21 +290,18 @@ public class BlackjackCommand : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             
             await HandleStand(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
+            return;
         }
-        else
-        {
-            // Continue game
-            await using var db = new ApplicationDbContext();
-            db.Attach(wager);
-            wager.GameMeta = JsonSerializer.Serialize(gameState);
-            await db.SaveChangesAsync(ctx);
+        
+        // Continue game
+        wager.GameMeta = JsonSerializer.Serialize(gameState);
+        await _dbContext.SaveChangesAsync(ctx);
             
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} hit and drew {card}[br]" +
-                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
-                $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
-                true, autoDeleteAfter: cleanupDelay);
-        }
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()} hit and drew {card}[br]" +
+            $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
+            $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
+            true, autoDeleteAfter: cleanupDelay);
     }
 
     private async Task HandleStand(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
@@ -372,18 +353,13 @@ public class BlackjackCommand : ICommand
         }
         
         // Double the wager
-        await using var db = new ApplicationDbContext();
-        db.Attach(wager);
-        db.Attach(gambler);
-        
         var additionalWager = wager.WagerAmount;
         gambler.Balance -= additionalWager;
         wager.WagerAmount *= 2;
         wager.WagerEffect -= additionalWager; // Subtract the additional wager
-        
         gameState.HasDoubledDown = true;
         
-        await db.SaveChangesAsync(ctx);
+        await _dbContext.SaveChangesAsync(ctx);
         
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()} doubled down! Wager is now {await wager.WagerAmount.FormatKasinoCurrencyAsync()}",
@@ -461,30 +437,13 @@ public class BlackjackCommand : ICommand
         }
         
         // Update wager to complete
-        await using var db = new ApplicationDbContext();
-        db.Attach(wager);
-        db.Attach(gambler);
-        
         wager.IsComplete = true;
         wager.WagerEffect = finalEffect;
         wager.Multiplier = multiplier;
-        
+        await _dbContext.SaveChangesAsync(ctx);
         var balanceAdjustment = finalEffect + wager.WagerAmount;
-        gambler.Balance += balanceAdjustment;
-        
-        // Create transaction for the outcome
-        await db.Transactions.AddAsync(new TransactionDbModel
-        {
-            Gambler = gambler,
-            EventSource = TransactionSourceEventType.Gambling,
-            Time = DateTimeOffset.UtcNow,
-            Effect = balanceAdjustment,
-            Comment = $"Blackjack outcome from wager {wager.Id}",
-            NewBalance = gambler.Balance,
-            TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-        }, ctx);
-        
-        await db.SaveChangesAsync(ctx);
+        await Money.ModifyBalanceAsync(gambler.Id, balanceAdjustment, TransactionSourceEventType.Gambling,
+            $"Blackjack outcome from wager {wager.Id}", null, ctx);
         
         // Display result
         var message = $"🃏 {user.FormatUsername()}'s blackjack game:[br]" +
@@ -509,14 +468,8 @@ public class BlackjackCommand : ICommand
     private async Task ForfeitGame(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, TimeSpan cleanupDelay, CancellationToken ctx)
     {
-        await using var db = new ApplicationDbContext();
-        db.Attach(wager);
-        
         wager.IsComplete = true;
-        wager.WagerEffect = -wager.WagerAmount;
-        wager.Multiplier = 0m;
-        
-        await db.SaveChangesAsync(ctx);
+        await _dbContext.SaveChangesAsync(ctx);
         
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, your blackjack game timed out and you forfeited {await wager.WagerAmount.FormatKasinoCurrencyAsync()}",

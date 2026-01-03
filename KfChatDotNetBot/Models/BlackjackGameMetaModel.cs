@@ -3,11 +3,6 @@
 public class BlackjackGameMetaModel
 {
     /// <summary>
-    /// The wager ID associated with this game
-    /// </summary>
-    public required int WagerId { get; set; }
-    
-    /// <summary>
     /// Player's hand
     /// </summary>
     public required List<Card> PlayerHand { get; set; }
@@ -21,11 +16,6 @@ public class BlackjackGameMetaModel
     /// Remaining cards in the deck
     /// </summary>
     public required List<Card> Deck { get; set; }
-    
-    /// <summary>
-    /// When the game was started
-    /// </summary>
-    public required DateTimeOffset GameStarted { get; set; }
     
     /// <summary>
     /// Whether player has doubled down (can only hit once more)
