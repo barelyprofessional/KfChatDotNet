@@ -463,6 +463,8 @@ public static class BuiltIn
         public static string ZiplineKey = "Zipline.Key";
         [BuiltInSetting("Base URL for Zipline", SettingValueType.Text, defaultValue: "https://i.ddos.lgbt")]
         public static string ZiplineUrl = "Zipline.Url";
+        [BuiltInSetting("Delay in milliseconds before cleaning up blackjack", SettingValueType.Text, "20000", WholeNumberRegex)]
+        public static string KasinoBlackjackCleanupDelay = "Kasino.Blackjack.CleanupDelay";
     }
 }
 

@@ -41,7 +41,7 @@ public class BlackjackCommand : ICommand
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromMilliseconds(
-            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoDiceCleanupDelay)).ToType<int>());
+            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoBlackjackCleanupDelay)).ToType<int>());
         
         // Check if this is a new game or continuing existing game
         if (arguments.TryGetValue("amount", out var amountGroup))
