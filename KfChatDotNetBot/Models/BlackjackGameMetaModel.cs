@@ -1,4 +1,7 @@
-﻿namespace KfChatDotNetBot.Models;
+﻿using KfChatDotNetBot.Models.DbModels;
+using Money = KfChatDotNetBot.Services.Money;
+
+namespace KfChatDotNetBot.Models;
 
 public class BlackjackGameMetaModel
 {
@@ -65,7 +68,7 @@ public static class BlackjackHelper
     /// <summary>
     /// Create a new shuffled deck
     /// </summary>
-    public static List<Card> CreateDeck(Random random)
+    public static List<Card> CreateDeck(GamblerDbModel gambler)
     {
         var deck = new List<Card>();
         foreach (var suit in Suits)
@@ -79,7 +82,8 @@ public static class BlackjackHelper
         // Shuffle using Fisher-Yates
         for (int i = deck.Count - 1; i > 0; i--)
         {
-            int j = random.Next(0, i + 1);
+            //int j = random.Next(0, i + 1);
+            int j = Money.GetRandomNumber(gambler, 0, i + 1);
             (deck[i], deck[j]) = (deck[j], deck[i]);
         }
         

@@ -8,8 +8,6 @@ using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using NLog;
-using RandN.Compat;
-using RandN;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
@@ -127,9 +125,7 @@ public class BlackjackCommand : ICommand
         
        
         // Create deck and deal initial hands
-        var rng = StandardRng.Create();
-        var random = RandomShim.Create(rng);
-        var deck = BlackjackHelper.CreateDeck(random);
+        var deck = BlackjackHelper.CreateDeck(gambler);
         
         var playerHand = new List<Card> { deck[0], deck[2] };
         var dealerHand = new List<Card> { deck[1], deck[3] };
@@ -234,25 +230,22 @@ public class BlackjackCommand : ICommand
             return;
         }
         
-        var rng = StandardRng.Create();
-        var random = RandomShim.Create(rng);
-        
         switch (action)
         {
             case "hit":
-                await HandleHit(botInstance, user, gambler, activeWager, currentGameState, random, cleanupDelay, ctx);
+                await HandleHit(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
             case "stand":
                 await HandleStand(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
             case "double":
-                await HandleDouble(botInstance, user, gambler, activeWager, currentGameState, random, cleanupDelay, ctx);
+                await HandleDouble(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
         }
     }
 
     private async Task HandleHit(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
-        WagerDbModel wager, BlackjackGameMetaModel gameState, Random random, TimeSpan cleanupDelay, CancellationToken ctx)
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
         
         if (gameState.Deck.Count == 0)
@@ -335,7 +328,7 @@ public class BlackjackCommand : ICommand
     }
 
     private async Task HandleDouble(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
-        WagerDbModel wager, BlackjackGameMetaModel gameState, Random random, TimeSpan cleanupDelay, CancellationToken ctx)
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
         // Check if player can double (only on first action with 2 cards)
         if (gameState.PlayerHand.Count != 2)
@@ -369,7 +362,7 @@ public class BlackjackCommand : ICommand
             true, autoDeleteAfter: cleanupDelay);
         
         // Draw one card and auto-stand
-        await HandleHit(botInstance, user, gambler, wager, gameState, random, cleanupDelay, ctx);
+        await HandleHit(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
     private async Task ResolveGame(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
