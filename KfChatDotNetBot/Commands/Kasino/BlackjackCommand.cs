@@ -22,11 +22,11 @@ public class BlackjackCommand : ICommand
         new Regex(@"^blackjack (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^bj (?<amount>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^bj (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^blackjack (?<action>hit|stand|double)$", RegexOptions.IgnoreCase),
-        new Regex(@"^bj (?<action>hit|stand|double)$", RegexOptions.IgnoreCase)
+        new Regex(@"^blackjack (?<action>hit|stand|double|split)$", RegexOptions.IgnoreCase),
+        new Regex(@"^bj (?<action>hit|stand|double|split)$", RegexOptions.IgnoreCase)
     ];
 
-    public string? HelpText => "!blackjack <amount> or !bj <amount> to start, then !bj hit/stand/double";
+    public string? HelpText => "!blackjack <amount> or !bj <amount> to start, then !bj hit/stand/double/split";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
     public RateLimitOptionsModel? RateLimitOptions => new()
@@ -134,10 +134,12 @@ public class BlackjackCommand : ICommand
         // Create game state
         var newGameState = new BlackjackGameMetaModel
         {
-            PlayerHand = playerHand,
+            PlayerHands = new List<List<Card>> { playerHand },
             DealerHand = dealerHand,
             Deck = deck,
-            HasDoubledDown = false
+            HasDoubledDown = new List<bool> { false },
+            CurrentHandIndex = 0,
+            OriginalWagerAmount = wager
         };
         
         // Create incomplete wager
@@ -177,12 +179,15 @@ public class BlackjackCommand : ICommand
         var colors = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
+
+        var canSplit = BlackjackHelper.CanSplit(playerHand);
+        var splitText = canSplit ? " or [B]!bj split[/B]" : "";
         
         await botInstance.SendChatMessageAsync(
             $"🃏 {user.FormatUsername()} started blackjack with {await wager.FormatKasinoCurrencyAsync()}[br]" +
             $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(playerHand)} = {playerValue}[br]" +
             $"[B]Dealer:[/B] {BlackjackHelper.FormatHand(dealerHand, hideFirstCard: true)}[br]" +
-            $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
+            $"Use [B]!bj hit[/B] or [B]!bj stand[/B]{splitText} to continue",
             true, autoDeleteAfter: cleanupDelay);
     }
 
@@ -241,13 +246,15 @@ public class BlackjackCommand : ICommand
             case "double":
                 await HandleDouble(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
+            case "split":
+                await HandleSplit(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
+                break;
         }
     }
 
     private async Task HandleHit(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
-        
         if (gameState.Deck.Count == 0)
         {
             await botInstance.SendChatMessageAsync(
@@ -257,35 +264,56 @@ public class BlackjackCommand : ICommand
             return;
         }
         
+        var currentHand = gameState.PlayerHands[gameState.CurrentHandIndex];
+        var handLabel = gameState.PlayerHands.Count > 1 ? $" (Hand {gameState.CurrentHandIndex + 1})" : "";
+        
         // Draw card
         var card = gameState.Deck[0];
         gameState.Deck.RemoveAt(0);
-        gameState.PlayerHand.Add(card);
+        currentHand.Add(card);
         
-        var playerValue = BlackjackHelper.CalculateHandValue(gameState.PlayerHand);
+        var playerValue = BlackjackHelper.CalculateHandValue(currentHand);
         
         if (playerValue > 21)
         {
             // Bust - player loses
+            var colors = await SettingsProvider.GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]);
+            
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} hit and drew {card}[br]" +
-                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
-                $"[B][COLOR=red]BUST![/COLOR][/B]",
+                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
+                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
+                $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]BUST![/COLOR][/B]",
                 true, autoDeleteAfter: cleanupDelay);
             
-            await ResolveGame(botInstance, user, gambler, wager, gameState, false, cleanupDelay, ctx);
+            // Move to next hand or resolve game
+            await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
             return;
         }
 
-        if (gameState.HasDoubledDown)
+        // Auto-stand on 21
+        if (playerValue == 21)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
+                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
+                $"[B]Standing on 21[/B]",
+                true, autoDeleteAfter: cleanupDelay);
+            
+            await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
+            return;
+        }
+
+        if (gameState.HasDoubledDown[gameState.CurrentHandIndex])
         {
             // Auto-stand after double down hit
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} hit and drew {card}[br]" +
-                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}",
+                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
+                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}",
                 true, autoDeleteAfter: cleanupDelay);
             
-            await HandleStand(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
+            await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
             return;
         }
         
@@ -294,8 +322,8 @@ public class BlackjackCommand : ICommand
         await _dbContext.SaveChangesAsync(ctx);
             
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()} hit and drew {card}[br]" +
-            $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
+            $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
+            $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
             $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
             true, autoDeleteAfter: cleanupDelay);
     }
@@ -303,35 +331,24 @@ public class BlackjackCommand : ICommand
     private async Task HandleStand(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
+        var handLabel = gameState.PlayerHands.Count > 1 ? $" (Hand {gameState.CurrentHandIndex + 1})" : "";
+        var currentHand = gameState.PlayerHands[gameState.CurrentHandIndex];
+        var playerValue = BlackjackHelper.CalculateHandValue(currentHand);
         
-        // Dealer plays
-        var dealerValue = BlackjackHelper.CalculateHandValue(gameState.DealerHand);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}{handLabel} stands with {BlackjackHelper.FormatHand(currentHand)} = {playerValue}",
+            true, autoDeleteAfter: cleanupDelay);
         
-        while (dealerValue < 17)
-        {
-            if (gameState.Deck.Count == 0)
-            {
-                await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, game error: dealer ran out of cards. Game forfeited.",
-                    true, autoDeleteAfter: cleanupDelay);
-                await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
-                return;
-            }
-            
-            var card = gameState.Deck[0];
-            gameState.Deck.RemoveAt(0);
-            gameState.DealerHand.Add(card);
-            dealerValue = BlackjackHelper.CalculateHandValue(gameState.DealerHand);
-        }
-        
-        await ResolveGame(botInstance, user, gambler, wager, gameState, false, cleanupDelay, ctx);
+        await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
     private async Task HandleDouble(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
+        var currentHand = gameState.PlayerHands[gameState.CurrentHandIndex];
+        
         // Check if player can double (only on first action with 2 cards)
-        if (gameState.PlayerHand.Count != 2)
+        if (currentHand.Count != 2)
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you can only double down on your first action.",
@@ -340,7 +357,7 @@ public class BlackjackCommand : ICommand
         }
         
         // Check if player has enough balance for double
-        if (gambler.Balance < wager.WagerAmount)
+        if (gambler.Balance < gameState.OriginalWagerAmount)
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you don't have enough balance to double down.",
@@ -349,114 +366,242 @@ public class BlackjackCommand : ICommand
         }
         
         // Double the wager
-        var additionalWager = wager.WagerAmount;
+        var additionalWager = gameState.OriginalWagerAmount;
         gambler.Balance -= additionalWager;
-        wager.WagerAmount *= 2;
+        wager.WagerAmount += additionalWager;
         wager.WagerEffect -= additionalWager; // Subtract the additional wager
-        gameState.HasDoubledDown = true;
+        gameState.HasDoubledDown[gameState.CurrentHandIndex] = true;
         
         await _dbContext.SaveChangesAsync(ctx);
         
+        var handLabel = gameState.PlayerHands.Count > 1 ? $" (Hand {gameState.CurrentHandIndex + 1})" : "";
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()} doubled down! Wager is now {await wager.WagerAmount.FormatKasinoCurrencyAsync()}",
+            $"{user.FormatUsername()}{handLabel} doubled down! Wager is now {await wager.WagerAmount.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
         
         // Draw one card and auto-stand
         await HandleHit(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
+    private async Task HandleSplit(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
+    {
+        var currentHand = gameState.PlayerHands[gameState.CurrentHandIndex];
+        
+        // Check if player can split
+        if (!BlackjackHelper.CanSplit(currentHand))
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you can only split with two cards of the same rank.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
+        // Check if already split
+        if (gameState.PlayerHands.Count > 1)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you can only split once per game.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
+        // Check if player has enough balance
+        if (gambler.Balance < gameState.OriginalWagerAmount)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you don't have enough balance to split.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
+        // Check if deck has enough cards
+        if (gameState.Deck.Count < 2)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, not enough cards in deck to split.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
+        // Perform the split
+        var card1 = currentHand[0];
+        var card2 = currentHand[1];
+        
+        var hand1 = new List<Card> { card1, gameState.Deck[0] };
+        var hand2 = new List<Card> { card2, gameState.Deck[1] };
+        gameState.Deck.RemoveRange(0, 2);
+        
+        gameState.PlayerHands = new List<List<Card>> { hand1, hand2 };
+        gameState.HasDoubledDown = new List<bool> { false, false };
+        gameState.CurrentHandIndex = 0;
+        
+        // Charge for the split
+        var additionalWager = gameState.OriginalWagerAmount;
+        gambler.Balance -= additionalWager;
+        wager.WagerAmount += additionalWager;
+        wager.WagerEffect -= additionalWager;
+        
+        wager.GameMeta = JsonSerializer.Serialize(gameState);
+        await _dbContext.SaveChangesAsync(ctx);
+        
+        var value1 = BlackjackHelper.CalculateHandValue(hand1);
+        var value2 = BlackjackHelper.CalculateHandValue(hand2);
+        
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()} split their hand! Total wager: {await wager.WagerAmount.FormatKasinoCurrencyAsync()}[br]" +
+            $"[B]Hand 1:[/B] {BlackjackHelper.FormatHand(hand1)} = {value1}[br]" +
+            $"[B]Hand 2:[/B] {BlackjackHelper.FormatHand(hand2)} = {value2}[br]" +
+            $"Playing Hand 1 - Use [B]!bj hit[/B] or [B]!bj stand[/B]",
+            true, autoDeleteAfter: cleanupDelay);
+    }
+
+    private async Task MoveToNextHandOrResolve(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
+    {
+        gameState.CurrentHandIndex++;
+        
+        if (gameState.CurrentHandIndex < gameState.PlayerHands.Count)
+        {
+            // Move to next hand
+            wager.GameMeta = JsonSerializer.Serialize(gameState);
+            await _dbContext.SaveChangesAsync(ctx);
+            
+            var nextHand = gameState.PlayerHands[gameState.CurrentHandIndex];
+            var nextValue = BlackjackHelper.CalculateHandValue(nextHand);
+            
+            await botInstance.SendChatMessageAsync(
+                $"Playing Hand {gameState.CurrentHandIndex + 1}[br]" +
+                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(nextHand)} = {nextValue}[br]" +
+                $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
+                true, autoDeleteAfter: cleanupDelay);
+        }
+        else
+        {
+            // All hands played, dealer plays and resolve
+            await PlayDealerAndResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
+        }
+    }
+
+    private async Task PlayDealerAndResolve(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
+    {
+        // Check if all hands busted
+        bool allHandsBusted = gameState.PlayerHands.All(hand => BlackjackHelper.CalculateHandValue(hand) > 21);
+        
+        if (!allHandsBusted)
+        {
+            // Dealer plays
+            var dealerValue = BlackjackHelper.CalculateHandValue(gameState.DealerHand);
+            
+            while (dealerValue < 17)
+            {
+                if (gameState.Deck.Count == 0)
+                {
+                    await botInstance.SendChatMessageAsync(
+                        $"{user.FormatUsername()}, game error: dealer ran out of cards. Game forfeited.",
+                        true, autoDeleteAfter: cleanupDelay);
+                    await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
+                    return;
+                }
+                
+                var card = gameState.Deck[0];
+                gameState.Deck.RemoveAt(0);
+                gameState.DealerHand.Add(card);
+                dealerValue = BlackjackHelper.CalculateHandValue(gameState.DealerHand);
+            }
+        }
+        
+        await ResolveGame(botInstance, user, gambler, wager, gameState, false, cleanupDelay, ctx);
+    }
+
     private async Task ResolveGame(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
         WagerDbModel wager, BlackjackGameMetaModel gameState, bool immediateResolution, 
         TimeSpan cleanupDelay, CancellationToken ctx)
     {
-        var playerValue = BlackjackHelper.CalculateHandValue(gameState.PlayerHand);
         var dealerValue = BlackjackHelper.CalculateHandValue(gameState.DealerHand);
-        var playerBlackjack = BlackjackHelper.IsBlackjack(gameState.PlayerHand);
         var dealerBlackjack = BlackjackHelper.IsBlackjack(gameState.DealerHand);
         
-        decimal finalEffect;
-        decimal multiplier;
-        string result;
-        
+        decimal totalEffect = 0;
         var colors = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
         
-        // Determine outcome
-        if (playerBlackjack && dealerBlackjack)
+        var message = $"🃏 {user.FormatUsername()}'s blackjack game:[br]";
+        
+        // Process each hand
+        for (int i = 0; i < gameState.PlayerHands.Count; i++)
         {
-            finalEffect = 0;
-            multiplier = 1m;
-            result = $"[B][COLOR=orange]PUSH![/COLOR][/B] Both have blackjack";
+            var hand = gameState.PlayerHands[i];
+            var playerValue = BlackjackHelper.CalculateHandValue(hand);
+            var playerBlackjack = BlackjackHelper.IsBlackjack(hand);
+            var handWager = gameState.OriginalWagerAmount;
+            
+            var handLabel = gameState.PlayerHands.Count > 1 ? $" {i + 1}" : "";
+            message += $"[B]Your hand{handLabel}:[/B] {BlackjackHelper.FormatHand(hand)} = {playerValue}[br]";
+            
+            decimal handEffect;
+            string result;
+            
+            // Determine outcome for this hand
+            if (playerBlackjack && dealerBlackjack)
+            {
+                handEffect = 0;
+                result = $"[B][COLOR=orange]PUSH![/COLOR][/B]";
+            }
+            else if (playerBlackjack)
+            {
+                handEffect = handWager * 1.5m;
+                result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]BLACKJACK! +{await handEffect.FormatKasinoCurrencyAsync()}[/COLOR][/B]";
+            }
+            else if (dealerBlackjack)
+            {
+                handEffect = -handWager;
+                result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DEALER BLACKJACK! -{await handWager.FormatKasinoCurrencyAsync()}[/COLOR][/B]";
+            }
+            else if (playerValue > 21)
+            {
+                handEffect = -handWager;
+                result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]BUST! -{await handWager.FormatKasinoCurrencyAsync()}[/COLOR][/B]";
+            }
+            else if (dealerValue > 21)
+            {
+                handEffect = handWager;
+                result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]DEALER BUST! +{await handEffect.FormatKasinoCurrencyAsync()}[/COLOR][/B]";
+            }
+            else if (playerValue > dealerValue)
+            {
+                handEffect = handWager;
+                result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]WIN! +{await handEffect.FormatKasinoCurrencyAsync()}[/COLOR][/B]";
+            }
+            else if (playerValue < dealerValue)
+            {
+                handEffect = -handWager;
+                result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOSE! -{await handWager.FormatKasinoCurrencyAsync()}[/COLOR][/B]";
+            }
+            else
+            {
+                handEffect = 0;
+                result = $"[B][COLOR=orange]PUSH![/COLOR][/B]";
+            }
+            
+            message += $"{result}[br]";
+            totalEffect += handEffect;
         }
-        else if (playerBlackjack)
-        {
-            finalEffect = wager.WagerAmount * 1.5m;
-            multiplier = 2.5m;
-            result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]BLACKJACK![/COLOR][/B]";
-        }
-        else if (dealerBlackjack)
-        {
-            finalEffect = -wager.WagerAmount;
-            multiplier = 0m;
-            result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DEALER BLACKJACK![/COLOR][/B]";
-        }
-        else if (playerValue > 21)
-        {
-            finalEffect = -wager.WagerAmount;
-            multiplier = 0m;
-            result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]BUST![/COLOR][/B]";
-        }
-        else if (dealerValue > 21)
-        {
-            finalEffect = wager.WagerAmount;
-            multiplier = 2m;
-            result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]DEALER BUST - YOU WIN![/COLOR][/B]";
-        }
-        else if (playerValue > dealerValue)
-        {
-            finalEffect = wager.WagerAmount;
-            multiplier = 2m;
-            result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]YOU WIN![/COLOR][/B]";
-        }
-        else if (playerValue < dealerValue)
-        {
-            finalEffect = -wager.WagerAmount;
-            multiplier = 0m;
-            result = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DEALER WINS![/COLOR][/B]";
-        }
-        else
-        {
-            finalEffect = 0;
-            multiplier = 1m;
-            result = $"[B][COLOR=orange]PUSH![/COLOR][/B]";
-        }
+        
+        message += $"[B]Dealer:[/B] {BlackjackHelper.FormatHand(gameState.DealerHand)} = {dealerValue}[br]";
         
         // Update wager to complete
         wager.IsComplete = true;
-        wager.WagerEffect = finalEffect;
-        wager.Multiplier = multiplier;
+        wager.WagerEffect = totalEffect;
+        wager.Multiplier = (totalEffect + wager.WagerAmount) / wager.WagerAmount;
         await _dbContext.SaveChangesAsync(ctx);
-        var balanceAdjustment = finalEffect + wager.WagerAmount;
+        
+        var balanceAdjustment = totalEffect + wager.WagerAmount;
         await Money.ModifyBalanceAsync(gambler.Id, balanceAdjustment, TransactionSourceEventType.Gambling,
             $"Blackjack outcome from wager {wager.Id}", null, ctx);
         
-        // Display result
-        var message = $"🃏 {user.FormatUsername()}'s blackjack game:[br]" +
-                     $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
-                     $"[B]Dealer:[/B] {BlackjackHelper.FormatHand(gameState.DealerHand)} = {dealerValue}[br]" +
-                     $"{result}[br]";
-        
-        if (finalEffect > 0)
-        {
-            message += $"You won {await finalEffect.FormatKasinoCurrencyAsync()}! ";
-        }
-        else if (finalEffect < 0)
-        {
-            message += $"You lost {await Math.Abs(finalEffect).FormatKasinoCurrencyAsync()}! ";
-        }
-        
-        message += $"Balance: {await gambler.Balance.FormatKasinoCurrencyAsync()}";
+        message += $"[B]Net:[/B] {(totalEffect >= 0 ? "+" : "")}{await totalEffect.FormatKasinoCurrencyAsync()} | Balance: {await gambler.Balance.FormatKasinoCurrencyAsync()}";
         
         await botInstance.SendChatMessageAsync(message, true, autoDeleteAfter: cleanupDelay);
     }

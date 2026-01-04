@@ -6,9 +6,9 @@ namespace KfChatDotNetBot.Models;
 public class BlackjackGameMetaModel
 {
     /// <summary>
-    /// Player's hand
+    /// Player's hands (multiple if split)
     /// </summary>
-    public required List<Card> PlayerHand { get; set; }
+    public required List<List<Card>> PlayerHands { get; set; }
     
     /// <summary>
     /// Dealer's hand
@@ -21,9 +21,19 @@ public class BlackjackGameMetaModel
     public required List<Card> Deck { get; set; }
     
     /// <summary>
-    /// Whether player has doubled down (can only hit once more)
+    /// Whether each hand has doubled down (can only hit once more)
     /// </summary>
-    public bool HasDoubledDown { get; set; } = false;
+    public required List<bool> HasDoubledDown { get; set; }
+    
+    /// <summary>
+    /// Current hand being played (for split hands)
+    /// </summary>
+    public int CurrentHandIndex { get; set; } = 0;
+    
+    /// <summary>
+    /// Original wager amount (per hand)
+    /// </summary>
+    public decimal OriginalWagerAmount { get; set; }
 }
 
 public class Card
@@ -82,7 +92,6 @@ public static class BlackjackHelper
         // Shuffle using Fisher-Yates
         for (int i = deck.Count - 1; i > 0; i--)
         {
-            //int j = random.Next(0, i + 1);
             int j = Money.GetRandomNumber(gambler, 0, i + 1);
             (deck[i], deck[j]) = (deck[j], deck[i]);
         }
@@ -127,6 +136,18 @@ public static class BlackjackHelper
     public static bool IsBlackjack(List<Card> hand)
     {
         return hand.Count == 2 && CalculateHandValue(hand) == 21;
+    }
+    
+    /// <summary>
+    /// Check if a hand can be split (two cards of same rank)
+    /// </summary>
+    public static bool CanSplit(List<Card> hand)
+    {
+        if (hand.Count != 2)
+            return false;
+        
+        // Check if both cards have the same value (not rank, to allow 10/J/Q/K splits)
+        return hand[0].GetValue() == hand[1].GetValue();
     }
     
     /// <summary>
