@@ -358,7 +358,8 @@ public class BlackjackCommand : ICommand
         
         // Double the wager
         var additionalWager = wager.WagerAmount;
-        gambler.Balance -= additionalWager;
+        await Money.ModifyBalanceAsync(gambler.Id, -additionalWager, TransactionSourceEventType.Gambling,
+            $"Double down for {wager.Id}", ct: ctx);
         wager.WagerAmount *= 2;
         wager.WagerEffect -= additionalWager; // Subtract the additional wager
         gameState.HasDoubledDown = true;
