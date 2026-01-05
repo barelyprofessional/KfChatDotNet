@@ -447,7 +447,7 @@ public class BlackjackCommand : ICommand
         wager.Multiplier = multiplier;
         await _dbContext.SaveChangesAsync(ctx);
         var balanceAdjustment = finalEffect + wager.WagerAmount;
-        await Money.ModifyBalanceAsync(gambler.Id, balanceAdjustment, TransactionSourceEventType.Gambling,
+        var newBalance = await Money.ModifyBalanceAsync(gambler.Id, balanceAdjustment, TransactionSourceEventType.Gambling,
             $"Blackjack outcome from wager {wager.Id}", null, ctx);
         
         // Display result
@@ -465,7 +465,7 @@ public class BlackjackCommand : ICommand
             message += $"You lost {await Math.Abs(finalEffect).FormatKasinoCurrencyAsync()}! ";
         }
         
-        message += $"Balance: {await gambler.Balance.FormatKasinoCurrencyAsync()}";
+        message += $"Balance: {await newBalance.FormatKasinoCurrencyAsync()}";
         
         await botInstance.SendChatMessageAsync(message, true, autoDeleteAfter: cleanupDelay);
     }
