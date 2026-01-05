@@ -531,4 +531,22 @@ public static class Money
     {
         return Convert.ToHexString(Guid.NewGuid().ToByteArray()[..4]).ToLower();
     }
+
+    /// <summary>
+    /// Get the current Kasino day based on the configured timezone offset
+    /// </summary>
+    /// <returns>Kasino day at midnight</returns>
+    /// <exception cref="InvalidOperationException">Thrown if Kasino.Timezone is null or empty</exception>
+    public static async Task<DateTimeOffset> GetKasinoDate()
+    {
+        var tz = await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoTimezone);
+        if (string.IsNullOrEmpty(tz.Value))
+        {
+            throw new InvalidOperationException();
+        }
+
+        var systemTz = TimeZoneInfo.FindSystemTimeZoneById(tz.Value);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, systemTz);
+        return new DateTimeOffset(now.Date, systemTz.BaseUtcOffset);
+    }
 }

@@ -270,7 +270,11 @@ public enum TransactionSourceEventType
     /// to figure out what the next lossback should be. (Basically return a small % of the player's losses
     /// unless the player's actual position is positive during the period, then tell them to fuck off)
     /// </summary>
-    Lossback
+    Lossback,
+    /// <summary>
+    /// A specific form of 24 hour time-based reload that has no wager requirement
+    /// </summary>
+    DailyDollar
 }
 
 public enum WagerGame
