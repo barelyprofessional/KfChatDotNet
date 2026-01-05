@@ -465,6 +465,12 @@ public static class BuiltIn
         public static string ZiplineUrl = "Zipline.Url";
         [BuiltInSetting("Delay in milliseconds before cleaning up blackjack", SettingValueType.Text, "20000", WholeNumberRegex)]
         public static string KasinoBlackjackCleanupDelay = "Kasino.Blackjack.CleanupDelay";
+        [BuiltInSetting("Amount for the daily dollar to pay out", SettingValueType.Text, "100", WholeNumberRegex)]
+        public static string KasinoDailyDollarAmount = "Kasino.DailyDollar.Amount";
+        [BuiltInSetting("Whether daily dollars can be redeemed", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoDailyDollarEnabled = "Kasino.DailyDollar.Enabled";
+        [BuiltInSetting("Timezone to use for daily reloads etc.", SettingValueType.Text, "Eastern Standard Time")]
+        public static string KasinoTimezone = "Kasino.Timezone";
     }
 }
 

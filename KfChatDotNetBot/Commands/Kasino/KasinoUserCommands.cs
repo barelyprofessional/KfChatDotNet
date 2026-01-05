@@ -387,3 +387,51 @@ public class HostessCommand : ICommand
         await botInstance.SendChatMessageAsync(llmResponse, true, ChatBot.LengthLimitBehavior.TruncateExactly);
     }
 }
+
+[KasinoCommand]
+public class GetDailyDollarCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^daily", RegexOptions.IgnoreCase),
+    ];
+    public string? HelpText => "Get your daily dollah";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoDailyDollarEnabled, BuiltIn.Keys.KasinoDailyDollarAmount
+        ]);
+        if (!settings[BuiltIn.Keys.KasinoDailyDollarEnabled].ToBoolean())
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, daily dollar has been disabled :(", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(15));
+            return;
+        }
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        await using var db = new ApplicationDbContext();
+        var mostRecentTxn = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(x =>
+            x.Gambler == gambler && x.EventSource == TransactionSourceEventType.DailyDollar, cancellationToken: ctx);
+        if (mostRecentTxn != null)
+        {
+            var rolloverTime = await Money.GetKasinoDate();
+            // It's really more a question of whether the most recent txn was in the same game day
+            if (mostRecentTxn.Time >= rolloverTime)
+            {
+                var span = rolloverTime.AddDays(1) - DateTimeOffset.UtcNow;
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, your next daily dollar will be available in {span.Humanize(maxUnit: TimeUnit.Hour, minUnit: TimeUnit.Second)}",
+                    true, autoDeleteAfter: TimeSpan.FromSeconds(15));
+                return;
+            }
+        }
+
+        var amount = settings[BuiltIn.Keys.KasinoDailyDollarAmount].ToType<decimal>();
+        await Money.ModifyBalanceAsync(gambler!.Id, amount, TransactionSourceEventType.DailyDollar,
+            "Daily dollar redemption", ct: ctx);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you redeemed {await amount.FormatKasinoCurrencyAsync()}", true,
+            autoDeleteAfter: TimeSpan.FromSeconds(15));
+    }
+}
