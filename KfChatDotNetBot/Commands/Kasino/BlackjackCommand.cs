@@ -365,17 +365,11 @@ public class BlackjackCommand : ICommand
             return;
         }
         
-        // Need to reload gambler with tracking to modify balance
-        var trackedGambler = await _dbContext.Gamblers.FirstOrDefaultAsync(g => g.Id == gambler.Id, ctx);
-        if (trackedGambler == null)
-        {
-            throw new InvalidOperationException($"Could not find gambler {gambler.Id}");
-        }
-        
         // Double the wager
-        var additionalWager = gameState.OriginalWagerAmount;
-        trackedGambler.Balance -= additionalWager;
-        wager.WagerAmount += additionalWager;
+        var additionalWager = wager.WagerAmount;
+        await Money.ModifyBalanceAsync(gambler.Id, -additionalWager, TransactionSourceEventType.Gambling,
+            $"Double down for {wager.Id}", ct: ctx);
+        wager.WagerAmount *= 2;
         wager.WagerEffect -= additionalWager; // Subtract the additional wager
         gameState.HasDoubledDown[gameState.CurrentHandIndex] = true;
         
@@ -605,37 +599,18 @@ public class BlackjackCommand : ICommand
         
         message += $"[B]Dealer:[/B] {BlackjackHelper.FormatHand(gameState.DealerHand)} = {dealerValue}[br]";
         
-        // Reload gambler with tracking to update balance
-        var trackedGambler = await _dbContext.Gamblers.FirstOrDefaultAsync(g => g.Id == gambler.Id, ctx);
-        if (trackedGambler == null)
-        {
-            throw new InvalidOperationException($"Could not find gambler {gambler.Id}");
-        }
-        
         // Update wager to complete
         wager.IsComplete = true;
         wager.WagerEffect = totalEffect;
         wager.Multiplier = (totalEffect + wager.WagerAmount) / wager.WagerAmount;
         
         // Update balance and create transaction in same context
-        var balanceAdjustment = totalEffect + wager.WagerAmount;
-        trackedGambler.Balance += balanceAdjustment;
-        
-        await _dbContext.Transactions.AddAsync(new TransactionDbModel
-        {
-            Gambler = trackedGambler,
-            EventSource = TransactionSourceEventType.Gambling,
-            Time = DateTimeOffset.UtcNow,
-            Effect = balanceAdjustment,
-            Comment = $"Blackjack payout from wager {wager.Id}",
-            From = null,
-            NewBalance = trackedGambler.Balance,
-            TimeUnixEpochSeconds = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
-        }, ctx);
-        
         await _dbContext.SaveChangesAsync(ctx);
+        var balanceAdjustment = totalEffect + wager.WagerAmount;
+        var newBalance = await Money.ModifyBalanceAsync(gambler.Id, balanceAdjustment, TransactionSourceEventType.Gambling,
+            $"Blackjack outcome from wager {wager.Id}", null, ctx);
         
-        message += $"[B]Net:[/B] {(totalEffect >= 0 ? "+" : "")}{await totalEffect.FormatKasinoCurrencyAsync()} | Balance: {await trackedGambler.Balance.FormatKasinoCurrencyAsync()}";
+        message += $"[B]Net:[/B] {(totalEffect >= 0 ? "+" : "")}{await totalEffect.FormatKasinoCurrencyAsync()} | Balance: {await newBalance.FormatKasinoCurrencyAsync()}";
         
         await botInstance.SendChatMessageAsync(message, true, autoDeleteAfter: cleanupDelay);
     }
