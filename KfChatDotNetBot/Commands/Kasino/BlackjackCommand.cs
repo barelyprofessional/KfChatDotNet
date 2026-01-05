@@ -240,7 +240,7 @@ public class BlackjackCommand : ICommand
         switch (action)
         {
             case "hit":
-                await HandleHit(botInstance, user, gambler, activeWager, currentGameState, random, cleanupDelay, ctx);
+                await HandleHit(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
                 break;
             case "stand":
                 await HandleStand(botInstance, user, gambler, activeWager, currentGameState, cleanupDelay, ctx);
@@ -252,7 +252,7 @@ public class BlackjackCommand : ICommand
     }
 
     private async Task HandleHit(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
-        WagerDbModel wager, BlackjackGameMetaModel gameState, Random random, TimeSpan cleanupDelay, CancellationToken ctx)
+        WagerDbModel wager, BlackjackGameMetaModel gameState, TimeSpan cleanupDelay, CancellationToken ctx)
     {
         
         if (gameState.Deck.Count == 0)
@@ -273,11 +273,12 @@ public class BlackjackCommand : ICommand
         
         if (playerValue > 21)
         {
+            var redColor = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsRedColor)).Value;
             // Bust - player loses
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()} hit and drew {card}[br]" +
                 $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(gameState.PlayerHand)} = {playerValue}[br]" +
-                $"[B][COLOR=red]BUST![/COLOR][/B]",
+                $"[B][COLOR={redColor}]BUST![/COLOR][/B]",
                 true, autoDeleteAfter: cleanupDelay);
             
             await ResolveGame(botInstance, user, gambler, wager, gameState, false, cleanupDelay, ctx);
@@ -369,7 +370,7 @@ public class BlackjackCommand : ICommand
             true, autoDeleteAfter: cleanupDelay);
         
         // Draw one card and auto-stand
-        await HandleHit(botInstance, user, gambler, wager, gameState, random, cleanupDelay, ctx);
+        await HandleHit(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
     private async Task ResolveGame(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
