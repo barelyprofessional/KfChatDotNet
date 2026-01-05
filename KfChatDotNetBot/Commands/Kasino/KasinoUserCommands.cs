@@ -411,6 +411,13 @@ public class GetDailyDollarCommand : ICommand
             return;
         }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        if (gambler!.Created.Date == DateTime.UtcNow.Date)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, new accounts cannot redeem a daily dollar", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(15));
+            return;
+        }
         await using var db = new ApplicationDbContext();
         var mostRecentTxn = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(x =>
             x.Gambler == gambler && x.EventSource == TransactionSourceEventType.DailyDollar, cancellationToken: ctx);
