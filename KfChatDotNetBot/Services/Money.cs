@@ -411,7 +411,7 @@ public static class Money
     {
         await using var db = new ApplicationDbContext();
         return (await db.Exclusions.Where(g => g.Gambler.Id == gamblerId).ToListAsync(ct))
-            .LastOrDefault(e => e.Expires <= DateTimeOffset.UtcNow);
+            .LastOrDefault(e => e.Expires >= DateTimeOffset.UtcNow);
     }
     
     /// <summary>
