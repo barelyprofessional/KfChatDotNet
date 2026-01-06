@@ -516,7 +516,11 @@ public static class Money
             Time = DateTimeOffset.UtcNow,
             Payout = payout,
         }, ct);
-        gambler.NextVipLevelWagerRequirement = nextVipLevel.WagerRequirement;
+        var nextNextLevel = GetNextVipLevel(nextVipLevel.WagerRequirement + 1);
+        if (nextNextLevel != null)
+        {
+            gambler.NextVipLevelWagerRequirement = nextNextLevel.WagerRequirement;
+        }
         await db.SaveChangesAsync(ct);
         await ModifyBalanceAsync(gamblerId, payout, TransactionSourceEventType.Bonus,
             $"VIP Level '{nextVipLevel.VipLevel.Icon} {nextVipLevel.VipLevel.Name}' Tier {nextVipLevel.Tier} level up bonus", ct: ct);
