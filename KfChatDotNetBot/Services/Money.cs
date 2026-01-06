@@ -185,7 +185,7 @@ public static class Money
         var level = VipLevels.LastOrDefault(v => v.BaseWagerRequirement <= wagered);
         if (level == null) return null;
         var tiers = CalculateTiers(level);
-        var nextTier = tiers.FirstOrDefault(t => wagered < t);
+        var nextTier = tiers.FirstOrDefault(t => wagered <= t);
         // default(decimal) is 0
         // This happens if the user is between tier 5 and their next level
         if (nextTier == 0)
