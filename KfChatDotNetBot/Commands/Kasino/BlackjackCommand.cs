@@ -425,13 +425,6 @@ public class BlackjackCommand : ICommand
             return;
         }
         
-        // Need to reload gambler with tracking to modify balance
-        var trackedGambler = await _dbContext.Gamblers.FirstOrDefaultAsync(g => g.Id == gambler.Id, ctx);
-        if (trackedGambler == null)
-        {
-            throw new InvalidOperationException($"Could not find gambler {gambler.Id}");
-        }
-        
         // Perform the split
         var card1 = currentHand[0];
         var card2 = currentHand[1];
@@ -446,7 +439,8 @@ public class BlackjackCommand : ICommand
         
         // Charge for the split
         var additionalWager = gameState.OriginalWagerAmount;
-        trackedGambler.Balance -= additionalWager;
+        await Money.ModifyBalanceAsync(gambler.Id, -additionalWager, TransactionSourceEventType.Gambling,
+            $"Split down for {wager.Id}", ct: ctx);
         wager.WagerAmount += additionalWager;
         wager.WagerEffect -= additionalWager;
         
