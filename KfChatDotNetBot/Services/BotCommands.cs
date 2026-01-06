@@ -156,20 +156,27 @@ internal class BotCommands
             return;
         }
 
-        if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyEnabled)).ToBoolean()) return;
-        var wagerCommand = HasAttribute<WagerCommand>(command);
-        if (!wagerCommand) return;
-        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: _cancellationToken);
-        if (gambler == null) return;
-        if (gambler.TotalWagered < gambler.NextVipLevelWagerRequirement) return;
-        // The reason for doing this instead of passing in TotalWagered is that otherwise VIP levels might
-        // get skipped if the user is a low VIP level but wagering very large amounts
-        var newLevel = Money.GetNextVipLevel(gambler.NextVipLevelWagerRequirement);
-        if (newLevel == null) return;
-        var payout = await Money.UpgradeVipLevelAsync(gambler.Id, newLevel, _cancellationToken);
-        await _bot.SendChatMessageAsync(
-            $"🤑🤑 {user.FormatUsername()} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
-            $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);
+        try
+        {
+            if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyEnabled)).ToBoolean()) return;
+            var wagerCommand = HasAttribute<WagerCommand>(command);
+            if (!wagerCommand) return;
+            var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: _cancellationToken);
+            if (gambler == null) return;
+            if (gambler.TotalWagered < gambler.NextVipLevelWagerRequirement) return;
+            // The reason for doing this instead of passing in TotalWagered is that otherwise VIP levels might
+            // get skipped if the user is a low VIP level but wagering very large amounts
+            var newLevel = Money.GetNextVipLevel(gambler.NextVipLevelWagerRequirement);
+            if (newLevel == null) return;
+            var payout = await Money.UpgradeVipLevelAsync(gambler.Id, newLevel, _cancellationToken);
+            await _bot.SendChatMessageAsync(
+                $"🤑🤑 {user.FormatUsername()} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
+                $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);
+        }
+        catch (Exception e)
+        {
+            _logger.Error(e);
+        }
     }
 
     private async Task SendCooldownResponse(UserDbModel user, RateLimitOptionsModel options, DateTimeOffset oldestEntryExpires, string commandName)
