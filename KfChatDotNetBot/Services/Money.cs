@@ -182,7 +182,7 @@ public static class Money
     /// <returns>null if the user is at the max level</returns>
     public static NextVipLevelModel? GetNextVipLevel(decimal wagered)
     {
-        var level = VipLevels.LastOrDefault(v => v.BaseWagerRequirement < wagered);
+        var level = VipLevels.LastOrDefault(v => v.BaseWagerRequirement <= wagered);
         if (level == null) return null;
         var tiers = CalculateTiers(level);
         var nextTier = tiers.FirstOrDefault(t => wagered < t);
