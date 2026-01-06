@@ -116,7 +116,7 @@ public class SendJuiceCommand : ICommand
             $"Juice sent to {targetUser.KfUsername}", ct: ctx);
         await Money.ModifyBalanceAsync(targetGambler.Id, amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
             gambler.Id, ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.KfUsername}", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.FormatUsername()}", true);
     }
 }
 
