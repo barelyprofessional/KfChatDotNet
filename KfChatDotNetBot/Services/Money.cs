@@ -349,8 +349,8 @@ public static class Money
         if (gameMeta != null)
         {
             metaJson = JsonConvert.SerializeObject(gameMeta, Formatting.Indented);
-            _logger.Info("Serialized metadata follows");
-            _logger.Info(metaJson);
+            _logger.Debug("Serialized metadata follows");
+            _logger.Debug(metaJson);
         }
 
         if (!isComplete)
