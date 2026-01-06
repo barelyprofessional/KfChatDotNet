@@ -171,7 +171,11 @@ internal class BotCommands
             // The reason for doing this instead of passing in TotalWagered is that otherwise VIP levels might
             // get skipped if the user is a low VIP level but wagering very large amounts
             var newLevel = Money.GetNextVipLevel(gambler.NextVipLevelWagerRequirement);
-            if (newLevel == null) return;
+            if (newLevel == null)
+            {
+                _logger.Info("newLevel is null");
+                return;
+            }
             _logger.Info($"New level is {newLevel.VipLevel.Name} {newLevel.Tier}");
             var payout = await Money.UpgradeVipLevelAsync(gambler.Id, newLevel, _cancellationToken);
             _logger.Info($"Payout is {payout:N2}");
