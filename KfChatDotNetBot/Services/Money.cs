@@ -182,10 +182,10 @@ public static class Money
     /// <returns>null if the user is at the max level</returns>
     public static NextVipLevelModel? GetNextVipLevel(decimal wagered)
     {
-        var level = VipLevels.LastOrDefault(v => v.BaseWagerRequirement < wagered);
+        var level = VipLevels.LastOrDefault(v => v.BaseWagerRequirement <= wagered);
         if (level == null) return null;
         var tiers = CalculateTiers(level);
-        var nextTier = tiers.FirstOrDefault(t => wagered < t);
+        var nextTier = tiers.FirstOrDefault(t => wagered <= t);
         // default(decimal) is 0
         // This happens if the user is between tier 5 and their next level
         if (nextTier == 0)
@@ -516,7 +516,11 @@ public static class Money
             Time = DateTimeOffset.UtcNow,
             Payout = payout,
         }, ct);
-        gambler.NextVipLevelWagerRequirement = nextVipLevel.WagerRequirement;
+        var nextNextLevel = GetNextVipLevel(nextVipLevel.WagerRequirement + 1);
+        if (nextNextLevel != null)
+        {
+            gambler.NextVipLevelWagerRequirement = nextNextLevel.WagerRequirement;
+        }
         await db.SaveChangesAsync(ct);
         await ModifyBalanceAsync(gamblerId, payout, TransactionSourceEventType.Bonus,
             $"VIP Level '{nextVipLevel.VipLevel.Icon} {nextVipLevel.VipLevel.Name}' Tier {nextVipLevel.Tier} level up bonus", ct: ct);
