@@ -92,7 +92,7 @@ public static class BlackjackHelper
         // Shuffle using Fisher-Yates
         for (int i = deck.Count - 1; i > 0; i--)
         {
-            int j = Money.GetRandomNumber(gambler, 0, i + 1, incrementMaxParam: false);
+            int j = Money.GetRandomNumber(gambler, 0, i + 1, incrementMaxParam:false);
             (deck[i], deck[j]) = (deck[j], deck[i]);
         }
         

@@ -414,8 +414,8 @@ public class LambchopCommand : ICommand
         targetTile -= 1; // make it 0 indexed xd
         List<double> lambChopMultis =
         [
-            1.072, 1.191, 1.331, 1.498, 1.698, 1.940, 2.238, 2.612, 3.086,
-            3.704, 4.527, 5.658, 7.275, 9.700, 13.580, 20.370
+            1.062, 1.138, 1.228, 1.318, 1.426, 1.561, 1.714, 1.912, 2.142,
+            2.442, 2.871, 3.425, 4.272, 5.702, 8.539, 16.861
         ];
         if (FIELD_LENGTH != lambChopMultis.Count)
         {
