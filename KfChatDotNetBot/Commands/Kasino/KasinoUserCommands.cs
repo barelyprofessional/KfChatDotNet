@@ -393,6 +393,8 @@ public class GetDailyDollarCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex("^daily", RegexOptions.IgnoreCase),
+        new Regex("^juiceme", RegexOptions.IgnoreCase),
+
     ];
     public string? HelpText => "Get your daily dollah";
     public UserRight RequiredRight => UserRight.Loser;
