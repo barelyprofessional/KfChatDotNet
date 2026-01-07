@@ -40,9 +40,24 @@ public class LimboCommand : ICommand
     {
         decimal limboNumber; //user number
         var settings = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KasinoLimboCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay,
+            BuiltIn.Keys.KasinoLimboCleanupDelay, BuiltIn.Keys.KasinoLimboEnabled, 
+            BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
+        
+        // Check if limbo is enabled
+        var limboEnabled = (settings[BuiltIn.Keys.KasinoLimboEnabled]).ToBoolean();
+        if (!limboEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, limbo is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoLimboCleanupDelay].ToType<int>());
+        
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !limbo <wager>",

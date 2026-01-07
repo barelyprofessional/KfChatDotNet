@@ -64,7 +64,23 @@ public class WheelCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoWheelCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoWheelCleanupDelay,
+            BuiltIn.Keys.KasinoWheelEnabled
+        ]);
+        
+        // Check if wheel is enabled
+        var wheelEnabled = (settings[BuiltIn.Keys.KasinoWheelEnabled]).ToBoolean();
+        if (!wheelEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, wheel is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoWheelCleanupDelay].ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !wheel <wager> <difficulty: low, medium, high>", true, autoDeleteAfter: cleanupDelay);

@@ -41,8 +41,23 @@ public class BlackjackCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds(
-            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoBlackjackCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoBlackjackCleanupDelay,
+            BuiltIn.Keys.KasinoBlackjackEnabled
+        ]);
+        
+        // Check if blackjack is enabled
+        var blackjackEnabled = (settings[BuiltIn.Keys.KasinoBlackjackEnabled]).ToBoolean();
+        if (!blackjackEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, blackjack is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoBlackjackCleanupDelay].ToType<int>());
         
         // Check if this is a new game or continuing existing game
         if (arguments.TryGetValue("amount", out var amountGroup))
