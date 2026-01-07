@@ -117,7 +117,8 @@ public class PlinkoCommand : ICommand
             await Task.Delay(100);
 
         }
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you won {payout} KKK from {numberOfBalls} plinko balls worth {wager} KKK.", true, autoDeleteAfter: cleanupDelay);
+        var newBalance = await Money.NewWagerAsync(gambler.Id, wager, payout, WagerGame.Plinko, ct: ctx);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you won ${payout} KKK from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: ${newBalance} KKK", true, autoDeleteAfter: cleanupDelay);
         
     }
 
