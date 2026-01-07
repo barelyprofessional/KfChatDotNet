@@ -84,8 +84,16 @@ public class PlinkoCommand : ICommand
             ballsNotInPlay.Add(new PlinkoBall());
         }
         //game starts here
+        int breakCounter = 0
         var plinkoMessageID = await botInstance.SendChatMessageAsync(PlinkoBoardDisplay(ballsInPlay), true, autoDeleteAfter: cleanupDelay);
-        int breakCounter = 0;
+        while (plinkoMessageID.ChatMessageId == null && breakCounter < 1000) { 
+            await Task.Delay(100);
+            breakCounter++;
+        }
+        if (breakCounter >= 999){
+            throw new Exception("game broke while waiting for chat message id");
+        }
+        breakCounter = 0;
         while (ballsNotInPlay.Count > 0 || ballsInPlay.Count > 0)
         {
             breakCounter++;
