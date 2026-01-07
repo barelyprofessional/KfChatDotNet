@@ -296,7 +296,9 @@ public enum WagerGame
     GuessWhatNumber,
     Wheel,
     Slots,
-    Blackjack
+    Blackjack,
+    [Description("Plinko")]
+    Plinko
 }
 
 public enum GamblerState
