@@ -174,6 +174,10 @@ public class KasinoGameListCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        var colors = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+        ]);
+        
         var response = $"{user.FormatUsername()}, Kasino games:[br]";
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
