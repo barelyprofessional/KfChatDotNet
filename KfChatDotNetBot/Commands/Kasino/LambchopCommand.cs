@@ -61,7 +61,24 @@ public class LambchopCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoLambchopCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoLambchopCleanupDelay,
+            BuiltIn.Keys.KasinoLambchopEnabled
+        ]);
+        
+        // Check if lambchop is enabled
+        var lambchopEnabled = (settings[BuiltIn.Keys.KasinoLambchopEnabled]).ToBoolean();
+        if (!lambchopEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, lambchop is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoLambchopCleanupDelay].ToType<int>());
+        
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !lambchop <wager> <number between 1 and {FIELD_LENGTH}>", true, autoDeleteAfter: cleanupDelay);

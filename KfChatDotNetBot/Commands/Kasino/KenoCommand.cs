@@ -39,7 +39,24 @@ public class KenoCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoKenoCleanupDelay,
+            BuiltIn.Keys.KasinoKenoFrameDelay, BuiltIn.Keys.KasinoKenoEnabled
+        ]);
+        
+        // Check if keno is enabled
+        var kenoEnabled = (settings[BuiltIn.Keys.KasinoKenoEnabled]).ToBoolean();
+        if (!kenoEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, keno is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoKenoCleanupDelay].ToType<int>());
+        
         if (!arguments.TryGetValue("amount", out var amount)) //if user just enters !keno
         {
             await botInstance.SendChatMessageAsync(
@@ -145,7 +162,7 @@ public class KenoCommand : ICommand
             throw new Exception($"_kenoTable chat message ID never got populated. Tracker status is: {_kenoTable?.Status}");
         }
 
-        var frameDelay = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoFrameDelay)).ToType<int>();
+        var frameDelay = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoFrameDelay)).ToType<int>(); // this should be grabbed from the settings dict declared at the start but idk how to do it cleanly atm.
         //FIRST FRAME 11111111111111111111111111111
         for (var frame = 0; frame < 10; frame++) //1 frame per casino number
         {

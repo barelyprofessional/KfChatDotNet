@@ -24,7 +24,24 @@ public class GuessWhatNumberCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay,
+            BuiltIn.Keys.KasinoGuessWhatNumberEnabled
+        ]);
+        
+        // Check if guesswhatnumber is enabled
+        var guessWhatNumberEnabled = (settings[BuiltIn.Keys.KasinoGuessWhatNumberEnabled]).ToBoolean();
+        if (!guessWhatNumberEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, guess what number is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay].ToType<int>());
+        
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !guess <wager> <number between 1 and 10>", true, autoDeleteAfter: cleanupDelay);

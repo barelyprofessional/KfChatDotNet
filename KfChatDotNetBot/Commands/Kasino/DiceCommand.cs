@@ -30,7 +30,24 @@ public class DiceCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var cleanupDelay = TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoDiceCleanupDelay)).ToType<int>());
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoDiceCleanupDelay,
+            BuiltIn.Keys.KasinoDiceEnabled
+        ]);
+
+        // Check if dice is enabled
+        var diceEnabled = (settings[BuiltIn.Keys.KasinoDiceEnabled]).ToBoolean();
+        if (!diceEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, dice is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
+        
+        var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoDiceCleanupDelay].ToType<int>());
+        
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync(

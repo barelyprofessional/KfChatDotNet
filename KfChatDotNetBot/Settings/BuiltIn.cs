@@ -471,6 +471,31 @@ public static class BuiltIn
         public static string KasinoDailyDollarEnabled = "Kasino.DailyDollar.Enabled";
         [BuiltInSetting("Timezone to use for daily reloads etc.", SettingValueType.Text, "Eastern Standard Time")]
         public static string KasinoTimezone = "Kasino.Timezone";
+        // kasino game controll
+        [BuiltInSetting("Delay in milliseconds before cleaning up message indicating a Kasino game is disabled", SettingValueType.Text, "15000", WholeNumberRegex)]
+        public static string KasinoGameDisabledMessageCleanupDelay = "Kasino.GameDisabledMessage.CleanupDelay";
+        [BuiltInSetting("Whether guess what number is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoGuessWhatNumberEnabled = "Kasino.GuessWhatNumber.Enabled";
+        [BuiltInSetting("Whether dice is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoDiceEnabled = "Kasino.Dice.Enabled";
+        [BuiltInSetting("Whether limbo is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoLimboEnabled = "Kasino.Limbo.Enabled";
+        [BuiltInSetting("Whether mines is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoMinesEnabled = "Kasino.Mines.Enabled";
+        [BuiltInSetting("Whether wheel is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoWheelEnabled = "Kasino.Wheel.Enabled";
+        [BuiltInSetting("Whether blackjack is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoBlackjackEnabled = "Kasino.Blackjack.Enabled";
+        [BuiltInSetting("Whether planes is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoPlanesEnabled = "Kasino.Planes.Enabled";
+        [BuiltInSetting("Whether lambchop is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoLambchopEnabled = "Kasino.Lambchop.Enabled";
+        [BuiltInSetting("Whether keno is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoKenoEnabled = "Kasino.Keno.Enabled";
+        [BuiltInSetting("Whether coinflip is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoCoinflipEnabled = "Kasino.Coinflip.Enabled";
+        [BuiltInSetting("Whether slots is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoSlotsEnabled = "Kasino.Slots.Enabled";
     }
 }
 

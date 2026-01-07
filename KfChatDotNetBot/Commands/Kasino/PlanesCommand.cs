@@ -45,10 +45,23 @@ public class Planes : ICommand
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoPlanesEnabled,
             BuiltIn.Keys.KasinoPlanesCleanupDelay, BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled,
             BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled, BuiltIn.Keys.KasinoPlanesTargetedRiggeryVictims
         ]);
+        
+        // Check if planes is enabled
+        var planesEnabled = (settings[BuiltIn.Keys.KasinoPlanesEnabled]).ToBoolean();
+        if (!planesEnabled)
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, planes is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoPlanesCleanupDelay].ToType<int>());
+        
         var logger = LogManager.GetCurrentClassLogger();
         if (!arguments.TryGetValue("amount", out var amount))
         {
