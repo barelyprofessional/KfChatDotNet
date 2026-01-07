@@ -51,7 +51,7 @@ public class PlinkoCommand : ICommand
         decimal currentPayout = 0;
         Group? number;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KasinoLimboCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoPlinkoCleanupDelay].ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
