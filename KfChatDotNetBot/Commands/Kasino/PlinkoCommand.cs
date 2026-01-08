@@ -53,7 +53,6 @@ public class PlinkoCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
             BuiltIn.Keys.KasinoPlinkoEnabled, BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay
-            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
 
         if (!settings[BuiltIn.Keys.KasinoPlinkoEnabled].ToBoolean())
