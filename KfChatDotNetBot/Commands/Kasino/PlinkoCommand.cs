@@ -35,11 +35,11 @@ public class PlinkoCommand : ICommand
     private static readonly Dictionary<int, decimal> PlinkoPayoutBoard = new()
     {
         {0, 25},
-        {1, 2_5},
-        {2, 0_25},
-        {3, 0_1},
-        {4, 0_25},
-        {5, 2_5},
+        {1, (decimal)2.5},
+        {2, (decimal)0.25},
+        {3, (decimal)0.1},
+        {4, (decimal)0.25},
+        {5, (decimal)2.5},
         {6, 25},
         
     };
@@ -53,7 +53,6 @@ public class PlinkoCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
             BuiltIn.Keys.KasinoPlinkoEnabled, BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay
-            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
 
         if (!settings[BuiltIn.Keys.KasinoPlinkoEnabled].ToBoolean())
@@ -229,9 +228,11 @@ public class PlinkoCommand : ICommand
             {
                 case >= 0.5:
                     if (!evenrow && Math.Abs(POSITION.col) > POSITION.row / 2) POSITION.col--;
+                    else if (evenrow) POSITION.col--;
                     break;
                 case < 0.5:
                     if (!evenrow && POSITION.col > POSITION.row / 2) POSITION.col++;
+                    else if (evenrow) POSITION.col++;
                     break;
                 default:
                     throw new Exception("generated an incorrect number");
