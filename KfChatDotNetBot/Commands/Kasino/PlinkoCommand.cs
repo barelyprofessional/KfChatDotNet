@@ -26,12 +26,13 @@ public class PlinkoCommand : ICommand
     
     public RateLimitOptionsModel? RateLimitOptions => null;
 
-    private string NULLSPACE = "⚫";
-    private string EMPTYSPACE = "⚪";
-    private string BALL = "🟠";
-    private int DIFFICULTY = 7;//maybe plan to allow user to change difficulty of plinko in future updates, would need to change the payout logic though
-
-    private readonly Dictionary<int, decimal> PlinkoPayoutBoard = new()
+    private readonly string NULLSPACE = "⚫";
+    private readonly string EMPTYSPACE = "⚪";
+    private readonly string BALL = "🟠";
+    private readonly int DIFFICULTY = 7;//maybe plan to allow user to change difficulty of plinko in future updates, would need to change the payout logic though
+    private static readonly double VACUUM = 0.02;
+    
+    private static readonly Dictionary<int, decimal> PlinkoPayoutBoard = new()
     {
         {0, 25},
         {1, 2_5},
@@ -50,18 +51,8 @@ public class PlinkoCommand : ICommand
         decimal payout = 0;
         decimal currentPayout = 0;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
-            BuiltIn.Keys.KasinoPlinkoEnabled, BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay
+            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
-
-        if (!settings[BuiltIn.Keys.KasinoPlinkoEnabled].ToBoolean())
-        {
-            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, plinko is currently disabled.", 
-                true, autoDeleteAfter: gameDisabledCleanupDelay);
-            return;
-        }
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoPlinkoCleanupDelay].ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
         {
@@ -125,6 +116,7 @@ public class PlinkoCommand : ICommand
             if (ballsInPlay[0].POSITION.row == DIFFICULTY - 1) //once your ball has reached the bottom calculate the payout
             {
                 currentPayout = wager * PlinkoPayoutBoard[ballsInPlay[0].POSITION.col];
+                payout += currentPayout;
                 ballsInPlay.RemoveAt(0);
                 if (currentPayout > wager)
                 {
@@ -142,9 +134,9 @@ public class PlinkoCommand : ICommand
                 ball.Iterate();
             }
 
-            await Task.Delay(100);
+            await Task.Delay(250);
             await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
-            await Task.Delay(100);
+            await Task.Delay(250);
 
         }
         var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout, WagerGame.Plinko, ct: ctx);
@@ -208,19 +200,26 @@ public class PlinkoCommand : ICommand
 
         public PlinkoBall()
         {
-            POSITION = (0, 0);
-            
+            POSITION = (0, 3);
         }
         public void Iterate()
         {
-            int rng = RAND.Next(2);
+            double rng = RAND.NextDouble();
             bool evenrow = POSITION.row % 2 == 0;
+            if (POSITION.col < 2)
+            {
+                rng -= VACUUM;
+            }
+            else if (POSITION.col > 4)
+            {
+                rng += VACUUM;
+            }
             switch (rng)
             {
-                case 0:
+                case >= 0.5:
                     if (!evenrow && Math.Abs(POSITION.col) > POSITION.row / 2) POSITION.col--;
                     break;
-                case 1:
+                case < 0.5:
                     if (!evenrow && POSITION.col > POSITION.row / 2) POSITION.col++;
                     break;
                 default:
