@@ -112,6 +112,7 @@ public class PlinkoCommand : ICommand
             throw new Exception("game broke while waiting for chat message id");
         }
         breakCounter = 0;
+        var logger = LogManager.GetCurrentClassLogger();
         while (ballsNotInPlay.Count > 0 || ballsInPlay.Count > 0)
         {
             breakCounter++;
@@ -127,7 +128,7 @@ public class PlinkoCommand : ICommand
             {
                 currentPayout = wager * PlinkoPayoutBoard[ballsInPlay[0].POSITION.col];
                 payout += currentPayout;
-                ballsInPlay.RemoveAt(0);
+                if (currentPayout == wager * 25) logger.Info($"Plinko: Max win on plinko, ball position: ({ballsInPlay[0].POSITION.row}, {ballsInPlay[0].POSITION.col})");
                 if (currentPayout > wager)
                 {
                     await botInstance.SendChatMessageAsync(
