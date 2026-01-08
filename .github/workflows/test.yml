@@ -1,0 +1,96 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run Tests
+      run: dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: '**/test-results.trx'
+
+  rtp-analysis:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run RTP Tests with Console Output
+      run: |
+        echo "=== RTP Analysis Report ==="
+        echo ""
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "FullyQualifiedName~RtpTests" \
+          --verbosity normal \
+          -- xunit.diagnosticMessages=true
+
+    - name: Generate RTP Summary
+      if: always()
+      run: |
+        echo "## RTP Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The following casino games were tested for Return to Player (RTP) percentages:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Game | Expected RTP Range |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|-------------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Dice | ~97% (1.5% house edge) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Limbo | ~99% (fair odds) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Keno | 70-98% (varies by selection) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Wheel (Low) | ~99% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Wheel (Medium) | ~95% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Wheel (High) | ~99% |" >> $GITHUB_STEP_SUMMARY
+        echo "| GuessWhatNumber | ~100% (fair odds) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Lambchop | ~97-98% (1.5% house edge) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Blackjack | ~99% (with basic strategy) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Slots | 85-98% (varies by features) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Planes | Variable (complex game) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Plinko | ~50-70% (edge-heavy payouts) |" >> $GITHUB_STEP_SUMMARY
