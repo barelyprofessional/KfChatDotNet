@@ -619,7 +619,7 @@ public class BlackjackCommand : ICommand
         var newBalance = await Money.ModifyBalanceAsync(gambler.Id, balanceAdjustment, TransactionSourceEventType.Gambling,
             $"Blackjack outcome from wager {wager.Id}", null, ctx);
         
-        message += $"[B]Net:[/B] {(totalEffect >= 0 ? "+" : "")}{await totalEffect.FormatKasinoCurrencyAsync()} | Balance: {await newBalance.FormatKasinoCurrencyAsync()}";
+        message += $"[u][B]Net:[/B] {(totalEffect >= 0 ? "+" : "")}{await totalEffect.FormatKasinoCurrencyAsync()} | Balance: {await newBalance.FormatKasinoCurrencyAsync()}";
         
         await botInstance.SendChatMessageAsync(message, true, autoDeleteAfter: cleanupDelay);
     }
