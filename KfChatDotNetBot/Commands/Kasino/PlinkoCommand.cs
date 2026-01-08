@@ -22,9 +22,13 @@ public class PlinkoCommand : ICommand
     ];
     public string? HelpText => "!plinko <bet amount> <optional number of balls 1 - 10, default 1 if nothing entered>";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(30);
     
-    public RateLimitOptionsModel? RateLimitOptions => null;
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 2,
+        Window = TimeSpan.FromSeconds(10)
+    };
 
     private readonly string NULLSPACE = "⚫";
     private readonly string EMPTYSPACE = "⚪";
