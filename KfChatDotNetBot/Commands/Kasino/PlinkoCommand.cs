@@ -49,7 +49,6 @@ public class PlinkoCommand : ICommand
     {
         decimal payout = 0;
         decimal currentPayout = 0;
-        Group? number;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
@@ -64,11 +63,19 @@ public class PlinkoCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
-        if (!arguments.TryGetValue("number", out number))
+        int numberOfBalls = 0;
+        if (!arguments.TryGetValue("number", out var number))
         {
-            number = null;
+            numberOfBalls = 1;
         }
-        int numberOfBalls = number == null ? 1 : Convert.ToInt32(number.Value);
+        else numberOfBalls = Convert.ToInt32(number.Value);
+
+        if (numberOfBalls < 1 || numberOfBalls > 10)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you can only play with 1 - 10 balls at a time", true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
         if (gambler.Balance < wager * numberOfBalls)
         {
             await botInstance.SendChatMessageAsync(
@@ -84,7 +91,7 @@ public class PlinkoCommand : ICommand
             ballsNotInPlay.Add(new PlinkoBall());
         }
         //game starts here
-        int breakCounter = 0
+        int breakCounter = 0;
         var plinkoMessageID = await botInstance.SendChatMessageAsync(PlinkoBoardDisplay(ballsInPlay), true, autoDeleteAfter: cleanupDelay);
         while (plinkoMessageID.ChatMessageId == null && breakCounter < 1000) { 
             await Task.Delay(100);
@@ -99,8 +106,11 @@ public class PlinkoCommand : ICommand
             breakCounter++;
             if (breakCounter >= 1000) throw new Exception("stuck in while loop in plinko");
             currentPayout = 0;
-            ballsInPlay.Add(ballsNotInPlay[0]);
-            ballsNotInPlay.RemoveAt(0);
+            if (ballsNotInPlay.Count > 0)
+            {
+                ballsInPlay.Add(ballsNotInPlay[0]);
+                ballsNotInPlay.RemoveAt(0);
+            }
             await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
             if (ballsInPlay[0].POSITION.row == DIFFICULTY - 1) //once your ball has reached the bottom calculate the payout
             {
@@ -109,12 +119,12 @@ public class PlinkoCommand : ICommand
                 if (currentPayout > wager)
                 {
                     await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!}]win![/color]. Payout: {currentPayout} KKK", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!}]won[/color] ${currentPayout} KKK from a plinko ball worth {wager}!", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
                 }
                 else
                 {
                     await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}lose. Payout: {currentPayout} KKK", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
                 }
             }
             foreach (var ball in ballsInPlay)
@@ -123,10 +133,12 @@ public class PlinkoCommand : ICommand
             }
 
             await Task.Delay(100);
+            await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
+            await Task.Delay(100);
 
         }
         var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout, WagerGame.Plinko, ct: ctx);
-        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you won ${payout} KKK from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: ${newBalance} KKK", true, autoDeleteAfter: cleanupDelay);
+        await botInstance.SendChatMessageAsync($"[u]{user.FormatUsername()}, you won ${payout} KKK from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: ${newBalance} KKK", true, autoDeleteAfter: cleanupDelay);
         
     }
 
@@ -173,6 +185,8 @@ public class PlinkoCommand : ICommand
                 if (!spaceIsValid) board += NULLSPACE;
 
             }
+
+            board += "[br]";
         }
 
         return board;
