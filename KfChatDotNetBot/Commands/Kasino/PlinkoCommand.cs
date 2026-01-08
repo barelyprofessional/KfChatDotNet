@@ -22,13 +22,9 @@ public class PlinkoCommand : ICommand
     ];
     public string? HelpText => "!plinko <bet amount> <optional number of balls 1 - 10, default 1 if nothing entered>";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(30);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     
-    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
-    {
-        MaxInvocations = 2,
-        Window = TimeSpan.FromSeconds(10)
-    };
+    public RateLimitOptionsModel? RateLimitOptions => null;
 
     private readonly string NULLSPACE = "⚫";
     private readonly string EMPTYSPACE = "⚪";
@@ -38,13 +34,13 @@ public class PlinkoCommand : ICommand
     
     private static readonly Dictionary<int, decimal> PlinkoPayoutBoard = new()
     {
-        {0, 25},
-        {1, (decimal)2.5},
+        {0, 8},
+        {1, (decimal)0.5},
         {2, (decimal)0.25},
-        {3, (decimal)0.1},
+        {3, (decimal)0.25},
         {4, (decimal)0.25},
-        {5, (decimal)2.5},
-        {6, 25},
+        {5, (decimal)0.5},
+        {6, 8},
         
     };
     private static readonly List<(int row, int col)> validPositions = new() //would need to come up with a formula to make this to have user defined difficulty, good luck
@@ -57,7 +53,10 @@ public class PlinkoCommand : ICommand
         (5, 0), (5, 1),(5, 2),         (5, 4), (5, 5), (5, 6),
         (6, 0), (6, 1),(6, 2), (6, 3), (6, 4), (6, 5), (6, 6)
     };
-    
+    //      1       1       1       1       1       1       1
+    //      2       1       0.5     1       0.5     1       2
+    //      4       0.5     0.5     0.25    0.5     0.5     4
+    //      8       0.5     0.25    0.25    0.25    0.5     8
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
