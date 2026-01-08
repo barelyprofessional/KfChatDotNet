@@ -127,7 +127,7 @@ public void Game_RTP_ByRiskLevel(int riskLevel)
 
 ### Limbo
 - Uses weighted random distribution with skew factor `1.0 / (multi * 1.01)`
-- Expected RTP: ~99% (fair odds with 1% edge)
+- Expected RTP: ~99%
 
 ### Keno
 - 40 number pool, player picks 1-10, casino draws 10
@@ -153,7 +153,7 @@ public void Game_RTP_ByRiskLevel(int riskLevel)
 ### Blackjack
 - Standard rules, dealer stands on 17
 - Blackjack pays 1.5x
-- Expected RTP: ~99% with basic strategy
+- Expected RTP: ~99%
 
 ### Slots
 - 5x5 grid with 20 paylines
@@ -190,11 +190,6 @@ Win threshold: 0.515
 Expected RTP: ~97.00%
 ```
 
-Compare actual vs expected to identify:
-- **RTP > 100%**: Game favors players
-- **RTP < 100%**: House has edge (expected)
-- **RTP varies widely**: High variance game or complex mechanics
-
 ## Troubleshooting
 
 ### Test Fails with Value Outside Range
@@ -202,12 +197,3 @@ Compare actual vs expected to identify:
 2. Widen assertion range or remove strict bounds
 3. Increase iterations for more stable results
 
-### RTP Doesn't Match Expected
-1. Verify payout table matches game code
-2. Check RNG implementation matches game's iteration count
-3. Ensure all game mechanics are simulated (bonuses, special features)
-
-### Tests Run Too Slowly
-1. Reduce iteration count for complex games
-2. Simplify simulation (skip animations/display logic)
-3. Run specific tests instead of full suite
