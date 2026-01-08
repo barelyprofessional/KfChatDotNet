@@ -50,8 +50,18 @@ public class PlinkoCommand : ICommand
         decimal payout = 0;
         decimal currentPayout = 0;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            BuiltIn.Keys.KasinoPlinkoCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
+            BuiltIn.Keys.KasinoPlinkoEnabled, BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay
         ]);
+
+        if (!settings[BuiltIn.Keys.KasinoPlinkoEnabled].ToBoolean())
+        {
+            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, plinko is currently disabled.", 
+                true, autoDeleteAfter: gameDisabledCleanupDelay);
+            return;
+        }
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoPlinkoCleanupDelay].ToType<int>());
         if (!arguments.TryGetValue("amount", out var amount))
         {

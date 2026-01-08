@@ -92,7 +92,8 @@ internal static class KasinoGameSettingMap
         new(WagerGame.LambChop, BuiltIn.Keys.KasinoLambchopEnabled, "lambchop"),
         new(WagerGame.Keno, BuiltIn.Keys.KasinoKenoEnabled, "keno"),
         new(WagerGame.CoinFlip, BuiltIn.Keys.KasinoCoinflipEnabled, "coinflip"),
-        new(WagerGame.Slots, BuiltIn.Keys.KasinoSlotsEnabled, "slots")
+        new(WagerGame.Slots, BuiltIn.Keys.KasinoSlotsEnabled, "slots"),
+        new(WagerGame.Plinko, BuiltIn.Keys.KasinoPlinkoEnabled, "plinko")
     };
     
     internal static KasinoGameSetting? FindByAlias(string alias) =>
@@ -174,6 +175,10 @@ public class KasinoGameListCommand : ICommand
         CancellationToken ctx)
     {
         var response = $"{user.FormatUsername()}, Kasino games:[br]";
+        var colors =
+            await SettingsProvider.GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+            ]);
 
         foreach (var game in KasinoGameSettingMap.All
                      .OrderBy(g => g.Game.ToString()))
@@ -183,8 +188,8 @@ public class KasinoGameListCommand : ICommand
                 .ToBoolean();
 
             var status = isEnabled
-                ? $"[B][COLOR={BuiltIn.Keys.KiwiFarmsGreenColor}]ENABLED[/COLOR][/B]"
-                : $"[B][COLOR={BuiltIn.Keys.KiwiFarmsRedColor}]DISABLED[/COLOR][/B]";
+                ? $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]ENABLED[/COLOR][/B]"
+                : $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]DISABLED[/COLOR][/B]";
 
             response += $"{game.Game.Humanize()}: {status}[br]";
         }

@@ -498,6 +498,8 @@ public static class BuiltIn
         public static string KasinoCoinflipEnabled = "Kasino.Coinflip.Enabled";
         [BuiltInSetting("Whether slots is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string KasinoSlotsEnabled = "Kasino.Slots.Enabled";
+        [BuiltInSetting("Whether plinko is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoPlinkoEnabled = "Kasino.Plinko.Enabled";
     }
 }
 
