@@ -153,7 +153,7 @@ public class PlinkoCommand : ICommand
                 else
                 {
                     await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}]lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
                 }
                 ballsInPlay.RemoveAt(0);
             }
