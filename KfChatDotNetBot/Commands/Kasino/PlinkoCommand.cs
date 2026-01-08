@@ -43,7 +43,16 @@ public class PlinkoCommand : ICommand
         {6, 25},
         
     };
-    
+    private static readonly List<(int row, int col)> validPositions = new() //would need to come up with a formula to make this to have user defined difficulty, good luck
+    {
+                               (0, 3),
+                       (1, 2),         (1, 4),
+                       (2, 2), (2, 3), (2, 4),
+                (3, 1),(3, 2),         (3, 4), (3, 5),
+                (4, 1),(4, 2), (4, 3), (4, 4), (4, 5),
+        (5, 0), (5, 1),(5, 2),         (5, 4), (5, 5), (5, 6),
+        (6, 0), (6, 1),(6, 2), (6, 3), (6, 4), (6, 5), (6, 6)
+    };
     
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -116,7 +125,7 @@ public class PlinkoCommand : ICommand
         while (ballsNotInPlay.Count > 0 || ballsInPlay.Count > 0)
         {
             breakCounter++;
-            if (breakCounter >= 1000) throw new Exception("stuck in while loop in plinko");
+            if (breakCounter >= numberOfBalls * 10) throw new Exception("stuck in while loop in plinko");
             currentPayout = 0;
             if (ballsNotInPlay.Count > 0)
             {
@@ -139,6 +148,7 @@ public class PlinkoCommand : ICommand
                     await botInstance.SendChatMessageAsync(
                         $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
                 }
+                ballsInPlay.RemoveAt(0);
             }
             foreach (var ball in ballsInPlay)
             {
@@ -160,16 +170,7 @@ public class PlinkoCommand : ICommand
         string board = "";
         bool spaceIsBall = false;
         bool spaceIsValid = false;
-        List<(int row, int col)> validPositions = new() //would need to come up with a formula to make this to have user defined difficulty, good luck
-        {
-            (0, 3),
-            (1, 2), (1, 4),
-            (2, 2), (2, 3), (2, 4),
-            (3, 1), (3,2), (3, 4), (3, 5),
-            (4, 1), (4, 2), (4, 3), (4, 4), (4, 5),
-            (5, 0), (5, 1), (5, 2), (5, 4), (5, 5), (5, 6),
-            (6, 0), (6, 1), (6, 2), (6, 3), (6, 4), (6, 5), (6,6)
-        };
+        
         for (int row = 0; row < DIFFICULTY; row++)
         {
             for (int col = 0; col < DIFFICULTY; col++)
@@ -208,10 +209,18 @@ public class PlinkoCommand : ICommand
     {
         private RandomShim<StandardRng> RAND = RandomShim.Create(StandardRng.Create());
         public (int row, int col) POSITION;
-
+        private Dictionary<int, List<int>> validColumnsForRow;
         public PlinkoBall()
         {
             POSITION = (0, 3);
+            validColumnsForRow = new Dictionary<int, List<int>>();
+            foreach (var position in validPositions){
+                if (!validColumnsForRow.ContainsKey(position.row)) validColumnsForRow.Add(position.row, new List<int>()
+                {
+                    position.col
+                }); //if no current key for that row add it
+                else  validColumnsForRow[position.row].Add(position.col);
+            }
         }
         public void Iterate()
         {
@@ -228,12 +237,11 @@ public class PlinkoCommand : ICommand
             switch (rng)
             {
                 case >= 0.5:
-                    if (!evenrow && Math.Abs(POSITION.col) > POSITION.row / 2) POSITION.col--;
-                    else if (evenrow) POSITION.col--;
+                    if (validColumnsForRow[POSITION.row+1].Contains(POSITION.col-1)) POSITION.col--;
                     break;
+                    
                 case < 0.5:
-                    if (!evenrow && POSITION.col > POSITION.row / 2) POSITION.col++;
-                    else if (evenrow) POSITION.col++;
+                    if (validColumnsForRow[POSITION.row+1].Contains(POSITION.col+1)) POSITION.col++;
                     break;
                 default:
                     throw new Exception("generated an incorrect number");
@@ -245,4 +253,3 @@ public class PlinkoCommand : ICommand
 
     
 }
-
