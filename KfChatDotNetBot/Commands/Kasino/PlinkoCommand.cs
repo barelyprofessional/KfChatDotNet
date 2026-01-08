@@ -35,11 +35,11 @@ public class PlinkoCommand : ICommand
     private static readonly Dictionary<int, decimal> PlinkoPayoutBoard = new()
     {
         {0, 25},
-        {1, 2_5},
-        {2, 0_25},
-        {3, 0_1},
-        {4, 0_25},
-        {5, 2_5},
+        {1, (decimal)2.5},
+        {2, (decimal)0.25},
+        {3, (decimal)0.1},
+        {4, (decimal)0.25},
+        {5, (decimal)2.5},
         {6, 25},
         
     };
@@ -112,6 +112,7 @@ public class PlinkoCommand : ICommand
             throw new Exception("game broke while waiting for chat message id");
         }
         breakCounter = 0;
+        var logger = LogManager.GetCurrentClassLogger();
         while (ballsNotInPlay.Count > 0 || ballsInPlay.Count > 0)
         {
             breakCounter++;
@@ -127,7 +128,7 @@ public class PlinkoCommand : ICommand
             {
                 currentPayout = wager * PlinkoPayoutBoard[ballsInPlay[0].POSITION.col];
                 payout += currentPayout;
-                ballsInPlay.RemoveAt(0);
+                if (currentPayout == wager * 25) logger.Info($"Plinko: Max win on plinko, ball position: ({ballsInPlay[0].POSITION.row}, {ballsInPlay[0].POSITION.col})");
                 if (currentPayout > wager)
                 {
                     await botInstance.SendChatMessageAsync(
@@ -228,9 +229,11 @@ public class PlinkoCommand : ICommand
             {
                 case >= 0.5:
                     if (!evenrow && Math.Abs(POSITION.col) > POSITION.row / 2) POSITION.col--;
+                    else if (evenrow) POSITION.col--;
                     break;
                 case < 0.5:
                     if (!evenrow && POSITION.col > POSITION.row / 2) POSITION.col++;
+                    else if (evenrow) POSITION.col++;
                     break;
                 default:
                     throw new Exception("generated an incorrect number");
