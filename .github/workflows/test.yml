@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ master, main, development, dev ]
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:
