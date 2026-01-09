@@ -62,9 +62,9 @@ public class PlinkoCommand : ICommand
         
     };
 
-    private static List<(int row, int col)> validPositions;
+    private static List<(int row, int col)> validPositions = [];
     
-    private static Dictionary<int, List<int>> validColumnsForRow;
+    private static Dictionary<int, List<int>> validColumnsForRow = new();
     
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
