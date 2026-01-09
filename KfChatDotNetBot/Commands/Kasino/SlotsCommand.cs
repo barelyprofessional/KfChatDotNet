@@ -23,9 +23,13 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class SlotsCommand : ICommand
 {
     public List<Regex> Patterns => [
+        new Regex(@"^slots (?<amount>\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^slots (?<amount>\d+\.\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^slots (?<amount>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^slots (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
         new Regex("^slots$", RegexOptions.IgnoreCase),
+        new Regex(@"^sluts (?<amount>\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^sluts (?<amount>\d+\.\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^sluts (?<amount>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^sluts (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
         new Regex("^sluts", RegexOptions.IgnoreCase)
@@ -66,11 +70,22 @@ public class SlotsCommand : ICommand
             return;
         }
 
+        int spins = 0;
+        if (!arguments.TryGetValue("spins", out var spinsArg)) spins = 1;
+        else spins = Convert.ToInt32(spinsArg.Value);
+
+        if (spins < 1 || spins > 10)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()} you can only do between 1 and 10 spins.", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            return;
+        }
+        
+
         var wager = Convert.ToDecimal(amount.Value);
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
-        if (gambler.Balance < wager)
+        if (gambler.Balance < wager * spins)
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
@@ -82,7 +97,7 @@ public class SlotsCommand : ICommand
         using (var board = new KiwiSlotBoard(wager))
         {
             board.LoadAssets();
-            board.ExecuteGameLoop();
+            board.ExecuteGameLoop(spins);
             using (var finalImageStream = board.ExportAndCleanup())
             {
                 if (finalImageStream == null)
@@ -101,17 +116,17 @@ public class SlotsCommand : ICommand
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
         decimal newBalance;
-        if (winnings == 0) //dud spin
+        if (winnings == 0) //dud spin(s)
         {
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.Slots, ct: ctx);
+            newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, -wager*spins, WagerGame.Slots, ct: ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             return;
         }
 
-        winnings -= wager;
-        newBalance = await Money.NewWagerAsync(gambler.Id, wager, winnings, WagerGame.Slots, ct: ctx);
+        winnings -= wager*spins;
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, winnings, WagerGame.Slots, ct: ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await winnings.FormatKasinoCurrencyAsync()}! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
@@ -307,7 +322,7 @@ public class SlotsCommand : ICommand
                 AnimatedImage.Frames.RemoveFrame(0);
         }
 
-        public void ExecuteGameLoop(int featureSpins = 0)
+        public void ExecuteGameLoop(int spins, int featureSpins = 0)
         {
             GeneratePreBoard(featureSpins);
             var fCount = 0;
@@ -322,7 +337,7 @@ public class SlotsCommand : ICommand
 
             ProcessReelsAndWins();
             var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
-            if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(s);
+            if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s);
         }
 
         private void ProcessReelsAndWins()
