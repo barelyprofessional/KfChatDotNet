@@ -1,11 +1,12 @@
 using System.Text.RegularExpressions;
-using KfChatDotNetBot;
-using KfChatDotNetBot.Commands;
+using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
 using RandN;
 using RandN.Compat;
+
+namespace KfChatDotNetBot.Commands;
 
 public class EightBallCommand : ICommand
 {
@@ -13,9 +14,13 @@ public class EightBallCommand : ICommand
         new Regex("^8ball", RegexOptions.IgnoreCase)
     ];
     public string? HelpText => "Ask the magic 8-ball a question";
-    public UserRight RequiredRight => UserRight.Guest;
+    public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
-    public RateLimitOptionsModel? RateLimitOptions => null;
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 3,
+        Window = TimeSpan.FromSeconds(15)
+    };
 
     private static readonly string[] AnswersYes = [
         "Yes, definitely.",
@@ -51,23 +56,23 @@ public class EightBallCommand : ICommand
     ];
 
     private static readonly string[] AnswersUncertain = [
-            "Concentrate and ask again.",
-            "Ask again later.",
-            "Cannot predict now.",
-            "Reply hazy, try again.",
-            "Better not tell you now.",
-            "It's unclear at the moment.",
-            "I'm not sure.",
-            "Maybe...",
-            "That's a mystery.",
-            "The answer is unclear.",
-            "It's hard to say.",
-            "I'm undecided.",
-            "The future is uncertain.",
-            "It's anyone's guess.",
-            "I can't tell you right now.",
-            "The signs are unclear.",
-        ];
+        "Concentrate and ask again.",
+        "Ask again later.",
+        "Cannot predict now.",
+        "Reply hazy, try again.",
+        "Better not tell you now.",
+        "It's unclear at the moment.",
+        "I'm not sure.",
+        "Maybe...",
+        "That's a mystery.",
+        "The answer is unclear.",
+        "It's hard to say.",
+        "I'm undecided.",
+        "The future is uncertain.",
+        "It's anyone's guess.",
+        "I can't tell you right now.",
+        "The signs are unclear.",
+    ];
 
     private static readonly string[] AnswersNo = [
         "No, absolutely not.",
@@ -101,23 +106,16 @@ public class EightBallCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var random = RandomShim.Create(StandardRng.Create());
-        string response;
 
         var outcome = random.Next(0, 110);
 
-        if (outcome < 50)
+        var response = outcome switch
         {
-            response = AnswersYes[random.Next(AnswersYes.Length)];
-        }
-        else if (outcome < 100)
-        {
-            response = AnswersNo[random.Next(AnswersNo.Length)];
-        }
-        else
-        {
-            response = AnswersUncertain[random.Next(AnswersUncertain.Length)];
-        }
+            < 50 => AnswersYes[random.Next(AnswersYes.Length)],
+            < 100 => AnswersNo[random.Next(AnswersNo.Length)],
+            _ => AnswersUncertain[random.Next(AnswersUncertain.Length)]
+        };
 
-        await botInstance.SendChatMessageAsync($"@{user.KfUsername}, {response}", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {response}", true);
     }
 }
