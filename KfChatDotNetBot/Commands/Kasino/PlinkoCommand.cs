@@ -123,6 +123,13 @@ public class PlinkoCommand : ICommand
             return;
         }
         var wager = Convert.ToDecimal(amount.Value);
+        if (wager > 1)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, plinko is currently limited to 1 KKK wagers while bugs are ironed out.", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(15));
+            return;
+        }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
@@ -203,7 +210,7 @@ public class PlinkoCommand : ICommand
             await Task.Delay(500);
 
         }
-        var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout, WagerGame.Plinko, ct: ctx);
+        var newBalance = await Money.NewWagerAsync(gambler.Id, payout-(wager*numberOfBalls), payout, WagerGame.Plinko, ct: ctx);
         await botInstance.SendChatMessageAsync($"[u]{user.FormatUsername()}, you won ${payout} KKK from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: ${newBalance} KKK", true, autoDeleteAfter: cleanupDelay);
         
     }
