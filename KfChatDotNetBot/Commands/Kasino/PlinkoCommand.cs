@@ -164,7 +164,7 @@ public class PlinkoCommand : ICommand
         int breakCounter = 0;
         var plinkoMessageID = await botInstance.SendChatMessageAsync(PlinkoBoardDisplay(ballsInPlay), true, autoDeleteAfter: cleanupDelay);
         while (plinkoMessageID.ChatMessageId == null && breakCounter < 1000) { 
-            await Task.Delay(100);
+            await Task.Delay(100, ctx);
             breakCounter++;
         }
         if (breakCounter >= 999){
@@ -205,13 +205,13 @@ public class PlinkoCommand : ICommand
                 ball.Iterate();
             }
 
-            await Task.Delay(500);
+            await Task.Delay(250, ctx);
             await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
-            await Task.Delay(500);
+            await Task.Delay(250, ctx);
 
         }
-        var newBalance = Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout-(wager*numberOfBalls), WagerGame.Plinko, ct: ctx);
-        await botInstance.SendChatMessageAsync($"[u]{user.FormatUsername()}, you won ${payout} KKK from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: ${newBalance} KKK", true, autoDeleteAfter: cleanupDelay);
+        var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout-(wager*numberOfBalls), WagerGame.Plinko, ct: ctx);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, [u]you won {await payout.FormatKasinoCurrencyAsync()} from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
         
     }
 
