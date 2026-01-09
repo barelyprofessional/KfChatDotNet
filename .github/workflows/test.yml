@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ master, main, development, dev ]
   pull_request:
     branches: [ master, main ]
   workflow_dispatch:
@@ -229,3 +229,50 @@ jobs:
         echo "## Concurrency Test Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Tests documenting race conditions and thread safety issues." >> $GITHUB_STEP_SUMMARY
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run Integration Tests
+      run: |
+        echo "=== Integration Tests ==="
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "Category=Integration" \
+          --verbosity normal \
+          --logger "trx;LogFileName=integration-results.trx"
+      timeout-minutes: 30
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results
+        path: '**/integration-results.trx'
+
+    - name: Generate Integration Summary
+      if: always()
+      run: |
+        echo "## Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "End-to-end tests invoking real commands through test mode bot." >> $GITHUB_STEP_SUMMARY
+        echo "Measures RTP from actual wager database records." >> $GITHUB_STEP_SUMMARY
