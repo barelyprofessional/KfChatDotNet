@@ -62,9 +62,9 @@ public class PlinkoCommand : ICommand
         
     };
 
-    private static List<(int row, int col)> validPositions = [];
+    private static List<(int row, int col)> validPositions;
     
-    private static Dictionary<int, List<int>> validColumnsForRow = new();
+    private static Dictionary<int, List<int>> validColumnsForRow;
     
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -198,9 +198,9 @@ public class PlinkoCommand : ICommand
                 ball.Iterate();
             }
 
-            await Task.Delay(250);
+            await Task.Delay(500);
             await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
-            await Task.Delay(250);
+            await Task.Delay(500);
 
         }
         var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout, WagerGame.Plinko, ct: ctx);
@@ -216,7 +216,7 @@ public class PlinkoCommand : ICommand
         
         for (int row = 0; row < DIFFICULTY; row++)
         {
-            for (int col = 0; col < DIFFICULTY * 2 - 1; col++)
+            for (int col = 0; col < DIFFICULTY*2-1; col++)
             {
                 spaceIsBall = false;
                 spaceIsValid = false;
@@ -262,7 +262,7 @@ public class PlinkoCommand : ICommand
         public (int row, int col) POSITION;
         public PlinkoBall()
         {
-            POSITION = (0, DIFFICULTY - 1);
+            POSITION = validPositions[0];
             
         }
         public void Iterate()
@@ -273,7 +273,7 @@ public class PlinkoCommand : ICommand
             {
                 rng -= VACUUM;
             }
-            else if (POSITION.col > DIFFICULTY+1)
+            else if (POSITION.col > DIFFICULTY-1)
             {
                 rng += VACUUM;
             }
