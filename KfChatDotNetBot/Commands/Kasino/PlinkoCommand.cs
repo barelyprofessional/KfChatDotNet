@@ -210,7 +210,7 @@ public class PlinkoCommand : ICommand
             await Task.Delay(500);
 
         }
-        var newBalance = await Money.NewWagerAsync(gambler.Id, payout-(wager*numberOfBalls), payout, WagerGame.Plinko, ct: ctx);
+        var newBalance = Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout-(wager*numberOfBalls), WagerGame.Plinko, ct: ctx);
         await botInstance.SendChatMessageAsync($"[u]{user.FormatUsername()}, you won ${payout} KKK from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: ${newBalance} KKK", true, autoDeleteAfter: cleanupDelay);
         
     }
