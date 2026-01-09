@@ -262,7 +262,7 @@ public class PlinkoCommand : ICommand
         public (int row, int col) POSITION;
         public PlinkoBall()
         {
-            POSITION = (0, 3);
+            POSITION = (0, DIFFICULTY);
             
         }
         public void Iterate()
