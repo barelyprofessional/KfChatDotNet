@@ -30,40 +30,76 @@ public class PlinkoCommand : ICommand
         Window = TimeSpan.FromSeconds(10)
     };
 
-    private readonly string NULLSPACE = "⚫";
-    private readonly string EMPTYSPACE = "⚪";
-    private readonly string BALL = "🟠";
-    private readonly int DIFFICULTY = 7;//maybe plan to allow user to change difficulty of plinko in future updates, would need to change the payout logic though
-    private static readonly double VACUUM = 0.02;
+    private const string NULLSPACE =   "⚫";
+    private const string EMPTYSPACE =  "⚪";
+    private const string BALL =        "🟠";
+    private const string LOSESPACE =   "🔻";
+    private const string SMALLWINSPACE = "🟢";
+    private const string MIDWINSPACE = "🍀";
+    private const string BIGWINSPACE = "💲";
+    
+    private const int DIFFICULTY = 8;//maybe plan to allow user to change difficulty of plinko in future updates, would need to change the payout logic though
+    private static readonly double VACUUM = 0.27;
+    
+    private static Dictionary<decimal, string> PAYOUTSTOSTRING = new Dictionary<decimal, string>()
+    {
+        {69, BIGWINSPACE},
+        {(decimal)42.069, MIDWINSPACE},
+        {9, SMALLWINSPACE},
+        {(decimal)0.1, LOSESPACE}
+    };
     
     private static readonly Dictionary<int, decimal> PlinkoPayoutBoard = new()
     {
-        {0, 8},
-        {1, (decimal)0.5},
-        {2, (decimal)0.25},
-        {3, (decimal)0.25},
-        {4, (decimal)0.25},
-        {5, (decimal)0.5},
-        {6, 8},
+        {0, 69},
+        {2, (decimal)42.069},
+        {4, 9},
+        {6, (decimal)0.1},
+        {8, (decimal)0.1},
+        {10, 9},
+        {12, (decimal)42.069},
+        {14, 69}
         
     };
-    private static readonly List<(int row, int col)> validPositions = new() //would need to come up with a formula to make this to have user defined difficulty, good luck
-    {
-                               (0, 3),
-                       (1, 2),         (1, 4),
-                       (2, 2), (2, 3), (2, 4),
-                (3, 1),(3, 2),         (3, 4), (3, 5),
-                (4, 1),(4, 2), (4, 3), (4, 4), (4, 5),
-        (5, 0), (5, 1),(5, 2),         (5, 4), (5, 5), (5, 6),
-        (6, 0), (6, 1),(6, 2), (6, 3), (6, 4), (6, 5), (6, 6)
-    };
-    //      1       1       1       1       1       1       1
-    //      2       1       0.5     1       0.5     1       2
-    //      4       0.5     0.5     0.25    0.5     0.5     4
-    //      8       0.5     0.25    0.25    0.25    0.5     8
+
+    private static List<(int row, int col)> validPositions;
+    
+    private static Dictionary<int, List<int>> validColumnsForRow;
+    
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        
+        validPositions = new List<(int row, int col)>() { (0, DIFFICULTY-1) };
+        validColumnsForRow = new Dictionary<int, List<int>>(){{0, new List<int>(){DIFFICULTY-1}}};
+        
+        //calculate all the valid positions for the difficulty
+        for (int i = 1; i < DIFFICULTY; i++)
+        {
+            // Find all positions from the row we just finished (i-1)
+            var previousRowPositions = validPositions.Where(p => p.row == i - 1).ToList();
+
+            foreach (var pos in previousRowPositions)
+            {
+                var leftChild = (i, pos.col - 1);
+                var rightChild = (i, pos.col + 1);
+
+                // Use a hash-set or check Contains to avoid adding duplicate nodes
+                if (!validPositions.Contains(leftChild)) validPositions.Add(leftChild);
+                if (!validPositions.Contains(rightChild)) validPositions.Add(rightChild);
+            }
+        }
+        
+        //calculate all the valid columns for any particular row
+        foreach (var position in validPositions)
+        {
+            if (!validColumnsForRow.ContainsKey(position.row)) validColumnsForRow.Add(position.row, new List<int>(){position.col});
+            else validColumnsForRow[position.row].Add(position.col);
+            
+        }
+        
+        
+        
         decimal payout = 0;
         decimal currentPayout = 0;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
@@ -199,7 +235,15 @@ public class PlinkoCommand : ICommand
                             }
                         }
 
-                        if (!spaceIsBall) board += EMPTYSPACE;
+                        if (!spaceIsBall)
+                        {
+                            if (row == DIFFICULTY - 1)
+                            {
+                                foreach (var num in new List<int>(){0,2,4,6,8,10,12,14}) 
+                                    if (col == num) board += PAYOUTSTOSTRING[PlinkoPayoutBoard[num]];
+                            }
+                            else board += EMPTYSPACE;
+                        }
                     }
                 }
 
@@ -216,39 +260,31 @@ public class PlinkoCommand : ICommand
     {
         private RandomShim<StandardRng> RAND = RandomShim.Create(StandardRng.Create());
         public (int row, int col) POSITION;
-        private Dictionary<int, List<int>> validColumnsForRow;
         public PlinkoBall()
         {
             POSITION = (0, 3);
-            validColumnsForRow = new Dictionary<int, List<int>>();
-            foreach (var position in validPositions){
-                if (!validColumnsForRow.ContainsKey(position.row)) validColumnsForRow.Add(position.row, new List<int>()
-                {
-                    position.col
-                }); //if no current key for that row add it
-                else  validColumnsForRow[position.row].Add(position.col);
-            }
+            
         }
         public void Iterate()
         {
             double rng = RAND.NextDouble();
             bool evenrow = POSITION.row % 2 == 0;
-            if (POSITION.col < 2)
+            if (POSITION.col < DIFFICULTY-1)
             {
                 rng -= VACUUM;
             }
-            else if (POSITION.col > 4)
+            else if (POSITION.col > DIFFICULTY+1)
             {
                 rng += VACUUM;
             }
             switch (rng)
             {
                 case >= 0.5:
-                    if (validColumnsForRow[POSITION.row+1].Contains(POSITION.col-1)) POSITION.col--;
+                    POSITION.col--;
                     break;
                     
                 case < 0.5:
-                    if (validColumnsForRow[POSITION.row+1].Contains(POSITION.col+1)) POSITION.col++;
+                    POSITION.col++;
                     break;
                 default:
                     throw new Exception("generated an incorrect number");
