@@ -216,7 +216,7 @@ public class PlinkoCommand : ICommand
         
         for (int row = 0; row < DIFFICULTY; row++)
         {
-            for (int col = 0; col < DIFFICULTY; col++)
+            for (int col = 0; col < DIFFICULTY * 2 - 1; col++)
             {
                 spaceIsBall = false;
                 spaceIsValid = false;
