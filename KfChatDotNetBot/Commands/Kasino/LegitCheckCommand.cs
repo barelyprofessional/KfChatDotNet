@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -121,24 +122,12 @@ public class LegitCheckCommand : ICommand
 
         if (luckiestGame != null)
         {
-            var gameName = GetGameDisplayName(luckiestGame.Game);
+            var gameName = luckiestGame.Game.Humanize();
             response +=
                 $" | Luckiest: {gameName} ({luckiestGame.Rtp:F2}% RTP, {luckiestGame.WagerCount:N0} wagers, {await luckiestGame.TotalWagered.FormatKasinoCurrencyAsync()} wagered)";
         }
 
         await botInstance.SendChatMessageAsync(response, true);
-    }
-
-    /// <summary>
-    /// Gets the display name for a WagerGame enum value.
-    /// Uses the [Description] attribute if present (e.g., LambChop -> "Lambchop"),
-    /// otherwise falls back to the enum name itself.
-    /// </summary>
-    private static string GetGameDisplayName(WagerGame game)
-    {
-        var memberInfo = typeof(WagerGame).GetMember(game.ToString()).FirstOrDefault();
-        var descriptionAttribute = memberInfo?.GetCustomAttribute<DescriptionAttribute>();
-        return descriptionAttribute?.Description ?? game.ToString();
     }
 
     /// <summary>
