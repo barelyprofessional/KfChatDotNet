@@ -5,9 +5,33 @@ namespace KfChatDotNetBot;
 
 public class ApplicationDbContext : DbContext
 {
+    /// <summary>
+    /// When set, this connection string will be used instead of the default db.sqlite.
+    /// Useful for integration tests that want to use an in-memory or separate test database.
+    /// </summary>
+    public static string? TestConnectionString { get; set; }
+
+    /// <summary>
+    /// Default constructor using standard or test configuration
+    /// </summary>
+    public ApplicationDbContext()
+    {
+    }
+
+    /// <summary>
+    /// Constructor for dependency injection with options
+    /// </summary>
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    {
+    }
+
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
-        builder.UseSqlite("Data Source=db.sqlite");
+        if (builder.IsConfigured)
+            return;
+
+        var connectionString = TestConnectionString ?? "Data Source=db.sqlite";
+        builder.UseSqlite(connectionString);
     }
     
     public DbSet<UserDbModel> Users { get; set; }

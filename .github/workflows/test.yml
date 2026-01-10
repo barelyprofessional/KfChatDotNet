@@ -1,0 +1,268 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ master, main, development, dev ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+  rtp-analysis:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run RTP Tests with Console Output
+      run: |
+        echo "=== RTP Analysis Report ==="
+        echo ""
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "FullyQualifiedName~RtpTests" \
+          --verbosity normal \
+          -- xunit.diagnosticMessages=true
+
+    - name: Generate RTP Summary
+      if: always()
+      run: |
+        echo "## RTP Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The following casino games were tested for Return to Player (RTP) percentages:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Game | Expected RTP Range |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|-------------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Dice | ~97% (1.5% house edge) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Limbo | ~99% (fair odds) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Keno | 70-98% (varies by selection) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Wheel (Low) | ~99% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Wheel (Medium) | ~95% |" >> $GITHUB_STEP_SUMMARY
+        echo "| Wheel (High) | ~99% |" >> $GITHUB_STEP_SUMMARY
+        echo "| GuessWhatNumber | ~100% (fair odds) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Lambchop | ~97-98% (1.5% house edge) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Blackjack | ~99% (with basic strategy) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Slots | 85-98% (varies by features) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Planes | Variable (complex game) |" >> $GITHUB_STEP_SUMMARY
+        echo "| Plinko | ~50-70% (edge-heavy payouts) |" >> $GITHUB_STEP_SUMMARY
+
+  edge-case-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run Edge Case Tests
+      run: |
+        echo "=== Edge Case Tests ==="
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "Category=EdgeCase" \
+          --verbosity normal \
+          --logger "trx;LogFileName=edge-case-results.trx"
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: edge-case-test-results
+        path: '**/edge-case-results.trx'
+
+    - name: Generate Edge Case Summary
+      if: always()
+      run: |
+        echo "## Edge Case Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Tests for boundary conditions, division by zero guards, and numeric edge cases." >> $GITHUB_STEP_SUMMARY
+
+  security-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run Security Tests
+      run: |
+        echo "=== Security Tests ==="
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "Category=Security" \
+          --verbosity normal \
+          --logger "trx;LogFileName=security-results.trx"
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-test-results
+        path: '**/security-results.trx'
+
+    - name: Generate Security Summary
+      if: always()
+      run: |
+        echo "## Security Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Tests for input validation, numeric overflow, and injection vulnerabilities." >> $GITHUB_STEP_SUMMARY
+
+  concurrency-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run Concurrency Tests
+      run: |
+        echo "=== Concurrency Tests ==="
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "Category=Concurrency" \
+          --verbosity normal \
+          --logger "trx;LogFileName=concurrency-results.trx"
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: concurrency-test-results
+        path: '**/concurrency-results.trx'
+
+    - name: Generate Concurrency Summary
+      if: always()
+      run: |
+        echo "## Concurrency Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Tests documenting race conditions and thread safety issues." >> $GITHUB_STEP_SUMMARY
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore KfChatDotNet.sln
+
+    - name: Build
+      run: dotnet build KfChatDotNet.sln --no-restore --configuration Release
+
+    - name: Run Integration Tests
+      run: |
+        echo "=== Integration Tests ==="
+        dotnet test KfChatDotNetBot.Tests/KfChatDotNetBot.Tests.csproj \
+          --no-build \
+          --configuration Release \
+          --filter "Category=Integration" \
+          --verbosity normal \
+          --logger "trx;LogFileName=integration-results.trx"
+      timeout-minutes: 30
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results
+        path: '**/integration-results.trx'
+
+    - name: Generate Integration Summary
+      if: always()
+      run: |
+        echo "## Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "End-to-end tests invoking real commands through test mode bot." >> $GITHUB_STEP_SUMMARY
+        echo "Measures RTP from actual wager database records." >> $GITHUB_STEP_SUMMARY

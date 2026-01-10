@@ -104,7 +104,8 @@ internal class BotCommands
                     break;
                 }
 
-                if (command.RateLimitOptions != null)
+                // Skip rate limiting in test mode
+                if (command.RateLimitOptions != null && !_bot.IsTestMode)
                 {
                     var isRateLimited = RateLimitService.IsRateLimited(user, command, message.MessageRawHtmlDecoded);
                     if (isRateLimited.IsRateLimited)
