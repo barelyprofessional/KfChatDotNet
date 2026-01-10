@@ -22,6 +22,8 @@ public class LegitCheckCommand : ICommand
     public List<Regex> Patterns =>
     [
         new Regex(@"^legitcheck (?<user_id>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^legitcheck (?<user_id>\d+) all$", RegexOptions.IgnoreCase),
+
     ];
 
     public string? HelpText => "Check a user's kasino RTP statistics";
@@ -45,6 +47,7 @@ public class LegitCheckCommand : ICommand
 
         var targetUserId = int.Parse(arguments["user_id"].Value);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == targetUserId, ctx);
+        var isAll = message.MessageRaw.EndsWith(" all");
 
         if (targetUser == null)
         {
@@ -55,10 +58,26 @@ public class LegitCheckCommand : ICommand
 
         // A user can have multiple gambler entities (e.g., if they abandoned an account or got reset).
         // We want to aggregate stats across ALL their gambler entities for a complete picture.
-        var gamblerIds = await db.Gamblers
-            .Where(g => g.User.Id == targetUser.Id)
-            .Select(g => g.Id)
-            .ToListAsync(ctx);
+        List<int> gamblerIds = [];
+        if (isAll)
+        {
+            gamblerIds = await db.Gamblers
+                .Where(g => g.User.Id == targetUser.Id)
+                .Select(g => g.Id)
+                .ToListAsync(ctx);
+        }
+        else
+        {
+            var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+            if (gambler == null)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, {targetUser.KfUsername} has never played at the kasino.", true);
+                return;
+            }
+            gamblerIds.Add(gambler.Id);
+        }
+
 
         if (gamblerIds.Count == 0)
         {
