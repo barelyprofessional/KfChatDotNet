@@ -193,11 +193,12 @@ public class PlinkoCommand : ICommand
                 if (currentPayout == wager * 25) logger.Info($"Plinko: Max win on plinko, ball position: ({ballsInPlay[0].POSITION.row}, {ballsInPlay[0].POSITION.col})");
                 if (currentPayout > wager)
                 {
-                    lastPayoutMessage = ($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!}]won[/color] ${currentPayout} KKK from a plinko ball worth {wager}!");
+                    lastPayoutMessage = ($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!}]won[/color] {await currentPayout.FormatKasinoCurrencyAsync()} from a plinko ball worth {await wager.FormatKasinoCurrencyAsync()}!");
                 }
                 else
                 {
-                    lastPayoutMessage = ($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}]lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.");
+                    var lossDisplay = wager - currentPayout;
+                    lastPayoutMessage = ($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}]lost[/color] {await lossDisplay.FormatKasinoCurrencyAsync()} from a plinko ball worth {await wager.FormatKasinoCurrencyAsync()}.");
                 }
                 ballsInPlay.RemoveAt(0);
             }
