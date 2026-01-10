@@ -172,6 +172,8 @@ public class PlinkoCommand : ICommand
         }
         breakCounter = 0;
         var logger = LogManager.GetCurrentClassLogger();
+        string lastPayoutMessage = "";
+        string PlinkoMessage = "";
         while (ballsNotInPlay.Count > 0 || ballsInPlay.Count > 0)
         {
             breakCounter++;
@@ -182,7 +184,8 @@ public class PlinkoCommand : ICommand
                 ballsInPlay.Add(ballsNotInPlay[0]);
                 ballsNotInPlay.RemoveAt(0);
             }
-            await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
+            PlinkoMessage = PlinkoBoardDisplay(ballsInPlay) + "[br]" + lastPayoutMessage;
+            await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoMessage);
             if (ballsInPlay[0].POSITION.row == DIFFICULTY - 1) //once your ball has reached the bottom calculate the payout
             {
                 currentPayout = wager * PlinkoPayoutBoard[ballsInPlay[0].POSITION.col];
@@ -190,13 +193,11 @@ public class PlinkoCommand : ICommand
                 if (currentPayout == wager * 25) logger.Info($"Plinko: Max win on plinko, ball position: ({ballsInPlay[0].POSITION.row}, {ballsInPlay[0].POSITION.col})");
                 if (currentPayout > wager)
                 {
-                    await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!}]won[/color] ${currentPayout} KKK from a plinko ball worth {wager}!", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+                    lastPayoutMessage = ($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value!}]won[/color] ${currentPayout} KKK from a plinko ball worth {wager}!");
                 }
                 else
                 {
-                    await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}]lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+                    lastPayoutMessage = ($"{user.FormatUsername()}, you [color={settings[BuiltIn.Keys.KiwiFarmsRedColor].Value!}]lost[/color] ${wager-currentPayout} KKK from a plinko ball worth {wager}.");
                 }
                 ballsInPlay.RemoveAt(0);
             }
@@ -205,9 +206,10 @@ public class PlinkoCommand : ICommand
                 ball.Iterate();
             }
 
-            await Task.Delay(250, ctx);
-            await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value,PlinkoBoardDisplay(ballsInPlay));
-            await Task.Delay(250, ctx);
+            await Task.Delay(300, ctx);
+            PlinkoMessage = PlinkoBoardDisplay(ballsInPlay) + "[br]" + lastPayoutMessage;
+            await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageId!.Value, PlinkoMessage);
+            await Task.Delay(300, ctx);
 
         }
         var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout-(wager*numberOfBalls), WagerGame.Plinko, ct: ctx);
