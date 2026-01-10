@@ -324,20 +324,23 @@ public class SlotsCommand : ICommand
 
         public void ExecuteGameLoop(int spins, int featureSpins = 0)
         {
-            GeneratePreBoard(featureSpins);
-            var fCount = 0;
-            for (var i = 0; i < 5; i++) for (var j = 0; j < 5; j++) if (_preboard[i, j] == FEATURE) fCount++;
+            for (int sp = 0; sp < spins; sp++)
+            {
+                GeneratePreBoard(featureSpins);
+                var fCount = 0;
+                for (var i = 0; i < 5; i++) for (var j = 0; j < 5; j++) if (_preboard[i, j] == FEATURE) fCount++;
 
-            if (featureSpins == 0) {
-                _activeFeatureTier = fCount >= 5 ? 5 : (fCount >= 3 ? fCount : 0);
-                _showGoldCircle = _activeFeatureTier >= 3; _currentFeatureSpin = 0;
-            } else {
-                _showGoldCircle = true; _currentFeatureSpin = featureSpins;
+                if (featureSpins == 0) {
+                    _activeFeatureTier = fCount >= 5 ? 5 : (fCount >= 3 ? fCount : 0);
+                    _showGoldCircle = _activeFeatureTier >= 3; _currentFeatureSpin = 0;
+                } else {
+                    _showGoldCircle = true; _currentFeatureSpin = featureSpins;
+                }
+
+                ProcessReelsAndWins();
+                var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
+                if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s);
             }
-
-            ProcessReelsAndWins();
-            var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
-            if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s);
         }
 
         private void ProcessReelsAndWins()
