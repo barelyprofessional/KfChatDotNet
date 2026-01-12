@@ -306,7 +306,17 @@ public class SlotsCommand : ICommand
             frame.Frames.RootFrame.Metadata.GetWebpMetadata().FrameDelay = 2;
             AnimatedImage.Frames.AddFrame(frame.Frames.RootFrame);
         }
-
+        
+        private void AddPause(int hundredthsOfASecond)
+        {
+            // Render the current state as a static frame
+            RenderFrame(); 
+    
+            // Modify the delay of the very last frame we just added
+            var lastFrame = AnimatedImage.Frames[^1];
+            lastFrame.Metadata.GetWebpMetadata().FrameDelay = (ushort)hundredthsOfASecond;
+        }
+        
         public MemoryStream? ExportAndCleanup()
         {
             if (AnimatedImage.Frames.Count <= 1) return null;
@@ -346,6 +356,7 @@ public class SlotsCommand : ICommand
 
                 ProcessReelsAndWins();
                 var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
+                if (total > 0 || featureSpins != 0 || spins > 1) AddPause(50);
                 if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s);
             }
         }
