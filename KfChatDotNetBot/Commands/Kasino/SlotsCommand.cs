@@ -94,6 +94,7 @@ public class SlotsCommand : ICommand
         }
 
         decimal winnings;
+        double delaySec;
         using (var board = new KiwiSlotBoard(wager))
         {
             board.LoadAssets();
@@ -110,25 +111,31 @@ public class SlotsCommand : ICommand
             }
 
             winnings = (decimal)board.RunningTotalDisplay;
+            delaySec = (board.AnimatedImage.Frames.Count - 1) / 50;
         }
+        await Task.Delay(TimeSpan.FromSeconds(delaySec+1));//adds delay to stop message showing gambling win/loss too early based on total frame count of the animated image 
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
         decimal newBalance;
+        string spinText = spins == 1 ? "" : $" from {spins} spins worth {await wager.FormatKasinoCurrencyAsync()}";
+        
         if (winnings == 0) //dud spin(s)
         {
             newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, -wager*spins, WagerGame.Slots, ct: ctx);
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
+                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color] {await (wager*spins).FormatKasinoCurrencyAsync()}{spins}. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             return;
         }
 
+        decimal rawWinnings = winnings;
+        
         winnings -= wager*spins;
         newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, winnings, WagerGame.Slots, ct: ctx);
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await winnings.FormatKasinoCurrencyAsync()}! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {rawWinnings.FormatKasinoCurrencyAsync()}{spins}! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
     public class WinDetail
     {
@@ -145,7 +152,7 @@ public class SlotsCommand : ICommand
         private Font? _font;
 
         // Optimized Animation Container
-        private Image<Rgba32> AnimatedImage { get; set; }
+        public Image<Rgba32> AnimatedImage { get; set; }
 
         private readonly char[,] _preboard = new char[5, 5];
         private char[,] _board = new char[5, 5];
