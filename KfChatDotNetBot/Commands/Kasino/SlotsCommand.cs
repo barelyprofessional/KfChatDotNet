@@ -94,7 +94,7 @@ public class SlotsCommand : ICommand
         }
 
         decimal winnings;
-        double delaySec;
+        double delayHSec = 0;
         using (var board = new KiwiSlotBoard(wager))
         {
             board.LoadAssets();
@@ -111,9 +111,13 @@ public class SlotsCommand : ICommand
             }
 
             winnings = (decimal)board.RunningTotalDisplay;
-            delaySec = (board.AnimatedImage.Frames.Count - 1) / 50;
+            // We skip index 0 if it's the blank placeholder frame
+            for (int i = 1; i < board.AnimatedImage.Frames.Count; i++)
+            {
+                delayHSec += board.AnimatedImage.Frames[i].Metadata.GetWebpMetadata().FrameDelay;
+            }
         }
-        await Task.Delay(TimeSpan.FromSeconds(delaySec+1));//adds delay to stop message showing gambling win/loss too early based on total frame count of the animated image 
+        await Task.Delay(TimeSpan.FromSeconds(delayHSec));//adds delay to stop message showing gambling win/loss too early based on total frame count of the animated image 
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
