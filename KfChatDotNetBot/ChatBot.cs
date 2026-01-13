@@ -361,6 +361,7 @@ public class ChatBot
                     _logger.Error("ProcessMessage threw an exception");
                     _logger.Error(e);
                 }
+                XeetEmbed.HandleXeet(this, message).Wait(_cancellationToken);
             }
 
             // Update or add the element to keep it in sync
