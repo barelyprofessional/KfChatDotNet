@@ -93,7 +93,8 @@ internal static class KasinoGameSettingMap
         new(WagerGame.Keno, BuiltIn.Keys.KasinoKenoEnabled, "keno"),
         new(WagerGame.CoinFlip, BuiltIn.Keys.KasinoCoinflipEnabled, "coinflip"),
         new(WagerGame.Slots, BuiltIn.Keys.KasinoSlotsEnabled, "slots"),
-        new(WagerGame.Plinko, BuiltIn.Keys.KasinoPlinkoEnabled, "plinko")
+        new(WagerGame.Plinko, BuiltIn.Keys.KasinoPlinkoEnabled, "plinko"),
+        new(WagerGame.Roulette, BuiltIn.Keys.KasinoRouletteEnabled, "roulette")
     };
     
     internal static KasinoGameSetting? FindByAlias(string alias) =>
@@ -174,10 +175,6 @@ public class KasinoGameListCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var colors = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
-        ]);
-        
         var response = $"{user.FormatUsername()}, Kasino games:[br]";
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
