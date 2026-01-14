@@ -128,8 +128,9 @@ public class SlotsCommand : ICommand
         if (winnings == 0) //dud spin(s)
         {
             newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, -wager*spins, WagerGame.Slots, ct: ctx);
+            var totalWager = wager * spins;
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color] {await (wager*spins).FormatKasinoCurrencyAsync()}{spins}. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
+                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color] {await totalWager.FormatKasinoCurrencyAsync()} with {spins} spins. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             return;
         }
@@ -139,7 +140,7 @@ public class SlotsCommand : ICommand
         winnings -= wager*spins;
         newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, winnings, WagerGame.Slots, ct: ctx);
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {rawWinnings.FormatKasinoCurrencyAsync()}{spins}! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {rawWinnings.FormatKasinoCurrencyAsync()} with {spins} spins! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
     public class WinDetail
     {
