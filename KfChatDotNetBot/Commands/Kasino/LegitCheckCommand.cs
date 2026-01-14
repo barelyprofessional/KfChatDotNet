@@ -68,7 +68,7 @@ public class LegitCheckCommand : ICommand
         }
         else
         {
-            var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+            var gambler = await Money.GetGamblerEntityAsync(targetUser.Id, ct: ctx);
             if (gambler == null)
             {
                 await botInstance.SendChatMessageAsync(
