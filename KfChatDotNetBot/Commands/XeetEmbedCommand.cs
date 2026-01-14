@@ -95,7 +95,7 @@ public class XeetEmbedCommand : ICommand
         var created = DateTimeOffset.FromUnixTimeSeconds(tweet.CreatedTimestamp);
         var response = $"[b][plain]{tweet.Author.Name}[/plain][/b] [plain](@{tweet.Author.ScreenName})[/plain] - {created.Humanize(DateTimeOffset.UtcNow)}[br]" +
                        $"[plain]{mainText}[/plain][br]" +
-                       $"💬 {tweet.Replies}, 🔁 {tweet.Retweets}, ❤️ {tweet.Likes}, 👁️ {tweet.Views}[br]" +
+                       $"💬 {tweet.Replies:N0} 🔁 {tweet.Retweets:N0} ❤️ {tweet.Likes:N0} 👁️ {tweet.Views:N0}[br]" +
                        $"[url={tweet.Url}]X.com[/url] | [url=https://xcancel.com/{tweet.Author.ScreenName}/status/{xeetId}]Xcancel[/url]";
         await botInstance.SendChatMessageAsync(response, true);
     }
