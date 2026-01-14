@@ -500,6 +500,8 @@ public static class BuiltIn
         public static string KasinoSlotsEnabled = "Kasino.Slots.Enabled";
         [BuiltInSetting("Whether plinko is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string KasinoPlinkoEnabled = "Kasino.Plinko.Enabled";
+        [BuiltInSetting("Whether Xeet posting is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string XeetEnabled = "Xeet.Enabled";
     }
 }
 
