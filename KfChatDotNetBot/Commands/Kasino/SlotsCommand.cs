@@ -94,6 +94,7 @@ public class SlotsCommand : ICommand
         }
 
         decimal winnings;
+        double delayHSec = 0;
         using (var board = new KiwiSlotBoard(wager))
         {
             board.LoadAssets();
@@ -110,25 +111,39 @@ public class SlotsCommand : ICommand
             }
 
             winnings = (decimal)board.RunningTotalDisplay;
+            // We skip index 0 if it's the blank placeholder frame
+            for (int i = 1; i < board.AnimatedImage.Frames.Count; i++)
+            {
+                delayHSec += board.AnimatedImage.Frames[i].Metadata.GetWebpMetadata().FrameDelay;
+            }
         }
+        await Task.Delay(TimeSpan.FromSeconds(delayHSec));//adds delay to stop message showing gambling win/loss too early based on total frame count of the animated image 
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
         decimal newBalance;
+        string spinText = spins == 1 ? "" : $" from {spins} spins worth {await wager.FormatKasinoCurrencyAsync()}";
+        
         if (winnings == 0) //dud spin(s)
         {
             newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, -wager*spins, WagerGame.Slots, ct: ctx);
+            var totalWager = wager * spins;
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color]. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
+                $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color] {await totalWager.FormatKasinoCurrencyAsync()} with {spins} spins. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             return;
         }
 
+        decimal rawWinnings = winnings;
+        
         winnings -= wager*spins;
+        bool netwin = winnings > 0;
+        string winstr = netwin ? "" : "-";
         newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, winnings, WagerGame.Slots, ct: ctx);
+        winnings = Math.Abs(winnings);
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await winnings.FormatKasinoCurrencyAsync()}! Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await rawWinnings.FormatKasinoCurrencyAsync()} from {spins} spins worth {await wager.FormatKasinoCurrencyAsync()}! Net: {winstr}{winnings.FormatKasinoCurrencyAsync()} Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
     public class WinDetail
     {
@@ -145,7 +160,7 @@ public class SlotsCommand : ICommand
         private Font? _font;
 
         // Optimized Animation Container
-        private Image<Rgba32> AnimatedImage { get; set; }
+        public Image<Rgba32> AnimatedImage { get; set; }
 
         private readonly char[,] _preboard = new char[5, 5];
         private char[,] _board = new char[5, 5];
@@ -299,7 +314,17 @@ public class SlotsCommand : ICommand
             frame.Frames.RootFrame.Metadata.GetWebpMetadata().FrameDelay = 2;
             AnimatedImage.Frames.AddFrame(frame.Frames.RootFrame);
         }
-
+        
+        private void AddPause(int hundredthsOfASecond)
+        {
+            // Render the current state as a static frame
+            RenderFrame(); 
+    
+            // Modify the delay of the very last frame we just added
+            var lastFrame = AnimatedImage.Frames[^1];
+            lastFrame.Metadata.GetWebpMetadata().FrameDelay = (ushort)hundredthsOfASecond;
+        }
+        
         public MemoryStream? ExportAndCleanup()
         {
             if (AnimatedImage.Frames.Count <= 1) return null;
@@ -339,6 +364,7 @@ public class SlotsCommand : ICommand
 
                 ProcessReelsAndWins();
                 var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
+                if (total > 0 || featureSpins != 0 || spins > 1) AddPause(50);
                 if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s);
             }
         }

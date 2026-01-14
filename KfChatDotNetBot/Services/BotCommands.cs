@@ -47,14 +47,11 @@ internal class BotCommands
             return;
         }
 
-        if (!message.MessageRaw.StartsWith(CommandPrefix))
-        {
-            return;
-        }
-
         var messageTrimmed = message.MessageRaw.TrimStart(CommandPrefix);
         foreach (var command in Commands)
         {
+            var noPrefixCommand = HasAttribute<NoPrefixRequired>(command);
+            if (!noPrefixCommand && !message.MessageRaw.StartsWith(CommandPrefix)) continue;
             foreach (var regex in command.Patterns)
             {
                 var match = regex.Match(messageTrimmed);
@@ -253,3 +250,9 @@ internal class WagerCommand : Attribute;
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 internal class KasinoCommand : Attribute;
+
+/// <summary>
+/// Use this on commands where the Regex should be tested even if there's no command prefix
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+internal class NoPrefixRequired : Attribute;
