@@ -51,7 +51,7 @@ internal class BotCommands
         foreach (var command in Commands)
         {
             var noPrefixCommand = HasAttribute<NoPrefixRequired>(command);
-            if (!noPrefixCommand && !message.MessageRaw.StartsWith(CommandPrefix)) return;
+            if (!noPrefixCommand && !message.MessageRaw.StartsWith(CommandPrefix)) continue;
             foreach (var regex in command.Patterns)
             {
                 var match = regex.Match(messageTrimmed);
