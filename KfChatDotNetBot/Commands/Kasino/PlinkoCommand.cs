@@ -123,13 +123,13 @@ public class PlinkoCommand : ICommand
             return;
         }
         var wager = Convert.ToDecimal(amount.Value);
-        if (wager > 1)
+        /*if (wager > 1)
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, plinko is currently limited to 1 KKK wagers while bugs are ironed out.", true,
                 autoDeleteAfter: TimeSpan.FromSeconds(15));
             return;
-        }
+        }*/
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
