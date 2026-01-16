@@ -53,7 +53,7 @@ public static class Zipline
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", settings[BuiltIn.Keys.ZiplineKey].Value);
         if (expiration != null)
         {
-            client.DefaultRequestHeaders.Add("x-zipline-expiration", expiration);
+            client.DefaultRequestHeaders.Add("x-zipline-deletes-at", expiration);
         }
 
         var response = await client.PostAsync($"{settings[BuiltIn.Keys.ZiplineUrl].Value}/api/upload", content, ct);
