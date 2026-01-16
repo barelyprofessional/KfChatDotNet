@@ -100,7 +100,7 @@ public class CoinflipCommand : ICommand
         if (rolled > 0.5 + _houseEdge)
         {
             // won
-            var coinflipAnimation = await GetCoinFlipAnimationUrl(choiceStr);
+            var coinflipAnimation = GetCoinFlipAnimationUrl(choiceStr);
 
             await botInstance.SendChatMessageAsync($"[IMG]{coinflipAnimation}[/IMG]", true, autoDeleteAfter: cleanupDelay);
             await Task.Delay(1200, ctx);
@@ -116,7 +116,7 @@ public class CoinflipCommand : ICommand
         {
             // lost
             bool isJacky = rolled > 0.5; // would've won without house edge
-            var coinflipAnimationURL = await GetCoinFlipAnimationUrl("heads" == choiceStr ? "tails" : "heads", isJacky);
+            var coinflipAnimationURL = GetCoinFlipAnimationUrl("heads" == choiceStr ? "tails" : "heads", isJacky);
 
             await botInstance.SendChatMessageAsync($"[IMG]{coinflipAnimationURL}[/IMG]", true, autoDeleteAfter: cleanupDelay);
             await Task.Delay(1200, ctx);
@@ -129,20 +129,14 @@ public class CoinflipCommand : ICommand
         }
     }
 
-    private static async Task<string?> GetCoinFlipAnimationUrl(string choiceStr, bool isJacky = false)
+    private static string GetCoinFlipAnimationUrl(string choiceStr, bool isJacky = false)
     {
-        string animationPath;
+        var baseUrl = "https://i.ddos.lgbt/u";
         if (isJacky)
         {
-            animationPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", $"bossmancoin-{choiceStr}-jacky.webp");
+            return $"{baseUrl}/bossmancoin-{choiceStr}-jacky.webp";
         }
-        else
-        {
-            animationPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", $"bossmancoin-{choiceStr}.webp");
-        }
-        if (!File.Exists(animationPath)) throw new DirectoryNotFoundException($"Coinflip animation missing at {animationPath}");
 
-        using var imageStream = File.OpenRead(animationPath);
-        return await Zipline.Upload(imageStream, new MediaTypeHeaderValue("image/webp"), "1h");
+        return $"{baseUrl}/bossmancoin-{choiceStr}.webp";
     }
 }
