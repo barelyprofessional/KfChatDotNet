@@ -1,5 +1,6 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using KfChatDotNetBot.Commands.Kasino;
 
 namespace KfChatDotNetBot.Models.DbModels;
 
@@ -42,6 +43,12 @@ public class GamblerDbModel
     /// If TotalWagered reaches this value, it'll trigger the calculation
     /// </summary>
     public required decimal NextVipLevelWagerRequirement { get; set; }
+
+    /// <summary>
+    /// Tracks the users current debt for loan purposes(starts at 0), as well as the number o
+    /// </summary>
+    public required List<Loan>? Loans { get; set; } = new List<Loan>();
+
 }
 
 public class TransactionDbModel
@@ -274,7 +281,11 @@ public enum TransactionSourceEventType
     /// <summary>
     /// A specific form of 24 hour time-based reload that has no wager requirement
     /// </summary>
-    DailyDollar
+    DailyDollar,
+    /// <summary>
+    /// A type of reload that must be paid back (separately from gambling losses) and accrues daily interest
+    /// </summary>
+    Loan
 }
 
 public enum WagerGame

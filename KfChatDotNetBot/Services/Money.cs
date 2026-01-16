@@ -1,4 +1,4 @@
-﻿using Humanizer;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using NLog;
 using RandN;
 using RandN.Compat;
+using KfChatDotNetBot.Commands.Kasino;
 
 namespace KfChatDotNetBot.Services;
 
@@ -246,7 +247,8 @@ public static class Money
             RandomSeed = Guid.NewGuid().ToString(),
             State = GamblerState.Active,
             TotalWagered = 0,
-            NextVipLevelWagerRequirement = Money.VipLevels[0].BaseWagerRequirement
+            NextVipLevelWagerRequirement = Money.VipLevels[0].BaseWagerRequirement,
+            Loans = new List<Loan>()
         }, ct);
         await db.SaveChangesAsync(ct);
         var newEntity = await db.Gamblers.AsNoTracking().OrderBy(x => x.Id).Include(x => x.User)

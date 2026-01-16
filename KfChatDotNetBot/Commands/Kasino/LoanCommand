@@ -1,0 +1,291 @@
+using System.Security.Principal;
+using System.Text.RegularExpressions;
+using KfChatDotNetBot.Extensions;
+using KfChatDotNetBot.Models;
+using KfChatDotNetBot.Models.DbModels;
+using KfChatDotNetBot.Services;
+using KfChatDotNetBot.Settings;
+using KfChatDotNetWsClient.Models.Events;
+using NLog;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
+
+namespace KfChatDotNetBot.Commands.Kasino;
+
+public class LoanCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^repay (?<number>\d+) (?<amount>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^repay (?<number>\d+) (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^repay (?<number>\d+)$", RegexOptions.IgnoreCase),
+        new Regex("^repay all$"),
+        new Regex("^repay$"),
+        new Regex(@"^loan (?<amount>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^loan (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^loan max$"),
+        new Regex("^loan$")
+    ];
+    public string? HelpText => "!loan will tell you how much credit you have available and information about your outstanding loans, !loan <amount> to take a loan";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(120);
+    public RateLimitOptionsModel? RateLimitOptions => new()
+    {
+        MaxInvocations = 1,
+        Window = TimeSpan.FromSeconds(30)
+    };
+    
+    
+
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        var cleanupDelay = TimeSpan.FromSeconds(10);
+        int patternIndex = -1;
+
+        for (int i = 0; i < Patterns.Count; i++)
+        {
+            var m = Patterns[i].Match(message.MessageRaw);
+            if (m.Success)
+            {
+                patternIndex = i;
+                break;
+            }
+        }
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        if (gambler == null)
+            throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        decimal kasinoKredit = 100 + gambler.TotalWagered/10000;
+        
+        string output = "";
+        
+        if (patternIndex < 4) //user is trying to repay a loan --------------------------------------------------------------------------------------------------------------------
+        {
+            if (gambler.Loans.Count == 0)
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you have no loans to repay.");
+            }
+            if (patternIndex == 3)//user is trying to repay all their loans at once
+            {
+                decimal loansOutstanding = 0;
+                foreach (var loan in gambler.Loans)
+                {
+                    if (loan.active) loansOutstanding += loan.getRemainingAmount();
+                }
+                if (gambler.Balance < loansOutstanding)
+                {
+                    await botInstance.SendChatMessageAsync(
+                        $"{user.FormatUsername()}, you do not have enough balance to repay all your loans. You owe {loansOutstanding.FormatKasinoCurrencyAsync()} but you only have {gambler.Balance.FormatKasinoCurrencyAsync()} remaining.", true, autoDeleteAfter: cleanupDelay);
+                    return;
+                }
+
+                foreach (var loan in gambler.Loans)
+                {
+                    loan.Repay(loan.getRemainingAmount());
+                }
+                var newBalance = await Money.ModifyBalanceAsync(gambler.Id, -loansOutstanding, TransactionSourceEventType.Loan);
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you paid off all your loans, worth a total of {loansOutstanding.FormatKasinoCurrencyAsync()}. Remaining balance: {newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+            //user is attempting to pay back a single loan
+            if (!arguments.TryGetValue("number", out var number))
+            {
+                string msg =
+                    $"{user.FormatUsername()}, use !repay <number> to repay a loan, !repay <number> <amount> to partially repay a loan, or !repay all to repay them all.[br]Outstanding loans:[br]";
+                for (int c = 0; c < gambler.Loans.Count; c++)
+                {
+                    msg += $"{c}: {gambler.Loans[c].ToString()}";
+                }
+
+                await botInstance.SendChatMessageAsync(msg, true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+            int loanToRepay = Convert.ToInt32(number.Value);
+            if (!arguments.TryGetValue("amount", out var repayment))
+            {
+                decimal payment = gambler.Loans[loanToRepay].getRemainingAmount();
+                if (gambler.Balance < payment)
+                {
+                    await botInstance.SendChatMessageAsync(
+                        $"{user.FormatUsername()}, your balance of {gambler.Balance.FormatKasinoCurrencyAsync()} is not enough to repay loan #{loanToRepay} remaining balance of {payment.FormatKasinoCurrencyAsync()}." +
+                        $"You can use !repay {loanToRepay} <amount> to partially repay the loan.", true,  autoDeleteAfter: cleanupDelay);
+                    return;
+                }
+                gambler.Loans[loanToRepay].Repay(payment);
+                var newBalance = await Money.ModifyBalanceAsync(gambler.Id, -payment, TransactionSourceEventType.Loan);
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you paid off remaining balance of {payment.FormatKasinoCurrencyAsync()} from loan #{loanToRepay}. Current balance: {newBalance.FormatKasinoCurrencyAsync()}");
+                return;
+            }
+
+            decimal repay = Convert.ToDecimal(repayment.Value);
+            if (gambler.Balance < repay)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you don't have enough to repay that much. Current balance: {gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            string refund = "";
+            if (repay > gambler.Loans[loanToRepay].getRemainingAmount())
+            {
+                refund += $"[br]Since your loan only had {gambler.Loans[loanToRepay].getRemainingAmount()} remaining, you have been refunded {(repay - gambler.Loans[loanToRepay].getRemainingAmount()).FormatKasinoCurrencyAsync()}.";
+                repay =  gambler.Loans[loanToRepay].getRemainingAmount();
+                gambler.Loans[loanToRepay].Repay(repay);
+                
+            }
+            else
+            {
+                gambler.Loans[loanToRepay].Repay(repay);
+                refund += $"Remaining balance: {gambler.Loans[loanToRepay].getRemainingAmount().FormatKasinoCurrencyAsync()}.";
+            }
+            var newBalance2 = await Money.ModifyBalanceAsync(gambler.Id, -repay, TransactionSourceEventType.Loan);
+
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you paid off {repay.FormatKasinoCurrencyAsync()} from loan #{loanToRepay}. {refund} Current balance: {newBalance2.FormatKasinoCurrencyAsync()}");
+            return;
+        }
+        
+        
+        
+        //repay stuff above loans below -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        
+        
+        /*
+         *
+         * dummy credit score logic, stole some logic from legitcheck
+         * 
+         */
+        
+        //legitcheck logic
+        await using var db = new ApplicationDbContext();
+        List<int> gamblerIds = new List<int>() { gambler.Id };
+        // Only include completed wagers - incomplete ones are pending bets (e.g., event outcomes)
+        var wagers = await db.Wagers
+            .Where(w => gamblerIds.Contains(w.Gambler.Id) && w.IsComplete)
+            .ToListAsync(ctx);
+
+        // RTP Calculation:
+        // - WagerAmount: The amount the user bet
+        // - WagerEffect: The net change to balance (negative for loss, positive for profit)
+        // - TotalReturned = WagerAmount + WagerEffect (what they got back)
+        //   Example: Bet 100, lost -> WagerEffect = -100, Returned = 100 + (-100) = 0
+        //   Example: Bet 100, won 150 total -> WagerEffect = +50 (profit), Returned = 100 + 50 = 150
+        // - RTP% = (TotalReturned / TotalWagered) * 100
+        var totalWagered = wagers.Sum(w => w.WagerAmount);
+        var totalReturned = wagers.Sum(w => w.WagerAmount + w.WagerEffect);
+        var overallRtp = totalWagered > 0 ? (totalReturned / totalWagered) * 100 : 0;
+        //legitcheck logic ^
+        decimal APR = 420 - gambler.TotalWagered/10000 - (95-overallRtp); //get a better interest rate if your rtp is low and/or if you've wagered a lot
+        if (APR < 100) APR = 100;
+        foreach (var loan in gambler.Loans)
+        {
+            if (loan.active) kasinoKredit -= loan.GetAmount();
+            else kasinoKredit += loan.principal / 10; //if you fully paid off the loan you get a bonus to your credit score
+        }
+        if (kasinoKredit <= 0) kasinoKredit = 0;
+        if (kasinoKredit == 0)
+        {
+            output += $"{user.FormatUsername()}, you have no credit available. Currently active loans:[br]";
+            for (int i = 0; i < gambler.Loans.Count; i++)
+            {
+                if (gambler.Loans[i].active) output +=  $"{i}: {gambler.Loans[i].ToString()}[br]";
+            }
+            await botInstance.SendChatMessageAsync(output, true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        if (!arguments.TryGetValue("amount", out var amount))
+        {
+            string activeLoans = gambler.Loans.Count > 0 ? $"[br]Currently active loans:[br]" : "";
+            string aprString = kasinoKredit == 0 ? $"" : $" at {APR}% APR, compounded daily.";
+            output +=
+                $"{user.FormatUsername()}, you have ${kasinoKredit} KKK credit available{aprString}. !loan <amount> to take out a loan.{activeLoans}";
+            for (int c = 0; c < gambler.Loans.Count; c++)
+            {
+                if (gambler.Loans[c].active) output += $"{c}: {gambler.Loans[c].ToString()}[br]";
+            }
+
+            await botInstance.SendChatMessageAsync(output, true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+
+        decimal loanAmount = Convert.ToInt32(amount.Value);
+        if (loanAmount > kasinoKredit)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you only have {kasinoKredit.FormatKasinoCurrencyAsync()} of credit available.", true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+
+        Loan newLoan = new Loan(gambler.Id, loanAmount, APR);
+        gambler.Loans.Add(newLoan);
+        var newBalance3 = await Money.ModifyBalanceAsync(gambler.Id, loanAmount, TransactionSourceEventType.Loan);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you took out a loan of {newLoan.principal.FormatKasinoCurrencyAsync()}. Current balance: {newBalance3.FormatKasinoCurrencyAsync()}");
+
+    }
+}
+
+public class Loan
+{
+    public int gamblerId;
+    public decimal principal;
+    private decimal amount;
+    public decimal amountRepaid;
+    public decimal APR;
+    public DateTimeOffset lastInterestCalculation;
+    public bool active;
+    
+    public Loan(int gId, decimal a, decimal iP)
+    {
+        gamblerId = gId;
+        principal = a;
+        amount = a;
+        amountRepaid = 0;
+        APR = iP;
+        lastInterestCalculation = DateTimeOffset.UtcNow;
+        active = true;
+    }
+
+    public decimal Repay(decimal kkk)
+    {
+        var currentDate = DateTimeOffset.UtcNow;
+        int activeDays = (int)(currentDate - lastInterestCalculation).TotalDays;
+        if (activeDays == 0) activeDays = 1;
+        decimal dailyRate = APR / 365;
+        amount *= (decimal)Math.Pow((double)(1 + dailyRate), activeDays);
+        amountRepaid += kkk;
+        decimal refundAmount = 0;
+        if (amountRepaid >= amount)
+        {
+            active = false;
+            refundAmount = amountRepaid - amount;
+        }
+        lastInterestCalculation = currentDate;
+        return refundAmount;
+    }
+
+    public decimal GetAmount()
+    {
+        var currentDate = DateTimeOffset.UtcNow;
+        int activeDays = (int)(currentDate - lastInterestCalculation).TotalDays;
+        decimal dailyRate = APR / 365;
+        amount *= (decimal)Math.Pow((double)(1 + dailyRate), activeDays);
+        lastInterestCalculation = currentDate;
+        return amount;
+    }
+
+    public decimal getRemainingAmount()
+    {
+        var currentDate = DateTimeOffset.UtcNow;
+        int activeDays = (int)(currentDate - lastInterestCalculation).TotalDays;
+        decimal dailyRate = APR / 365;
+        amount *= (decimal)Math.Pow((double)(1 + dailyRate), activeDays);
+        lastInterestCalculation = currentDate;
+        return amount - amountRepaid;
+    }
+
+    public string ToString()
+    {
+        return $"Principle: {principal.FormatKasinoCurrencyAsync()}| Interest Rate: {APR}% | Left To Repay: {(amount - amountRepaid).FormatKasinoCurrencyAsync()} | Current Total Account Value: {amount.FormatKasinoCurrencyAsync()}";
+    }
+}
