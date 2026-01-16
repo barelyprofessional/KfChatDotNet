@@ -132,11 +132,12 @@ public class CoinflipCommand : ICommand
     private static string GetCoinFlipAnimationUrl(string choiceStr, bool isJacky = false)
     {
         var baseUrl = "https://i.ddos.lgbt/u";
+        var unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (isJacky)
         {
-            return $"{baseUrl}/bossmancoin-{choiceStr}-jacky.webp";
+            return $"{baseUrl}/bossmancoin-{choiceStr}-jacky.webp?{unixTime}";
         }
 
-        return $"{baseUrl}/bossmancoin-{choiceStr}.webp";
+        return $"{baseUrl}/bossmancoin-{choiceStr}.webp?{unixTime}";
     }
 }
