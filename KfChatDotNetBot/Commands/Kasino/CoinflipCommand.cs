@@ -103,7 +103,7 @@ public class CoinflipCommand : ICommand
             var coinflipAnimation = GetCoinFlipAnimationUrl(choiceStr);
 
             await botInstance.SendChatMessageAsync($"[IMG]{coinflipAnimation}[/IMG]", true, autoDeleteAfter: cleanupDelay);
-            await Task.Delay(1200, ctx);
+            await Task.Delay(1500, ctx);
 
             var effect = wager;
             newBalance = await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.CoinFlip, ct: ctx);
@@ -119,7 +119,7 @@ public class CoinflipCommand : ICommand
             var coinflipAnimationURL = GetCoinFlipAnimationUrl("heads" == choiceStr ? "tails" : "heads", isJacky);
 
             await botInstance.SendChatMessageAsync($"[IMG]{coinflipAnimationURL}[/IMG]", true, autoDeleteAfter: cleanupDelay);
-            await Task.Delay(1200, ctx);
+            await Task.Delay(1500, ctx);
 
             newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.CoinFlip, ct: ctx);
             await botInstance.SendChatMessageAsync(
@@ -132,11 +132,12 @@ public class CoinflipCommand : ICommand
     private static string GetCoinFlipAnimationUrl(string choiceStr, bool isJacky = false)
     {
         var baseUrl = "https://i.ddos.lgbt/u";
+        var unixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (isJacky)
         {
-            return $"{baseUrl}/bossmancoin-{choiceStr}-jacky.webp";
+            return $"{baseUrl}/bossmancoin-{choiceStr}-jacky.webp?{unixTime}";
         }
 
-        return $"{baseUrl}/bossmancoin-{choiceStr}.webp";
+        return $"{baseUrl}/bossmancoin-{choiceStr}.webp?{unixTime}";
     }
 }
