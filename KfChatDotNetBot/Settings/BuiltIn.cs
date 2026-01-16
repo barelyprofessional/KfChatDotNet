@@ -453,6 +453,8 @@ public static class BuiltIn
         public static string KasinoLambchopCleanupDelay = "Kasino.Lambchop.CleanupDelay";
         [BuiltInSetting("Delay in milliseconds before cleaning up dice", SettingValueType.Text, "15000", WholeNumberRegex)]
         public static string KasinoDiceCleanupDelay = "Kasino.Dice.CleanupDelay";
+        [BuiltInSetting("Delay in milliseconds before cleaning up coinflip", SettingValueType.Text, "15000", WholeNumberRegex)]
+        public static string KasinoCoinflipCleanupDelay = "Kasino.Coinflip.CleanupDelay";
         [BuiltInSetting("Delay in milliseconds before cleaning up wheel", SettingValueType.Text, "30000", WholeNumberRegex)]
         public static string KasinoWheelCleanupDelay = "Kasino.Wheel.CleanupDelay";
         [BuiltInSetting("Whether the YouTube PubSub Redis client is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
