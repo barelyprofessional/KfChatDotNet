@@ -74,6 +74,38 @@ public static class Zipline
 
         return url;
     }
+    
+    public static async Task<string?> UploadFromUrl(string imageUrl, string? expiration = null, CancellationToken ct = default)
+    {
+        var logger = LogManager.GetCurrentClassLogger();
+        var settings = await SettingsProvider.GetMultipleValuesAsync([
+            BuiltIn.Keys.Proxy
+        ]);
+        var downloadHandler = new HttpClientHandler();
+        if (settings[BuiltIn.Keys.Proxy].Value != null)
+        {
+            downloadHandler.Proxy = new WebProxy(settings[BuiltIn.Keys.Proxy].Value);
+            downloadHandler.UseProxy = true;
+        }
+    
+        using var downloadClient = new HttpClient(downloadHandler);
+        try
+        {
+            using var response = await downloadClient.GetAsync(imageUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+            response.EnsureSuccessStatusCode();
+            var mimeType = response.Content.Headers.ContentType ?? new MediaTypeHeaderValue("application/octet-stream");
+            await using var imageStream = await response.Content.ReadAsStreamAsync(ct);
+            var ziplineUrl = await Upload(imageStream, mimeType, expiration, ct);
+        
+            return ziplineUrl;
+        }
+        catch (Exception e)
+        {
+            logger.Error($"Failed to upload image from URL: {imageUrl}");
+            logger.Error(e);
+            throw;
+        }
+    }
 
     public static async Task<bool> IsZiplineEnabled()
     {

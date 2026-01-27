@@ -180,7 +180,8 @@ public class GetRandomImage : ICommand
             BuiltIn.Keys.BotImageRandomSliceDivideBy, BuiltIn.Keys.BotImagePigCubeSelfDestruct,
             BuiltIn.Keys.BotImageInvertedCubeUrl, BuiltIn.Keys.BotImagePigCubeSelfDestructMin,
             BuiltIn.Keys.BotImagePigCubeSelfDestructMax, BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay,
-            BuiltIn.Keys.BotImageChinkSelfDestruct, BuiltIn.Keys.BotImageChinkSelfDestructDelay
+            BuiltIn.Keys.BotImageChinkSelfDestruct, BuiltIn.Keys.BotImageChinkSelfDestructDelay,
+            BuiltIn.Keys.CarouselImageUrlScrambling
         ]);
         var divideBy = settings[BuiltIn.Keys.BotImageRandomSliceDivideBy].ToType<int>();
         var limit = 1;
@@ -197,6 +198,30 @@ public class GetRandomImage : ICommand
         image.LastSeen = DateTimeOffset.UtcNow;
         db.Images.Update(image);
         await db.SaveChangesAsync(ctx);
+        
+        //  URL scrambling if enabled
+        var imageUrl = image.Url;
+        if (settings[BuiltIn.Keys.CarouselImageUrlScrambling].ToBoolean() && await Zipline.IsZiplineEnabled())
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var scrambledUrl = await Zipline.UploadFromUrl(image.Url, "1h", cts.Token);
+                if (scrambledUrl != null)
+                {
+                    imageUrl = scrambledUrl;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Timeout reached, fall back to original URL
+            }
+            catch (Exception)
+            {
+                // Upload failed, fall back to original URL
+            }
+        }
+        
         TimeSpan? timeToDeletion = null;
         if (key == "pigcube" && settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean())
         {
@@ -209,6 +234,31 @@ public class GetRandomImage : ICommand
         {
             timeToDeletion = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>());
         }
-        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true, autoDeleteAfter: timeToDeletion);
+        await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true, autoDeleteAfter: timeToDeletion);
+    }
+    
+    public class ToggleImageScramblingCommand : ICommand
+    {
+        public List<Regex> Patterns => [
+            new Regex(@"^admin image scrambling (?<state>on|off|enable|disable|true|false)$"),
+            new Regex(@"^admin images scrambling (?<state>on|off|enable|disable|true|false)$")
+        ];
+        public string? HelpText => "Toggle URL scrambling for image carousels (reuploads images through Zipline)";
+        public UserRight RequiredRight => UserRight.TrueAndHonest;
+        public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+        public RateLimitOptionsModel? RateLimitOptions => null;
+    
+        public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+            CancellationToken ctx)
+        {
+            var state = arguments["state"].Value.ToLower();
+            var enabled = state is "on" or "enable" or "true";
+        
+            await SettingsProvider.SetValueAsync(BuiltIn.Keys.CarouselImageUrlScrambling, enabled.ToString());
+        
+            var statusText = enabled ? "enabled" : "disabled";
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, image carousel URL scrambling is now {statusText}", true);
+        }
     }
 }
