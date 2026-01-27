@@ -71,7 +71,7 @@ public class RainCommand : ICommand
             if (rain.participants.Count == 0)
             {
                 await botInstance.SendChatMessageAsync($"{rain.creator.FormatUsername()} made it rain on nobody.");
-                Money.ModifyBalanceAsync(rain.creatorGambler.Id, -rain.rainAmount, TransactionSourceEventType.Rain);
+                await Money.ModifyBalanceAsync(rain.creatorGambler.Id, -rain.rainAmount, TransactionSourceEventType.Rain);
                 return;
             }
             else
@@ -82,15 +82,28 @@ public class RainCommand : ICommand
                 foreach (var participant in rain.participants)
                 {
                     rainParticipants += (rain.participants.Count > 1 && counter == rain.participants.Count - 1) ? $"and {participant.User.FormatUsername()}" : $"{participant.User.FormatUsername()}, ";
-                    Money.ModifyBalanceAsync(participant.Id, payout, TransactionSourceEventType.Rain);
+                    await Money.ModifyBalanceAsync(participant.Id, payout, TransactionSourceEventType.Rain);
                     counter++;
                 }
                 if (rain.participants.Count == 1) rainParticipants = rain.participants[0].User.FormatUsername();
                 await botInstance.SendChatMessageAsync(
                     $"{rain.creator.FormatUsername()} made it rain {payout.FormatKasinoCurrencyAsync()} on {rainParticipants}",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(30));
-                Money.ModifyBalanceAsync(rain.creatorGambler.Id, -rain.rainAmount, TransactionSourceEventType.Rain);
+                await Money.ModifyBalanceAsync(rain.creatorGambler.Id, -rain.rainAmount, TransactionSourceEventType.Rain);
                 
+            }
+        }
+
+        public static async Task RemoveRain(Rain rain)
+        {
+            await _lock.WaitAsync();
+            try
+            {
+                rainLobbies.Remove(rain.creatorGambler.Id);
+            }
+            finally
+            {
+                _lock.Release();
             }
         }
         public class Rain
@@ -137,8 +150,8 @@ public class RainCommand : ICommand
                         $"{creator.FormatUsername()} is making it rain with {rainAmount.FormatKasinoCurrencyAsync()}! You have {rainTimer} seconds left to join!");
                 }
                 open = false;
-                PayoutRain(this);
-
+                await PayoutRain(this);
+                await RemoveRain(this);
             }
             
             
@@ -186,7 +199,7 @@ public class RainCommand : ICommand
                 bool success = await RainManager.AddParticipant(gambler, user);
                 if (!success)
                 {
-                    botInstance.SendChatMessageAsync(
+                    await botInstance.SendChatMessageAsync(
                         $"{user.FormatUsername()}, there are no rain lobbies currently running. !rain <amount> to start a new rain lobby",
                         true, autoDeleteAfter: cleanupDelay);
                 }
@@ -221,12 +234,12 @@ public class RainCommand : ICommand
         decimal decAmount = Convert.ToDecimal(amount.Value);
         if (decAmount <= 0)
         {
-            botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't make it rain with nothing.", true, autoDeleteAfter: cleanupDelay);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't make it rain with nothing.", true, autoDeleteAfter: cleanupDelay);
             return;
         }
         if (gambler.Balance < decAmount)
         {
-            botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your balance ${gambler.Balance} KKK is not enough to make it rain for ${decAmount} KKK.", true, autoDeleteAfter: cleanupDelay);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your balance ${gambler.Balance} KKK is not enough to make it rain for ${decAmount} KKK.", true, autoDeleteAfter: cleanupDelay);
             return;
         }
         await RainManager.AddRain(gambler.Id,new RainManager.Rain(user, gambler, decAmount));
