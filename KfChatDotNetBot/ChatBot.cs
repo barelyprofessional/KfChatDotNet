@@ -529,6 +529,31 @@ public class ChatBot
         return message;
     }
 
+    /// <summary>
+    /// Wait for a chat message to be successfully delivered or not
+    /// </summary>
+    /// <param name="message">Reference to the message you're waiting for</param>
+    /// <param name="patience">How long to wait</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>True if the message was echoed, false otherwise</returns>
+    public async Task<bool> WaitForChatMessageAsync(SentMessageTrackerModel message, TimeSpan? patience = null, CancellationToken ct = default)
+    {
+        if (patience == null)
+        {
+            patience = TimeSpan.FromSeconds(60);
+        }
+
+        var patienceEnds = DateTimeOffset.UtcNow.Add(patience.Value);
+        while (message.ChatMessageId == null)
+        {
+            if (DateTimeOffset.UtcNow > patienceEnds) return false;
+            if (message.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending) return false;
+            await Task.Delay(100, ct);
+        }
+
+        return true;
+    }
+
     public class SentMessageNotFoundException : Exception;
     
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)

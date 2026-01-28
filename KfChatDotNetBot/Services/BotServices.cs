@@ -40,6 +40,7 @@ public class BotServices
     private Owncast? _owncastStatusCheck;
     private ShuffleDotUs? _shuffleDotUs;
     private YouTubePubSub? _youTubePubSub;
+    public KasinoRain? KasinoRain;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -91,7 +92,8 @@ public class BotServices
             BuildPeerTubeLiveStatusCheck(),
             BuildOwncastLiveStatusCheck(),
             BuildShuffleDotUs(),
-            BuildYouTubePubSub()
+            BuildYouTubePubSub(),
+            BuildKasinoRain()
         ];
         try
         {
@@ -106,6 +108,12 @@ public class BotServices
         _logger.Info("Starting websocket watchdog and Howl.gg user stats timer");
         _websocketWatchdog = WebsocketWatchdog();
         _howlggGetUserTimer = HowlggGetUserTimer();
+    }
+
+    private async Task BuildKasinoRain()
+    {
+        _logger.Debug("Building the Kasino Rain thingy");
+        KasinoRain = new KasinoRain(_chatBot, _cancellationToken);
     }
     
     private async Task BuildShuffle()
