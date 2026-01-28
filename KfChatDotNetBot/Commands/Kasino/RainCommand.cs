@@ -60,7 +60,7 @@ public class RainCommand : ICommand
             var pluralSuffix = string.Empty;
             if (rain.Participants.Count > 0) pluralSuffix = "s";
             await botInstance.SendChatMessageAsync(
-                $"LFG {user.FormatUsername()} is now a participant! There's now {rain.Participants.Count} participant{pluralSuffix}",
+                $"LFG {user.FormatUsername()} is now a participant! There's now {rain.Participants.Count + 1} participant{pluralSuffix}",
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
