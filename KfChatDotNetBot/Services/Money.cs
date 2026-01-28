@@ -179,18 +179,36 @@ public static class Money
     /// Get the next VIP level based on the wager amount given
     /// </summary>
     /// <param name="wagered">Wager amount to calculate the next level</param>
-    /// <returns>null if the user is at the max level</returns>
+    /// <returns>null if the user is at or beyond the max level</returns>
     public static NextVipLevelModel? GetNextVipLevel(decimal wagered)
     {
         var level = VipLevels.LastOrDefault(v => v.BaseWagerRequirement <= wagered);
-        if (level == null) return null;
+
+        // If wagered is below the first VIP level, return first level tier 1
+        if (level == null)
+        {
+            var firstLevel = VipLevels[0];
+            return new NextVipLevelModel
+            {
+                VipLevel = firstLevel,
+                Tier = 1,
+                WagerRequirement = firstLevel.BaseWagerRequirement
+            };
+        }
+
         var tiers = CalculateTiers(level);
         var nextTier = tiers.FirstOrDefault(t => wagered <= t);
         // default(decimal) is 0
         // This happens if the user is between tier 5 and their next level
         if (nextTier == 0)
         {
-            var nextLevel = VipLevels[VipLevels.IndexOf(level) + 1];
+            var levelIndex = VipLevels.IndexOf(level);
+            // If at max level, there's no next level
+            if (levelIndex >= VipLevels.Count - 1)
+            {
+                return null;
+            }
+            var nextLevel = VipLevels[levelIndex + 1];
             return new NextVipLevelModel
             {
                 VipLevel = nextLevel,

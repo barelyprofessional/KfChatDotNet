@@ -17,7 +17,7 @@ namespace KfChatDotNetBot;
 
 public class ChatBot
 {
-    internal readonly ChatClient KfClient;
+    internal readonly ChatClient? KfClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     // Oh no it's an ever expanding list that may never get cleaned up!
     // BUY MORE RAM
@@ -28,14 +28,28 @@ public class ChatBot
     private readonly BotCommands _botCommands;
     public readonly List<SentMessageTrackerModel> SentMessages = [];
     internal bool GambaSeshPresent;
-    internal readonly BotServices BotServices;
-    private Task _kfChatPing;
-    private KfTokenService _kfTokenService;
+    internal readonly BotServices? BotServices;
+    private Task? _kfChatPing;
+    private KfTokenService? _kfTokenService;
     private int _joinFailures = 0;
-    private Task _kfDeadBotDetection;
+    private Task? _kfDeadBotDetection;
     private DateTime _lastReconnectAttempt = DateTime.UtcNow;
     private List<ScheduledAutoDeleteModel> _scheduledDeletions = [];
-    private Task _scheduledAutoDeleteTask;
+    private Task? _scheduledAutoDeleteTask;
+
+    /// <summary>
+    /// When true, the bot operates in test mode:
+    /// - No connection to KiwiFarms
+    /// - No background tasks (ping, dead bot detection, etc.)
+    /// - SendChatMessageAsync generates fake message IDs
+    /// - EditMessageAsync is a no-op
+    /// </summary>
+    public bool IsTestMode { get; private set; }
+
+    /// <summary>
+    /// Counter for generating fake message IDs in test mode
+    /// </summary>
+    private int _testModeMessageIdCounter = 1000000;
     
     public ChatBot()
     {
@@ -95,6 +109,61 @@ public class ChatBot
         _logger.Debug("Blocking the main thread");
         var exitEvent = new ManualResetEvent(false);
         exitEvent.WaitOne();
+    }
+
+    /// <summary>
+    /// Test mode constructor - creates a minimal bot instance for integration testing.
+    /// Skips all network connections, background tasks, and service initialization.
+    /// </summary>
+    /// <param name="testMode">Must be true to use this constructor</param>
+    /// <param name="cancellationToken">Cancellation token for the test</param>
+    public ChatBot(bool testMode, CancellationToken cancellationToken = default)
+    {
+        if (!testMode)
+            throw new ArgumentException("This constructor is only for test mode", nameof(testMode));
+
+        IsTestMode = true;
+        _cancellationToken = cancellationToken;
+        InitialStartCooldown = false; // Don't suppress commands in test mode
+
+        _logger.Info("Bot starting in TEST MODE - no connections will be made");
+
+        // KfClient, BotServices, and background tasks are intentionally null/not started
+        // Commands can still be processed via ProcessTestMessage
+
+        _logger.Debug("Creating bot command instance for test mode");
+        _botCommands = new BotCommands(this, _cancellationToken);
+    }
+
+    /// <summary>
+    /// Process a message in test mode without needing a real WebSocket connection.
+    /// Creates a fake MessageModel and runs it through the command processor.
+    /// </summary>
+    /// <param name="message">The raw message text (including ! prefix)</param>
+    /// <param name="userId">The KF user ID to simulate</param>
+    /// <param name="username">The username to simulate</param>
+    public void ProcessTestMessage(string message, int userId, string username)
+    {
+        if (!IsTestMode)
+            throw new InvalidOperationException("ProcessTestMessage can only be used in test mode");
+
+        var fakeMessage = new MessageModel
+        {
+            MessageId = _testModeMessageIdCounter++,
+            Message = message,
+            MessageRaw = message,
+            MessageRawHtmlDecoded = message,
+            RoomId = 1,
+            Author = new UserModel
+            {
+                Id = userId,
+                Username = username
+            },
+            MessageDate = DateTimeOffset.UtcNow,
+            MessageEditDate = null
+        };
+
+        _botCommands.ProcessMessage(fakeMessage);
     }
 
     private void OnFailedToJoinRoom(object sender, string message)
@@ -404,10 +473,6 @@ public class ChatBot
     /// <returns>An object you can use to check the status of the message and get its ID for editing/deleting later</returns>
     public async Task<SentMessageTrackerModel> SendChatMessageAsync(string message, bool bypassSeshDetect = false, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 1023, TimeSpan? autoDeleteAfter = null)
     {
-        var settings = await SettingsProvider
-            .GetMultipleValuesAsync([
-                BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled
-            ]);
         var reference = Guid.NewGuid().ToString();
         var messageTracker = new SentMessageTrackerModel
         {
@@ -415,6 +480,23 @@ public class ChatBot
             Message = message.TrimEnd(), // Sneedchat trims trailing spaces
             Status = SentMessageTrackerStatus.Unknown,
         };
+
+        // In test mode, immediately mark as successful with a fake message ID
+        if (IsTestMode)
+        {
+            messageTracker.ChatMessageId = Interlocked.Increment(ref _testModeMessageIdCounter);
+            messageTracker.Status = SentMessageTrackerStatus.ResponseReceived;
+            messageTracker.SentAt = DateTimeOffset.UtcNow;
+            messageTracker.Delay = TimeSpan.Zero;
+            SentMessages.Add(messageTracker);
+            _logger.Debug($"[TEST MODE] Fake sent message: {message}");
+            return messageTracker;
+        }
+
+        var settings = await SettingsProvider
+            .GetMultipleValuesAsync([
+                BuiltIn.Keys.KiwiFarmsSuppressChatMessages, BuiltIn.Keys.GambaSeshDetectEnabled
+            ]);
         if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].ToBoolean())
         {
             _logger.Info("Not sending message as SuppressChatMessages is enabled");
@@ -527,6 +609,50 @@ public class ChatBot
         }
 
         return message;
+    }
+
+    /// <summary>
+    /// Edit a previously sent message. In test mode, this is a no-op.
+    /// </summary>
+    /// <param name="messageId">The chat message ID to edit</param>
+    /// <param name="newMessage">The new message content</param>
+    public async Task EditMessageAsync(int messageId, string newMessage)
+    {
+        if (IsTestMode)
+        {
+            _logger.Debug($"[TEST MODE] Fake edit message {messageId}: {newMessage}");
+            // Update the message in SentMessages if it exists
+            var sentMessage = SentMessages.FirstOrDefault(m => m.ChatMessageId == messageId);
+            if (sentMessage != null)
+            {
+                sentMessage.Message = newMessage;
+                sentMessage.LastEdited = DateTimeOffset.UtcNow;
+            }
+            return;
+        }
+
+        if (KfClient == null)
+            throw new InvalidOperationException("KfClient is not initialized");
+
+        await KfClient.EditMessageAsync(messageId, newMessage);
+    }
+
+    /// <summary>
+    /// Delete a previously sent message. In test mode, this is a no-op.
+    /// </summary>
+    /// <param name="messageId">The chat message ID to delete</param>
+    public async Task DeleteMessageAsync(int messageId)
+    {
+        if (IsTestMode)
+        {
+            _logger.Debug($"[TEST MODE] Fake delete message {messageId}");
+            return;
+        }
+
+        if (KfClient == null)
+            throw new InvalidOperationException("KfClient is not initialized");
+
+        await KfClient.DeleteMessageAsync(messageId);
     }
 
     public class SentMessageNotFoundException : Exception;
