@@ -18,7 +18,7 @@ public class RainCommand : ICommand
 
     public string? HelpText => "!rain <amount> to start a rain, !rain to join all active rains";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(60);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(90);
     public RateLimitOptionsModel? RateLimitOptions => null;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
@@ -52,6 +52,14 @@ public class RainCommand : ICommand
             {
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, you're already participating in this rain!", true,
+                    autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (rain.Creator == user.Id)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you can't participate in your own rain!", true,
                     autoDeleteAfter: cleanupDelay);
                 return;
             }
