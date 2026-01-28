@@ -105,6 +105,7 @@ public class RainCommand : ICommand
         while (timer > 0)
         {
             timer--;
+            await Task.Delay(1000, ctx);
             await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value,
                 $"{user.FormatUsername()} is making it rain with {await decAmount.FormatKasinoCurrencyAsync()}! Type !rain in the next {timer} seconds to join.");
         }
