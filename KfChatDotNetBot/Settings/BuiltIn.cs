@@ -475,6 +475,8 @@ public static class BuiltIn
         public static string KasinoDailyDollarEnabled = "Kasino.DailyDollar.Enabled";
         [BuiltInSetting("Timezone to use for daily reloads etc.", SettingValueType.Text, "Eastern Standard Time")]
         public static string KasinoTimezone = "Kasino.Timezone";
+        [BuiltInSetting("Whether to randomize carousel media urls through reuploading", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string CarouselImageUrlScrambling = "Kasino.CarouselImageUrlScrambling.Enabled";
         // kasino game controll
         [BuiltInSetting("Delay in milliseconds before cleaning up message indicating a Kasino game is disabled", SettingValueType.Text, "15000", WholeNumberRegex)]
         public static string KasinoGameDisabledMessageCleanupDelay = "Kasino.GameDisabledMessage.CleanupDelay";
