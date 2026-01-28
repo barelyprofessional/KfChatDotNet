@@ -73,6 +73,13 @@ public class RainCommand : ICommand
             return;
         }
         //if you're trying to start the rain
+        if (rain != null)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, there's already a rain in progress.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
         decimal decAmount = Convert.ToDecimal(amount.Value);
         if (decAmount <= 0)
         {
