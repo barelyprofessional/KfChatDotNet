@@ -110,6 +110,6 @@ public class RainCommand : ICommand
                 $"{user.FormatUsername()} is making it rain with {await decAmount.FormatKasinoCurrencyAsync()}! Type !rain in the next {timer} seconds to join.");
         }
         await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId!.Value);
-        // At this point the timer should take care of things but truthfully it's 
+        // At this point the timer should take care of things but truthfully it's a disaster and probably won't work
     }
 }
