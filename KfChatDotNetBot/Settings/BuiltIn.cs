@@ -502,6 +502,10 @@ public static class BuiltIn
         public static string KasinoSlotsEnabled = "Kasino.Slots.Enabled";
         [BuiltInSetting("Whether plinko is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string KasinoPlinkoEnabled = "Kasino.Plinko.Enabled";
+        [BuiltInSetting("Enable/disable roulette game", SettingValueType.Boolean, "true")]
+        public static string KasinoRouletteEnabled = "Kasino.Roulette.Enabled";
+        [BuiltInSetting("Roulette countdown duration in seconds", SettingValueType.Text, "120", WholeNumberRegex)]
+        public static string KasinoRouletteCountdownDuration = "Kasino.Roulette.CountdownDuration";
         [BuiltInSetting("Whether Xeet posting is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string XeetEnabled = "Xeet.Enabled";
         [BuiltInSetting("Connection string for bot's Redis", SettingValueType.Text)]
