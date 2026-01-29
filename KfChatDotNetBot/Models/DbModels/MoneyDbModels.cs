@@ -302,7 +302,9 @@ public enum WagerGame
     Slots,
     Blackjack,
     [Description("Plinko")]
-    Plinko
+    Plinko,
+    [Description("Roulette but live")]
+    Roulette
 }
 
 public enum GamblerState
