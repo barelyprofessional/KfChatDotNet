@@ -93,7 +93,8 @@ public class BotServices
             BuildOwncastLiveStatusCheck(),
             BuildShuffleDotUs(),
             BuildYouTubePubSub(),
-            BuildKasinoRain()
+            BuildKasinoRain(),
+            BuildKasinoMines()
         ];
         try
         {
@@ -114,6 +115,12 @@ public class BotServices
     {
         _logger.Debug("Building the Kasino Rain thingy");
         KasinoRain = new KasinoRain(_chatBot, _cancellationToken);
+    }
+
+    private async Task BuildKasinoMines()
+    {
+        _logger.Debug("Building the Kasino mines service");
+        KasinoMines = new KasinoMines(_chatBot, _cancellationToken);
     }
     
     private async Task BuildShuffle()
