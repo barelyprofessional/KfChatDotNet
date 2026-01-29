@@ -504,6 +504,8 @@ public static class BuiltIn
         public static string KasinoPlinkoEnabled = "Kasino.Plinko.Enabled";
         [BuiltInSetting("Whether Xeet posting is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string XeetEnabled = "Xeet.Enabled";
+        [BuiltInSetting("Connection string for bot's Redis", SettingValueType.Text)]
+        public static string BotRedisConnectionString = "Bot.RedisConnectionString";
     }
 }
 
