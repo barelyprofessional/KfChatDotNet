@@ -13,23 +13,19 @@ public class MinesCommand : ICommand
 {
     public List<Regex> Patterns => [
         //attempting to continue a game below here
-        new Regex(@"^mines (?<betString>.+) (?<cashout>cashout)$", RegexOptions.IgnoreCase),                                                    //1
-        new Regex(@"^mines (?<betString>.+)$", RegexOptions.IgnoreCase),                                                                        //2
-        new Regex(@"^mines (?<picks>\d+) (?<cashout>cashout)$", RegexOptions.IgnoreCase),                                                       //3
-        new Regex(@"^mines (?<picks>\d+)$", RegexOptions.IgnoreCase),                                                                           //4
+        new Regex(@"^mines (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                                                       
+        new Regex(@"^mines (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                                                               
         //attempting to start a game below here
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout)$", RegexOptions.IgnoreCase),        //5
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout)$", RegexOptions.IgnoreCase),             //6
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+)$", RegexOptions.IgnoreCase),                            //7
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+)$", RegexOptions.IgnoreCase),                                 //8
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout)$", RegexOptions.IgnoreCase),           //9
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout)$", RegexOptions.IgnoreCase),                //10
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+)$", RegexOptions.IgnoreCase),                               //11
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+)$", RegexOptions.IgnoreCase),                                    //12
+        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),        
+        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                          
+        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),           
+        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                                 
         //cashout
-        new Regex(@"^mines (?<cashout>cashout)$", RegexOptions.IgnoreCase),                                                                     //13
+        new Regex(@"^mines (?<cashout>cashout)$", RegexOptions.IgnoreCase),                                                                     
+        //refresh
+        new Regex(@"^mines (?<refresh>refresh)$", RegexOptions.IgnoreCase),                                                                                 
         //get info
-        new Regex("^mines")                                                                                                                     //14
+        new Regex("^mines")                                                                                                                     
     ];
     public string? HelpText => "!mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: https://i.ddos.lgbt/raw/UJ9Dty.html";
     public UserRight RequiredRight => UserRight.Loser;
@@ -70,6 +66,13 @@ public class MinesCommand : ICommand
         //check if user has an existing game already
         if (!botInstance.BotServices.KasinoMines.activeGames.ContainsKey(gambler.Id))
         {
+            if (arguments.TryGetValue("refresh", out var refresh))
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you don't have a game running. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {toolUrl}",
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
             //if there is no game currently running
             if (!arguments.TryGetValue("bet", out var bet))
             {
@@ -121,7 +124,17 @@ public class MinesCommand : ICommand
                 return;
             }
             int boardSize = Convert.ToInt32(size.Value);
+            if (boardSize < 2 || boardSize > 10)
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, board size must be between 2 and 10.",true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
             int minesCount = Convert.ToInt32(mines.Value);
+            if (minesCount < 1 || minesCount > (boardSize * boardSize) - 1)
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, number of mines must be between 1 and {boardSize * boardSize - 1}(boardSize * boardSize - 1).",true, autoDeleteAfter: cleanupDelay);
+                return;           
+            }
             //at this point all valid values so good to continue making the game
             await botInstance.BotServices.KasinoMines.CreateGame(gambler, wager, boardSize, minesCount);
             var msg = await botInstance.SendChatMessageAsync(
@@ -148,6 +161,11 @@ public class MinesCommand : ICommand
         else
         {
             //if there is a game already running
+            if (arguments.TryGetValue("refresh", out var refresh))
+            {
+                await botInstance.BotServices.KasinoMines.RefreshGameMessage(gambler.Id);
+                return;
+            }
             int pick = 0;
             List<(int r, int c)> precisePicks = new();
             if (arguments.TryGetValue("picks", out var picks)) //if they are using picks to randomly select squares to reveal
