@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -41,6 +41,7 @@ public class BotServices
     private ShuffleDotUs? _shuffleDotUs;
     private YouTubePubSub? _youTubePubSub;
     public KasinoRain? KasinoRain;
+    public KasinoMines KasinoMines;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
