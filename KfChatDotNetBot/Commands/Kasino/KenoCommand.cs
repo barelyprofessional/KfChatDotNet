@@ -29,11 +29,14 @@ public class KenoCommand : ICommand
         Window = TimeSpan.FromSeconds(10)
     };
 
+    private List<int> playerNumbers;
+    private List<int> casinoNumbers;
+    private decimal HOUSE_EDGE = (decimal)0.98;
     private const string PlayerNumberDisplay = "⬜";
     private const string CasinoNumberDisplay = "🔶";
     private const string MatchRevealDisplay = "💠";
     private const string BlankSpaceDisplay = "⬛";
-
+    
     private SentMessageTrackerModel? _kenoTable;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
@@ -97,8 +100,8 @@ public class KenoCommand : ICommand
             {0.0, 0.0, 0.0, 0.0, 4.04, 11.11, 56.56, 505.05, 808.08, 1000.0, 0.0}, // 9 selections
             {0.0, 0.0, 0.0, 0.0, 3.53, 8.08, 13.13, 63.63, 505.05, 808.08, 1000.0} // 10 selections
         };
-        var playerNumbers = GenerateKenoNumbers(numbers, gambler);
-        var casinoNumbers = GenerateKenoNumbers(10, gambler);
+        playerNumbers = GenerateKenoNumbers(numbers, gambler);
+        casinoNumbers = GenerateKenoNumbers(10, gambler, true);
         var matches = playerNumbers.Intersect(casinoNumbers).ToList();
         var payoutMulti = payoutMultipliers[numbers - 1, matches.Count];
         
@@ -202,7 +205,7 @@ public class KenoCommand : ICommand
         }
     }
 
-    private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler)
+    private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler, bool kasino = false)
     {
         var numbers = new List<int>();
         for (var i = 0; i < size; i++)
@@ -212,6 +215,8 @@ public class KenoCommand : ICommand
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 40);
                 if (numbers.Contains(randomNum)) continue;
+                if (kasino && Money.GetRandomDouble(gambler) > (double)HOUSE_EDGE &&
+                    playerNumbers.Contains(randomNum)) continue; //rigging function
                 numbers.Add(randomNum);
                 repeatNum = false;
             }
