@@ -124,7 +124,7 @@ public class Planes : ICommand
          */
         do
         {
-            var counter = (fullCounter - 3) % 20;
+            var counter = (fullCounter - 3) % 24;
             
             await Task.Delay(TimeSpan.FromMilliseconds(frameLength / 3), ctx);
 
