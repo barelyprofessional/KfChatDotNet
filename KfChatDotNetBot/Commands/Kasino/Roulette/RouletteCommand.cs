@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Headers;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -8,6 +9,14 @@ using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using NLog;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using StackExchange.Redis;
 
 namespace KfChatDotNetBot.Commands.Kasino.Roulette;
 
@@ -15,8 +24,6 @@ namespace KfChatDotNetBot.Commands.Kasino.Roulette;
 [WagerCommand]
 public class RouletteCommand : ICommand
 {
-    private static RouletteRound? _activeRound = null;
-    private static readonly object _roundLock = new object();
     private static int _nextRoundId = 1;
     
     public List<Regex> Patterns => [
@@ -36,6 +43,8 @@ public class RouletteCommand : ICommand
         Flags = RateLimitFlags.NoAutoDeleteCooldownResponse
     };
 
+    private IDatabase? _redisDb;
+
     private ApplicationDbContext _dbContext = new();
 
     // European Roulette wheel configuration
@@ -51,7 +60,8 @@ public class RouletteCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay,
             BuiltIn.Keys.KasinoRouletteEnabled,
-            BuiltIn.Keys.KasinoRouletteCountdownDuration
+            BuiltIn.Keys.KasinoRouletteCountdownDuration,
+            BuiltIn.Keys.BotRedisConnectionString
         ]);
         
         // Check if roulette is enabled
@@ -66,6 +76,16 @@ public class RouletteCommand : ICommand
             return;
         }
         
+        if (string.IsNullOrEmpty(settings[BuiltIn.Keys.BotRedisConnectionString].Value))
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, roulette is not available at this time", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(15));
+            return;
+        }
+
+        var redis = await ConnectionMultiplexer.ConnectAsync(settings[BuiltIn.Keys.BotRedisConnectionString].Value!);
+        _redisDb = redis.GetDatabase();
+        
         var countdownDuration = TimeSpan.FromSeconds(
             settings[BuiltIn.Keys.KasinoRouletteCountdownDuration].ToType<int>());
         
@@ -78,7 +98,8 @@ public class RouletteCommand : ICommand
                 await HandleRefund(botInstance, user, ctx);
                 return;
             }
-            else if (action == "cancel")
+
+            if (action == "cancel")
             {
                 // Check if user has admin rights
                 if (user.UserRight < UserRight.TrueAndHonest)
@@ -138,24 +159,22 @@ public class RouletteCommand : ICommand
 
         int roundId;
         bool isFirstBet = false;
+        var activeRound = await GetRound();
         
-        lock (_roundLock)
+        // Check if there's an active round
+        if (activeRound == null)
         {
-            // Check if there's an active round
-            if (_activeRound == null)
+            // Start a new round
+            isFirstBet = true;
+            activeRound = new RouletteRound
             {
-                // Start a new round
-                isFirstBet = true;
-                _activeRound = new RouletteRound
-                {
-                    RoundId = _nextRoundId++,
-                    StartTime = DateTimeOffset.UtcNow,
-                    Bets = new List<RouletteBetInfo>(),
-                    CancellationTokenSource = new CancellationTokenSource()
-                };
-            }
-            roundId = _activeRound.RoundId;
+                RoundId = _nextRoundId++,
+                StartTime = DateTimeOffset.UtcNow,
+                Bets = []
+            };
+            await SaveRound(activeRound);
         }
+        roundId = activeRound.RoundId;
 
         // Create incomplete wager
         var gameMeta = new RouletteWagerMetaModel
@@ -189,32 +208,31 @@ public class RouletteCommand : ICommand
         }
 
         // Add bet to active round
-        lock (_roundLock)
+        if (activeRound.RoundId == roundId)
         {
-            if (_activeRound?.RoundId == roundId)
+            activeRound.Bets.Add(new RouletteBetInfo
             {
-                _activeRound.Bets.Add(new RouletteBetInfo
-                {
-                    WagerId = newWager.Id,
-                    GamblerId = gambler.Id,
-                    Username = user.KfUsername,
-                    Amount = wager,
-                    BetType = betInfo.Value.BetType,
-                    BetValue = betInfo.Value.BetValue
-                });
-            }
+                WagerId = newWager.Id,
+                GamblerId = gambler.Id,
+                Username = user.KfUsername,
+                Amount = wager,
+                BetType = betInfo.Value.BetType,
+                BetValue = betInfo.Value.BetValue
+            });
         }
+
+        await SaveRound(activeRound);
 
         logger.Info($"User {user.KfUsername} placed roulette bet: {wager} on {betInfo.Value.BetType} {betInfo.Value.BetValue}");
         
         // If this is the first bet, start the countdown
         if (isFirstBet)
         {
-            _ = Task.Run(async () => await RunCountdown(botInstance, countdownDuration, _activeRound.CancellationTokenSource.Token));
+            _ = Task.Run(async () => await RunCountdown(botInstance, countdownDuration), CancellationToken.None);
         }
     }
 
-    private async Task RunCountdown(ChatBot botInstance, TimeSpan countdownDuration, CancellationToken ctx)
+    private async Task RunCountdown(ChatBot botInstance, TimeSpan countdownDuration)
     {
         var logger = LogManager.GetCurrentClassLogger();
         
@@ -223,27 +241,23 @@ public class RouletteCommand : ICommand
             var endTime = DateTimeOffset.UtcNow.Add(countdownDuration);
             
             // Send initial countdown message
-            var initialMessage = FormatCountdownMessage(endTime);
+            var initialMessage = await FormatCountdownMessage(endTime);
             var countdownMessage = await botInstance.SendChatMessageAsync(initialMessage, true);
+            var activeRound = await GetRound();
             
-            lock (_roundLock)
+            if (activeRound != null)
             {
-                if (_activeRound != null)
-                {
-                    _activeRound.CountdownMessageId = countdownMessage.ChatMessageId;
-                }
+                activeRound.CountdownMessageId = countdownMessage.ChatMessageId;
+                await SaveRound(activeRound);
             }
 
             // Wait until message is fully sent
             logger.Debug("Waiting for countdown message to be sent...");
-            while (countdownMessage.Status != SentMessageTrackerStatus.ResponseReceived && !ctx.IsCancellationRequested)
-            {
-                await Task.Delay(100, ctx);
-            }
+            var success = await botInstance.WaitForChatMessageAsync(countdownMessage, TimeSpan.FromSeconds(30));
 
-            if (!countdownMessage.ChatMessageId.HasValue)
+            if (!success)
             {
-                logger.Error("Countdown message was sent but no ChatMessageId was assigned");
+                logger.Error("Ran out of patience for this shitty chat");
                 return;
             }
 
@@ -251,18 +265,18 @@ public class RouletteCommand : ICommand
 
             // Update countdown every second for real-time display
             var lastUpdate = DateTimeOffset.UtcNow;
-            while (DateTimeOffset.UtcNow < endTime && !ctx.IsCancellationRequested)
+            while (DateTimeOffset.UtcNow < endTime)
             {
                 var remaining = endTime - DateTimeOffset.UtcNow;
                 if (remaining.TotalSeconds <= 0) break;
                 
                 // Wait 1 second between updates
-                await Task.Delay(TimeSpan.FromSeconds(1), ctx);
+                await Task.Delay(TimeSpan.FromSeconds(1));
                 
                 try
                 {
-                    var updatedMessage = FormatCountdownMessage(endTime);
-                    await botInstance.KfClient.EditMessageAsync(countdownMessage.ChatMessageId.Value, updatedMessage);
+                    var updatedMessage = await FormatCountdownMessage(endTime);
+                    await botInstance.KfClient.EditMessageAsync(countdownMessage.ChatMessageId!.Value, updatedMessage);
                     
                     var timeSinceLastUpdate = DateTimeOffset.UtcNow - lastUpdate;
                     logger.Debug($"Countdown updated (elapsed: {timeSinceLastUpdate.TotalSeconds:F1}s, remaining: {remaining.TotalSeconds:F0}s)");
@@ -272,18 +286,18 @@ public class RouletteCommand : ICommand
                 {
                     logger.Error(ex, "Error updating countdown message, will retry on next interval");
                 }
-            }
 
-            if (ctx.IsCancellationRequested)
-            {
-                logger.Info("Countdown was cancelled before completion");
-                return;
+                var isCanceled = await CountdownCanceled();
+                if (!isCanceled) continue;
+                // Reset flag
+                await SetCountdownState(false);
+                throw new TaskCanceledException();
             }
 
             logger.Info("Countdown complete, spinning wheel...");
 
             // Countdown complete, spin the wheel
-            await SpinWheel(botInstance, ctx);
+            await SpinWheel(botInstance);
         }
         catch (TaskCanceledException)
         {
@@ -295,7 +309,7 @@ public class RouletteCommand : ICommand
         }
     }
 
-    private string FormatCountdownMessage(DateTimeOffset endTime)
+    private async Task<string> FormatCountdownMessage(DateTimeOffset endTime)
     {
         var remaining = endTime - DateTimeOffset.UtcNow;
         if (remaining.TotalSeconds < 0) remaining = TimeSpan.Zero;
@@ -305,33 +319,29 @@ public class RouletteCommand : ICommand
 
         var message = $"🎰 [B]ROULETTE ROUND STARTING[/B] 🎰[br]" +
                       $"⏱️ Time remaining: [B]{minutes:00}:{seconds:00}[/B][br][br]";
+        var activeRound = await GetRound();
 
-        lock (_roundLock)
+        if (activeRound != null && activeRound.Bets.Count > 0)
         {
-            if (_activeRound != null && _activeRound.Bets.Count > 0)
-            {
-                message += "[B]Current Bets:[/B][br]";
-                
-                // Group bets by user
-                var betsByUser = _activeRound.Bets
-                    .GroupBy(b => b.Username)
-                    .OrderBy(g => g.Key);
+            message += "[B]Current Bets:[/B][br]";
+            
+            // Group bets by user
+            var betsByUser = activeRound.Bets
+                .GroupBy(b => b.Username)
+                .OrderBy(g => g.Key);
 
-                foreach (var userGroup in betsByUser)
-                {
-                    message += $"[B]{userGroup.Key}:[/B] ";
-                    var userBets = userGroup.Select(b => $"{b.Amount:F2} on {FormatBetDisplay(b.BetType, b.BetValue)}");
-                    message += string.Join(", ", userBets) + "[br]";
-                }
-                
-                message += $"[br][B]Total bets:[/B] {_activeRound.Bets.Count}";
-            }
-            else
+            foreach (var userGroup in betsByUser)
             {
-                message += "[I]No bets placed yet. Use !roulette <amount> <bet> to join![/I]";
+                message += $"[B]{userGroup.Key}:[/B] ";
+                var userBets = userGroup.Select(b => $"{b.Amount:F2} on {FormatBetDisplay(b.BetType, b.BetValue)}");
+                message += string.Join(", ", userBets) + "[br]";
             }
+            
+            message += $"[br][B]Total bets:[/B] {activeRound.Bets.Count}";
+            return message;
         }
 
+        message += "[I]No bets placed yet. Use !roulette <amount> <bet> to join![/I]";
         return message;
     }
 
@@ -341,16 +351,12 @@ public class RouletteCommand : ICommand
         return betValue;
     }
 
-    private async Task SpinWheel(ChatBot botInstance, CancellationToken ctx)
+    private async Task SpinWheel(ChatBot botInstance)
     {
         var logger = LogManager.GetCurrentClassLogger();
-        RouletteRound? round;
-        
-        lock (_roundLock)
-        {
-            round = _activeRound;
-            _activeRound = null; // Clear active round
-        }
+        RouletteRound? round = await GetRound();
+        // Delete round persistent data
+        await DeleteRound();
 
         if (round == null || round.Bets.Count == 0)
         {
@@ -362,7 +368,7 @@ public class RouletteCommand : ICommand
         {
             // Generate winning number using first gambler's seed
             var firstGambler = await _dbContext.Gamblers
-                .FirstOrDefaultAsync(g => g.Id == round.Bets[0].GamblerId, cancellationToken: ctx);
+                .FirstOrDefaultAsync(g => g.Id == round.Bets[0].GamblerId);
             
             if (firstGambler == null)
             {
@@ -383,8 +389,7 @@ public class RouletteCommand : ICommand
             var animationUrl = await Zipline.Upload(
                 animationStream, 
                 new MediaTypeHeaderValue("image/webp"), 
-                expiration: "1h", 
-                ct: ctx);
+                expiration: "1h");
 
             if (string.IsNullOrEmpty(animationUrl))
             {
@@ -409,21 +414,21 @@ public class RouletteCommand : ICommand
 
             // Wait for animation duration before revealing results
             logger.Info($"Waiting {animationDuration} seconds for animation to complete");
-            await Task.Delay(TimeSpan.FromSeconds(animationDuration), ctx);
+            await Task.Delay(TimeSpan.FromSeconds(animationDuration));
 
             // Process all bets and show results
-            await ProcessBets(botInstance, round, winningNumber, ctx);
+            await ProcessBets(botInstance, round, winningNumber);
         }
         catch (Exception ex)
         {
             logger.Error(ex, $"Error spinning roulette wheel for round {round.RoundId}");
             
             // Cancel the round and refund all bets
-            await CancelRoundDueToError(botInstance, round, ex.Message, ctx);
+            await CancelRoundDueToError(botInstance, round, ex.Message);
         }
     }
 
-    private async Task CancelRoundDueToError(ChatBot botInstance, RouletteRound round, string errorMessage, CancellationToken ctx)
+    private async Task CancelRoundDueToError(ChatBot botInstance, RouletteRound round, string errorMessage)
     {
         var logger = LogManager.GetCurrentClassLogger();
         logger.Error($"Cancelling roulette round {round.RoundId} due to error: {errorMessage}");
@@ -436,20 +441,20 @@ public class RouletteCommand : ICommand
             {
                 var wager = await _dbContext.Wagers
                     .Include(w => w.Gambler)
-                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId, cancellationToken: ctx);
+                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId);
 
                 if (wager != null)
                 {
                     wager.IsComplete = true;
                     wager.WagerEffect = 0;
                     wager.Multiplier = 1;
+                    await _dbContext.SaveChangesAsync();
 
                     await Money.ModifyBalanceAsync(
                         wager.Gambler.Id,
                         wager.WagerAmount,
                         TransactionSourceEventType.Gambling,
-                        $"Roulette round {round.RoundId} cancelled due to error, wager {wager.Id} refunded",
-                        ct: ctx);
+                        $"Roulette round {round.RoundId} cancelled due to error, wager {wager.Id} refunded");
 
                     totalRefunded += wager.WagerAmount;
                 }
@@ -460,7 +465,6 @@ public class RouletteCommand : ICommand
             }
         }
 
-        await _dbContext.SaveChangesAsync(ctx);
 
         var cancelMessage = $"🎰 [B]ROULETTE ROUND ERROR[/B] 🎰[br]" +
                            $"Round {round.RoundId} has been cancelled due to a technical error.[br]" +
@@ -479,7 +483,7 @@ public class RouletteCommand : ICommand
         }
     }
 
-    private async Task ProcessBets(ChatBot botInstance, RouletteRound round, int winningNumber, CancellationToken ctx)
+    private async Task ProcessBets(ChatBot botInstance, RouletteRound round, int winningNumber)
     {
         var logger = LogManager.GetCurrentClassLogger();
         var colors = await SettingsProvider.GetMultipleValuesAsync([
@@ -498,7 +502,7 @@ public class RouletteCommand : ICommand
             {
                 var wager = await _dbContext.Wagers
                     .Include(w => w.Gambler)
-                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId, cancellationToken: ctx);
+                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId);
 
                 if (wager == null)
                 {
@@ -515,7 +519,7 @@ public class RouletteCommand : ICommand
                 wager.WagerEffect = effect;
                 wager.Multiplier = payout / bet.Amount;
 
-                await _dbContext.SaveChangesAsync(ctx);
+                await _dbContext.SaveChangesAsync();
 
                 // Update balance
                 var balanceAdjustment = payout;
@@ -523,8 +527,7 @@ public class RouletteCommand : ICommand
                     wager.Gambler.Id, 
                     balanceAdjustment, 
                     TransactionSourceEventType.Gambling,
-                    $"Roulette outcome from wager {wager.Id}",
-                    ct: ctx);
+                    $"Roulette outcome from wager {wager.Id}");
 
                 // Track results by user
                 if (!winnersByUser.ContainsKey(bet.Username))
@@ -575,15 +578,13 @@ public class RouletteCommand : ICommand
 
     private async Task HandleRefund(ChatBot botInstance, UserDbModel user, CancellationToken ctx)
     {
-        lock (_roundLock)
+        var activeRound = await GetRound();
+        if (activeRound == null)
         {
-            if (_activeRound == null)
-            {
-                _ = botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, there's no active roulette round.",
-                    true, autoDeleteAfter: TimeSpan.FromSeconds(10));
-                return;
-            }
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, there's no active roulette round.",
+                true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+            return;
         }
 
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -615,6 +616,7 @@ public class RouletteCommand : ICommand
             wager.WagerEffect = 0; // No loss
             wager.Multiplier = 1; // Break even
             totalRefund += wager.WagerAmount;
+            await _dbContext.SaveChangesAsync(ctx);
 
             // Refund the wager amount
             await Money.ModifyBalanceAsync(
@@ -625,16 +627,10 @@ public class RouletteCommand : ICommand
                 ct: ctx);
         }
 
-        await _dbContext.SaveChangesAsync(ctx);
 
         // Remove bets from active round
-        lock (_roundLock)
-        {
-            if (_activeRound != null)
-            {
-                _activeRound.Bets.RemoveAll(b => b.GamblerId == gambler.Id);
-            }
-        }
+        activeRound.Bets.RemoveAll(b => b.GamblerId == gambler.Id);
+        await SaveRound(activeRound);
 
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, refunded {userWagers.Count} bet(s) totaling {await totalRefund.FormatKasinoCurrencyAsync()}",
@@ -643,13 +639,7 @@ public class RouletteCommand : ICommand
 
     private async Task HandleCancel(ChatBot botInstance, UserDbModel user, CancellationToken ctx)
     {
-        RouletteRound? round;
-        
-        lock (_roundLock)
-        {
-            round = _activeRound;
-            _activeRound = null;
-        }
+        var round = await GetRound();
 
         if (round == null)
         {
@@ -658,9 +648,11 @@ public class RouletteCommand : ICommand
                 true, autoDeleteAfter: TimeSpan.FromSeconds(10));
             return;
         }
+        await DeleteRound();
+
 
         // Cancel countdown
-        round.CancellationTokenSource?.Cancel();
+        await SetCountdownState(true);
 
         // Refund all bets
         decimal totalRefunded = 0;
@@ -677,6 +669,7 @@ public class RouletteCommand : ICommand
                     wager.IsComplete = true;
                     wager.WagerEffect = 0;
                     wager.Multiplier = 1;
+                    await _dbContext.SaveChangesAsync(ctx);
 
                     await Money.ModifyBalanceAsync(
                         wager.Gambler.Id,
@@ -694,7 +687,6 @@ public class RouletteCommand : ICommand
             }
         }
 
-        await _dbContext.SaveChangesAsync(ctx);
 
         var cancelMessage = $"🎰 [B]ROULETTE ROUND CANCELLED[/B] 🎰[br]" +
                            $"Cancelled by {user.FormatUsername()}[br]" +
@@ -837,13 +829,46 @@ public class RouletteCommand : ICommand
         return RedNumbers.Contains(number) ? "RED" : "BLACK";
     }
 
+    private async Task<RouletteRound?> GetRound()
+    {
+        if (_redisDb == null) throw new InvalidOperationException("Redis service isn't initialized");
+        var json = await _redisDb.StringGetAsync("Roulette.State");
+        if (string.IsNullOrEmpty(json)) return null;
+        var data = JsonSerializer.Deserialize<RouletteRound>(json.ToString());
+        return data;
+    }
+
+    private async Task DeleteRound()
+    {
+        if (_redisDb == null) throw new InvalidOperationException("Redis service isn't initialized");
+        await _redisDb.KeyDeleteAsync("Roulette.State");
+    }
+
+    private async Task SaveRound(RouletteRound data)
+    {
+        if (_redisDb == null) throw new InvalidOperationException("Redis service isn't initialized");
+        var json = JsonSerializer.Serialize(data);
+        await _redisDb.StringSetAsync("Roulette.State", json, null, When.Always);
+    }
+
+    private async Task<bool> CountdownCanceled()
+    {
+        if (_redisDb == null) throw new InvalidOperationException("Redis service isn't initialized");
+        return await _redisDb.StringGetBitAsync("Roulette.Cancel", 0);
+    }
+
+    private async Task SetCountdownState(bool canceled)
+    {
+        if (_redisDb == null) throw new InvalidOperationException("Redis service isn't initialized");
+        await _redisDb.StringSetBitAsync("Roulette.Cancel", 0, canceled);
+    }
+
     private class RouletteRound
     {
         public required int RoundId { get; init; }
         public required DateTimeOffset StartTime { get; init; }
         public int? CountdownMessageId { get; set; }
         public required List<RouletteBetInfo> Bets { get; init; }
-        public CancellationTokenSource? CancellationTokenSource { get; init; }
     }
 
     private class RouletteBetInfo
@@ -862,4 +887,132 @@ public class RouletteWagerMetaModel
     public int RoundId { get; set; }
     public string BetType { get; set; } = "";
     public string BetValue { get; set; } = "";
+}
+
+public static class RouletteAnimationGenerator
+{
+    // European Wheel Sequence
+    private static readonly int[] WheelNumbers = {
+        0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
+    };
+
+    /// <summary>
+    /// Generates an animated roulette wheel that lands on the specified winning number
+    /// </summary>
+    /// <param name="winningNumber">The number (0-36) that the ball should land on</param>
+    /// <returns>A tuple containing the animation duration in seconds and the WebP animation bytes</returns>
+    public static (int durationSeconds, byte[] animationBytes) GenerateAnimation(int winningNumber)
+    {
+        if (winningNumber < 0 || winningNumber > 36)
+        {
+            throw new ArgumentOutOfRangeException(nameof(winningNumber), "Winning number must be between 0 and 36");
+        }
+
+        using var board = DrawWheelBase();
+        int fps = 20;
+        int duration = Random.Shared.Next(6, 9);
+        int totalFrames = fps * duration;
+        using var animation = new Image<Rgba32>(500, 500);
+
+        // Find the index of the winning number in the wheel sequence
+        int winningIndex = Array.IndexOf(WheelNumbers, winningNumber);
+        if (winningIndex == -1)
+        {
+            throw new InvalidOperationException($"Winning number {winningNumber} not found in wheel sequence");
+        }
+
+        // Set the "Journey"
+        float endWheelRotation = 720f + Random.Shared.Next(0, 360);
+        float sliceAngle = 360f / 37f;
+        
+        // The pocket index 'i' is located at (i * sliceAngle) degrees relative to wheel zero.
+        // Our '0' pocket was drawn at -90 degrees.
+        float pocketOffsetOnWheel = (winningIndex * sliceAngle) - 90;
+        
+        // This is where the ball MUST be at the end of the video
+        float finalBallAngle = endWheelRotation + pocketOffsetOnWheel;
+
+        // Render frames
+        for (int i = 0; i < totalFrames; i++)
+        {
+            float progress = (float)i / totalFrames;
+            float ease = 1f - MathF.Pow(1f - progress, 3); // Smooth stop
+
+            // Wheel rotates Clockwise (Adding degrees)
+            float currentWheelAngle = endWheelRotation * ease;
+            
+            // Ball rotates Counter-Clockwise (Starting high and subtracting)
+            // We start with 5 extra laps (1800 degrees) and "go back" to the final angle
+            float startBallAngle = finalBallAngle + 1800f;
+            float currentBallAngle = startBallAngle - ((startBallAngle - finalBallAngle) * ease);
+
+            var frame = new Image<Rgba32>(500, 500);
+            frame.Mutate(ctx => {
+                // Draw Wheel
+                using var rotatedBoard = board.Clone(b => b.Rotate(currentWheelAngle));
+                int ox = 250 - (rotatedBoard.Width / 2);
+                int oy = 250 - (rotatedBoard.Height / 2);
+                ctx.DrawImage(rotatedBoard, new Point(ox, oy), 1f);
+
+                // Ball Radius (Physics)
+                float dropT = MathF.Max(0, (progress - 0.7f) / 0.3f);
+                float radius = 230 - (45 * MathF.Pow(dropT, 2));
+                
+                float rads = currentBallAngle * MathF.PI / 180;
+                float bx = 250 + (radius * MathF.Cos(rads));
+                float by = 250 + (radius * MathF.Sin(rads));
+                
+                ctx.Fill(Color.White, new EllipsePolygon(bx, by, 14));
+            });
+
+            frame.Frames.RootFrame.Metadata.GetWebpMetadata().FrameDelay = (uint)(1000 / fps);
+            animation.Frames.AddFrame(frame.Frames.RootFrame);
+            frame.Dispose();
+        }
+
+        animation.Frames.RemoveFrame(0);
+        using var ms = new MemoryStream();
+        animation.SaveAsWebp(ms, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = 50 });
+        
+        return (duration, ms.ToArray());
+    }
+
+    private static Image<Rgba32> DrawWheelBase()
+    {
+        var img = new Image<Rgba32>(500, 500);
+        float centerX = 250, centerY = 250, outerRadius = 245, innerRadius = 170, step = 360f / 37f;
+        
+        img.Mutate(ctx => {
+            for (int i = 0; i < 37; i++) {
+                float startAngle = i * step - (step / 2) - 90;
+                var color = WheelNumbers[i] == 0 ? Color.Green : (i % 2 == 0 ? Color.DarkRed : Color.Black);
+                var path = new PathBuilder().AddArc(centerX, centerY, outerRadius, outerRadius, 0, startAngle, step)
+                    .AddArc(centerX, centerY, innerRadius, innerRadius, 0, startAngle + step, -step).Build();
+                ctx.Fill(color, path);
+                ctx.Draw(Color.Gold, 1, path);
+                
+                string text = WheelNumbers[i].ToString();
+                float textAngle = (startAngle + (step / 2)) * MathF.PI / 180;
+                float tx = centerX + ((outerRadius + innerRadius) / 2) * MathF.Cos(textAngle);
+                float ty = centerY + ((outerRadius + innerRadius) / 2) * MathF.Sin(textAngle);
+                
+                try {
+                    var font = SystemFonts.CreateFont("Arial", 14, FontStyle.Bold);
+                    ctx.DrawText(
+                        new DrawingOptions { 
+                            Transform = Matrix3x2Extensions.CreateRotationDegrees(startAngle + (step / 2) + 90, new PointF(tx, ty)) 
+                        }, 
+                        text, 
+                        font, 
+                        Color.White, 
+                        new PointF(tx - 6, ty - 9));
+                } catch { 
+                    // Font loading failed, skip text rendering
+                }
+            }
+            ctx.Fill(Color.DarkSlateGray, new EllipsePolygon(centerX, centerY, innerRadius - 5));
+        });
+        
+        return img;
+    }
 }
