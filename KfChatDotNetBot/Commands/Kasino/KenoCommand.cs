@@ -14,6 +14,8 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class KenoCommand : ICommand
 {
     public List<Regex> Patterns => [
+        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^keno (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^keno (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^keno (?<amount>\d+)$", RegexOptions.IgnoreCase),
@@ -29,11 +31,14 @@ public class KenoCommand : ICommand
         Window = TimeSpan.FromSeconds(10)
     };
 
+    private List<int> playerNumbers;
+    private List<int> casinoNumbers;
+    private decimal HOUSE_EDGE = (decimal)0.98;
     private const string PlayerNumberDisplay = "⬜";
     private const string CasinoNumberDisplay = "🔶";
     private const string MatchRevealDisplay = "💠";
     private const string BlankSpaceDisplay = "⬛";
-
+    
     private SentMessageTrackerModel? _kenoTable;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
@@ -43,20 +48,21 @@ public class KenoCommand : ICommand
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoKenoCleanupDelay,
             BuiltIn.Keys.KasinoKenoFrameDelay, BuiltIn.Keys.KasinoKenoEnabled
         ]);
-        
+
         // Check if keno is enabled
         var kenoEnabled = (settings[BuiltIn.Keys.KasinoKenoEnabled]).ToBoolean();
         if (!kenoEnabled)
         {
-            var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
+            var gameDisabledCleanupDelay =
+                TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, keno is currently disabled.", 
+                $"{user.FormatUsername()}, keno is currently disabled.",
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
-        
+
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoKenoCleanupDelay].ToType<int>());
-        
+
         if (!arguments.TryGetValue("amount", out var amount)) //if user just enters !keno
         {
             await botInstance.SendChatMessageAsync(
@@ -64,8 +70,20 @@ public class KenoCommand : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
+
+        string difficultyString;
+        if (!arguments.TryGetValue("difficulty", out var difficultyArg))
+        {
+            difficultyString = "high";
+        }
+        else
+        {
+            difficultyString = difficultyArg.Value;
+        }
         var wager = Convert.ToDecimal(amount.Value);
-        var numbers = !arguments.TryGetValue("numbers", out var userNumbers) ? 10 : Convert.ToInt32(userNumbers.Value); //if user just enters !keno <wager>
+        var numbers = !arguments.TryGetValue("numbers", out var userNumbers)
+            ? 10
+            : Convert.ToInt32(userNumbers.Value); //if user just enters !keno <wager>
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
@@ -76,31 +94,81 @@ public class KenoCommand : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
-        
+
         if (numbers is < 1 or > 10) //if user picks invalid numbers
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can only pick numbers from 1 - 10",
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
-        
-        var payoutMultipliers = new[,]//stole the payout multis from stake keno and re added the RTP, except for the 1000x
-        {
-            {0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},               // 1 selection
-            {0.0, 0.0, 17.27, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},             // 2 selections
-            {0.0, 0.0, 0.0, 82.32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},             // 3 selections
-            {0.0, 0.0, 0.0, 10.1, 261.61, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},           // 4 selections
-            {0.0, 0.0, 0.0, 4.5, 48.48, 454.54, 0.0, 0.0, 0.0, 0.0, 0.0},          // 5 selections
-            {0.0, 0.0, 0.0, 0.0, 11.11, 353.53, 717.17, 0.0, 0.0, 0.0, 0.0},       // 6 selections
-            {0.0, 0.0, 0.0, 0.0, 7.07, 90.90, 404.04, 808.08, 0.0, 0.0, 0.0},      // 7 selections
-            {0.0, 0.0, 0.0, 0.0, 5.05, 20.20, 272.72, 606.06, 909.09, 0.0, 0.0},   // 8 selections
-            {0.0, 0.0, 0.0, 0.0, 4.04, 11.11, 56.56, 505.05, 808.08, 1000.0, 0.0}, // 9 selections
-            {0.0, 0.0, 0.0, 0.0, 3.53, 8.08, 13.13, 63.63, 505.05, 808.08, 1000.0} // 10 selections
+
+        var payoutMultipliersHigh =
+            new[,] //stole the payout multis from stake keno and re added the RTP, except for the 1000x
+            {
+                { 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 1 selection
+                { 0.0, 0.0, 17.27, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 2 selections
+                { 0.0, 0.0, 0.0, 82.32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 3 selections
+                { 0.0, 0.0, 0.0, 10.1, 261.61, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 4 selections
+                { 0.0, 0.0, 0.0, 4.5, 48.48, 454.54, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 5 selections
+                { 0.0, 0.0, 0.0, 0.0, 11.11, 353.53, 717.17, 0.0, 0.0, 0.0, 0.0 }, // 6 selections
+                { 0.0, 0.0, 0.0, 0.0, 7.07, 90.90, 404.04, 808.08, 0.0, 0.0, 0.0 }, // 7 selections
+                { 0.0, 0.0, 0.0, 0.0, 5.05, 20.20, 272.72, 606.06, 909.09, 0.0, 0.0 }, // 8 selections
+                { 0.0, 0.0, 0.0, 0.0, 4.04, 11.11, 56.56, 505.05, 808.08, 1000.0, 0.0 }, // 9 selections
+                { 0.0, 0.0, 0.0, 0.0, 3.53, 8.08, 13.13, 63.63, 505.05, 808.08, 1000.0 } // 10 selections
+            };
+        var payoutMultipliersClassic =
+            new[,] //stole the payout multis from stake keno and re added the RTP, except for the 1000x
+            {
+                { 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 1 selection
+                { 0.0, 1.93, 4.59, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 2 selections
+                { 0.0, 1.02, 3.16, 10.6, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 3 selections
+                { 0.0, 0.81, 1.83, 10.1, 5.1, 22.96, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 4 selections
+                { 0.0, 0.26, 1.42, 4.18, 16.83, 36.73, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 5 selections
+                { 0.0, 0.0, 1.02, 3.75, 7.14, 16.83, 40.81, 0.0, 0.0, 0.0, 0.0 }, // 6 selections
+                { 0.0, 0.0, 0.46, 3.06, 4.59, 14.28, 31.63, 61.22, 0.0, 0.0, 0.0 }, // 7 selections
+                { 0.0, 0.0, 0.0, 2.24, 4.08, 13.26, 22.44, 56.12, 71.42, 0.0, 0.0 }, // 8 selections
+                { 0.0, 0.0, 0.0, 1.58, 3.06, 8.16, 15.30, 44.89, 61.22, 86.73, 0.0 }, // 9 selections
+                { 0.0, 0.0, 0.0, 1.42, 2.29, 4.59, 8.16, 17.34, 51.02, 81.63, 102.04 } // 10 selections
+            };
+        var payoutMultipliersLow =
+            new[,] //stole the payout multis from stake keno and re added the RTP, except for the 1000x
+            {
+                { 0.7, 1.85, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 1 selection
+                { 0.0, 2.04, 3.87, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 2 selections
+                { 0.0, 1.12, 1.4, 26.53, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 3 selections
+                { 0.0, 0.0, 2.24, 8.06, 91.83, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 4 selections
+                { 0.0, 0.0, 1.53, 4.28, 13.26, 306.12, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 5 selections
+                { 0.0, 0.0, 1.12, 2.04, 6.32, 102.04, 714.28, 0.0, 0.0, 0.0, 0.0 }, // 6 selections
+                { 0.0, 0.0, 1.12, 1.63, 3.57, 15.3, 229.59, 714.28, 0.0, 0.0, 0.0 }, // 7 selections
+                { 0.0, 0.0, 1.12, 1.53, 2.04, 5.61, 39.79, 102.04, 816.32, 0.0, 0.0 }, // 8 selections
+                { 0.0, 0.0, 1.12, 1.32, 1.73, 2.55, 7.65, 51.02, 255.1, 1000.0, 0.0 }, // 9 selections
+                { 0.0, 0.0, 1.12, 1.22, 1.32, 1.83, 3.57, 13.26, 51.02, 255.1, 1000.0 } // 10 selections
+            };
+        var payoutMultipliersMedium =
+            new[,] //stole the payout multis from stake keno and re added the RTP, except for the 1000x
+            {
+                { 0.4, 2.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 1 selection
+                { 0.0, 1.83, 5.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 2 selections
+                { 0.0, 0.0, 2.85, 51.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 3 selections
+                { 0.0, 0.0, 1.73, 10.2, 102.04, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 4 selections
+                { 0.0, 0.0, 1.42, 4.08, 14.28, 397.95, 0.0, 0.0, 0.0, 0.0, 0.0 }, // 5 selections
+                { 0.0, 0.0, 0.0, 3.06, 9.18, 183.67, 724.48, 0.0, 0.0, 0.0, 0.0 }, // 6 selections
+                { 0.0, 0.0, 0.0, 2.04, 7.14, 30.61, 408.16, 816.32, 0.0, 0.0, 0.0 }, // 7 selections
+                { 0.0, 0.0, 0.0, 2.04, 4.08, 11.22, 68.36, 408.16, 918.36, 0.0, 0.0 }, // 8 selections
+                { 0.0, 0.0, 0.0, 2.04, 2.55, 11.11, 56.56, 505.05, 808.08, 1000.0, 0.0 }, // 9 selections
+                { 0.0, 0.0, 0.0, 0.0, 3.53, 5.1, 15.3, 63.63, 102.04, 510.2, 1000.0 } // 10 selections
+            };
+        Dictionary<string, double[,]> payoutMultipliers = new Dictionary<string, double[,]>{
+            { "high", payoutMultipliersHigh },
+            { "low", payoutMultipliersLow},
+            { "medium", payoutMultipliersMedium},
+            { "classic", payoutMultipliersClassic}
         };
-        var playerNumbers = GenerateKenoNumbers(numbers, gambler);
-        var casinoNumbers = GenerateKenoNumbers(10, gambler);
+
+    playerNumbers = GenerateKenoNumbers(numbers, gambler);
+        casinoNumbers = GenerateKenoNumbers(10, gambler, true);
         var matches = playerNumbers.Intersect(casinoNumbers).ToList();
-        var payoutMulti = payoutMultipliers[numbers - 1, matches.Count];
+        var payoutMulti = payoutMultipliers[difficultyString][numbers - 1, matches.Count];
         
         await AnimatedDisplayTable(playerNumbers, casinoNumbers, matches, botInstance);
         var colors =
@@ -202,7 +270,7 @@ public class KenoCommand : ICommand
         }
     }
 
-    private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler)
+    private List<int> GenerateKenoNumbers(int size, GamblerDbModel gambler, bool kasino = false)
     {
         var numbers = new List<int>();
         for (var i = 0; i < size; i++)
@@ -212,6 +280,8 @@ public class KenoCommand : ICommand
             {
                 var randomNum = Money.GetRandomNumber(gambler, 1, 40);
                 if (numbers.Contains(randomNum)) continue;
+                if (kasino && Money.GetRandomDouble(gambler) > (double)HOUSE_EDGE &&
+                    playerNumbers.Contains(randomNum)) continue; //rigging function
                 numbers.Add(randomNum);
                 repeatNum = false;
             }

@@ -39,7 +39,8 @@ public class PlinkoCommand : ICommand
     private const string BIGWINSPACE = "💲";
     
     private const int DIFFICULTY = 8;//maybe plan to allow user to change difficulty of plinko in future updates, would need to change the payout logic though
-    private static readonly double VACUUM = 0.27;
+    private static double VACUUM = 0.25;
+    private decimal HOUSE_EDGE = (decimal)0.98;
     
     private static Dictionary<decimal, string> PAYOUTSTOSTRING = new Dictionary<decimal, string>()
     {
@@ -69,7 +70,7 @@ public class PlinkoCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        
+        VACUUM += 1 - (double)HOUSE_EDGE;
         validPositions = new List<(int row, int col)>() { (0, DIFFICULTY-1) };
         validColumnsForRow = new Dictionary<int, List<int>>(){{0, new List<int>(){DIFFICULTY-1}}};
         

@@ -414,7 +414,9 @@ public static class BuiltIn
         public static string KasinoGuessWhatNumberCleanupDelay = "Kasino.GuessWhatNumber.CleanupDelay";
         [BuiltInSetting("Delay in milliseconds before cleaning up the Keno board", SettingValueType.Text, "30000", WholeNumberRegex)]
         public static string KasinoKenoCleanupDelay = "Kasino.Keno.CleanupDelay";
-        [BuiltInSetting("Delay in milliseconds before cleaning up the Planes board and result", SettingValueType.Text, "60000", WholeNumberRegex)]
+        [BuiltInSetting("Delay in milliseconds before cleaning up the keno board and result", SettingValueType.Text, "60000", WholeNumberRegex)]
+        public static string KasinoMinesCleanupDelay = "Kasino.Mines.CleanupDelay";
+        [BuiltInSetting("Delay in milliseconds before cleaning up the mines command messages", SettingValueType.Text, "60000", WholeNumberRegex)]
         public static string KasinoPlanesCleanupDelay = "Kasino.Planes.CleanupDelay";
         [BuiltInSetting("Delay in milliseconds between each check to see whether tehre's messages to be deleted", SettingValueType.Text, "1000", WholeNumberRegex)]
         public static string BotScheduledDeletionInterval = "Bot.ScheduledDeletionInterval";
