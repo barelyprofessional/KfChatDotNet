@@ -79,7 +79,8 @@ public class TempExcludeCommand : ICommand
 public class KasinoGameToggleCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^admin kasino (?<game>\w+) (?<action>enable|disable)$", RegexOptions.IgnoreCase)
+        new Regex(@"^admin kasino (?<game>\w+) (?<action>enable|disable)$", RegexOptions.IgnoreCase),
+        new Regex("^kasino (?<action>open|close)$", RegexOptions.IgnoreCase)
     ];
     
     public string? HelpText => "Enable or disable a Kasino game (use 'all' to toggle all games)";
@@ -90,23 +91,33 @@ public class KasinoGameToggleCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        if (!arguments.TryGetValue("game", out var gameArg) || !arguments.TryGetValue("action", out var actionArg))
+        if (!arguments.TryGetValue("action", out var actionArg))
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, usage: !admin kasino <game|all> enable|disable", true);
             return;
         }
+
+        string gameName;
+
+        if (!arguments.TryGetValue("game", out var gameArg))
+        {
+            gameName = "all";
+        }
+        else
+        {
+            gameName = gameArg.Value;
+        }
         
-        var gameName = gameArg.Value;
         var action = actionArg.Value.ToLower();
-        var shouldEnable = action == "enable";
+        var shouldEnable = action is "enable" or "open";
         var status = shouldEnable ? "enabled" : "disabled";
         
         await using var db = new ApplicationDbContext();
         var gameSettingPattern = new Regex(@"^Kasino\.(?<game>\w+)\.Enabled$", RegexOptions.IgnoreCase);
-        
+
         var allGameSettings = await db.Settings
-            .Where(s => s.Key.StartsWith("Kasino.") && s.Key.EndsWith(".Enabled"))
+            .Where(s => s.Key.StartsWith("Kasino.") && s.Key.EndsWith(".Enabled") && !s.Key.Contains("DailyDollar"))
             .ToListAsync(ctx);
         
         // Handle "all" games
