@@ -82,6 +82,10 @@ public class SlotsCommand : ICommand
         
 
         var wager = Convert.ToDecimal(amount.Value);
+        if (wager <= 0.01){
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()} you must bet a minimum of $0.01 KKK", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            return;
+        }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
