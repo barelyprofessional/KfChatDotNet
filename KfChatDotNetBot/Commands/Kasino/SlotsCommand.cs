@@ -44,9 +44,11 @@ public class SlotsCommand : ICommand
         Window = TimeSpan.FromSeconds(15)
     };
 
+    private decimal HOUSE_EDGE = (decimal)0.98;
     public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user,
         GroupCollection arguments, CancellationToken ctx)
     {
+        
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoSlotsEnabled
         ]);
@@ -82,7 +84,7 @@ public class SlotsCommand : ICommand
         
 
         var wager = Convert.ToDecimal(amount.Value);
-        if (wager <= 0.01){
+        if (wager < (decimal)0.01){
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()} you must bet a minimum of $0.01 KKK", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             return;
         }
@@ -97,12 +99,24 @@ public class SlotsCommand : ICommand
             return;
         }
 
+        char rigged = '0';
+        int rigCheck = Money.GetRandomNumber(gambler, 0, 1, 1);
+        if (HOUSE_EDGE > 1)
+        {
+            if (HOUSE_EDGE - rigCheck > 1) rigged = 'W';
+        }
+        else
+        {
+            if (rigCheck - HOUSE_EDGE > 0) rigged = 'L';
+        }
+        
+        
         decimal winnings;
         double delayHSec = 0;
         using (var board = new KiwiSlotBoard(wager))
         {
             board.LoadAssets();
-            board.ExecuteGameLoop(spins);
+            board.ExecuteGameLoop(spins, rigged);
             using (var finalImageStream = board.ExportAndCleanup())
             {
                 if (finalImageStream == null)
@@ -172,6 +186,7 @@ public class SlotsCommand : ICommand
         public decimal RunningTotalDisplay = 0;
         private int _activeFeatureTier = 0, _currentFeatureSpin = 0;
         private bool _showGoldCircle = false;
+
 
         private readonly RandomShim<StandardRng> _rand = RandomShim.Create(StandardRng.Create());
         private static readonly List<char> ExpanderWild =
@@ -351,11 +366,12 @@ public class SlotsCommand : ICommand
                 AnimatedImage.Frames.RemoveFrame(0);
         }
 
-        public void ExecuteGameLoop(int spins, int featureSpins = 0)
+        public void ExecuteGameLoop(int spins, int featureSpins = 0, char rigged = '0')
         {
             for (int sp = 0; sp < spins; sp++)
             {
-                GeneratePreBoard(featureSpins);
+                
+                GeneratePreBoard(featureSpins, rigged);
                 var fCount = 0;
                 for (var i = 0; i < 5; i++) for (var j = 0; j < 5; j++) if (_preboard[i, j] == FEATURE) fCount++;
 
@@ -369,7 +385,7 @@ public class SlotsCommand : ICommand
                 ProcessReelsAndWins();
                 var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
                 if (total > 0 || featureSpins != 0 || spins > 1) AddPause(50);
-                if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s);
+                if (featureSpins == 0) for (var s = 1; s <= total; s++) ExecuteGameLoop(1,s, rigged);
             }
         }
 
@@ -430,10 +446,35 @@ public class SlotsCommand : ICommand
         {
             var fc = 0; HashSet<int> ex = [];
             for (var i = 0; i < 5; i++) {
-                for (var j = 0; j < 5; j++) {
+                for (var j = 0; j < 5; j++)
+                {
+                    int loopCounter = 0;
                     var r = _rand.NextDouble() * 100.6;
-                    if (f != 0 && j > 2) r *= 1.05;
-                    if (r < 22) _preboard[i, j] = 'A';
+                    if (f != 0 && j > 2) r *= 1.1;
+                    if (rigged == 'L') r = _rand.NextDouble() * 97.01;
+
+                    if (rigged == 'W') // guarantee max win
+                    {
+                        if (i == 0)
+                        {
+                            _preboard[i, j] = EXPANDER;
+                            continue;
+                        }
+                        else if (i < 4)
+                        {
+                            _preboard[i, j] = WILD;
+                            continue;
+                        }
+                        else
+                        {
+                            _preboard[i, j] = FEATURE;
+                            continue;
+                        }
+                    }
+
+                    
+                    
+                    /*if (r < 22) _preboard[i, j] = 'A';
                     else if (r < 44) _preboard[i, j] = 'B';
                     else if (r < 52) _preboard[i, j] = 'C';
                     else if (r < 66) _preboard[i, j] = 'D';
@@ -445,11 +486,213 @@ public class SlotsCommand : ICommand
                     else if (r < 97) _preboard[i, j] = 'J';
                     else if (r < 98.5) _preboard[i, j] = WILD;
                     else if (r < (j <= 2 ? 99 : 99.5)) { if (!ex.Contains(j)) { _preboard[i, j] = EXPANDER; ex.Add(j); } else _preboard[i, j] = WILD; }
-                    else { if (fc < 5) { _preboard[i, j] = FEATURE; fc++; } else _preboard[i, j] = WILD; }
+                    else { if (fc < 5) { _preboard[i, j] = FEATURE; fc++; } else _preboard[i, j] = WILD; }*/
+
+                    _preboard[i, j] = PickSlotSymbol(r, i, j);
+                    switch (_preboard[i, j])
+                    {
+                        case EXPANDER: ex.Add(j);
+                            break;
+                    }
+                    
+                    /*if (rigged == 'L') //guarantee random losing board
+                    {
+                        //if i==0 and j==0 pick a random one, aka do nothing
+                        if (i == 0 && j == 1)
+                        {
+                            //first row, just make sure the tiles do not have straight line match for the first three from the left. essentially make sure from first row 0 1 2 3 4, tiles 0, 1, and 2 all need to be different
+                            while (_preboard[i, j - 1] == _preboard[i, j])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[i, j] = PickSlotSymbol(r, i, j);
+                                loopCounter++;
+                                if (loopCounter > 10000) throw new Exception("Failed to generate a losing board");
+                            }
+
+                            continue;
+                        }
+                        else if (i == 0 && j == 2)
+                        {
+                            while (_preboard[i, j - 1] == _preboard[i, j] || _preboard[i, j - 2] == _preboard[i, j])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[i, j] = PickSlotSymbol(r, i, j);
+                                loopCounter++;
+                                if (loopCounter > 10000) throw new Exception("Failed to generate a losing board2");
+                            }
+
+                            continue;
+                        }
+                        else if (i > 0 && j == 0)
+                        {
+                            //if its the first one in a row check to make sure its not the same as a diagonal on the row above
+                            if (_preboard[i - 1, j + 1] == _preboard[i, j])
+                            {
+                                while (_preboard[i - 1, j + 1] == _preboard[i, j])
+                                {
+                                    r = _rand.NextDouble() * 97.01;
+                                    _preboard[i, j] = PickSlotSymbol(r, i, j);
+                                    loopCounter++;
+                                    if (loopCounter > 10000) throw new Exception("Failed to generate a losing board3");
+                                }
+                            }
+
+                            continue;
+                        }
+                        else if (i > 0 && j > 0 && j < 3)
+                        {
+                            //check both diagonals above and one space behind
+                            if (j == 2)
+                            {
+                                if (_preboard[i - 1, j + 1] == _preboard[i, j] ||
+                                    _preboard[i - 1, j - 1] == _preboard[i, j] ||
+                                    _preboard[i, j - 1] == _preboard[i, j] ||
+                                    _preboard[i, j - 2] == _preboard[i, j])
+                                {
+                                    while (_preboard[i - 1, j + 1] == _preboard[i, j] ||
+                                           _preboard[i - 1, j - 1] == _preboard[i, j] ||
+                                           _preboard[i, j - 1] == _preboard[i, j] ||
+                                           _preboard[i, j - 2] == _preboard[i, j])
+                                    {
+                                        r = _rand.NextDouble() * 97.01;
+                                        _preboard[i, j] = PickSlotSymbol(r, i, j);
+                                        loopCounter++;
+                                        if (loopCounter > 10000) throw new Exception("Failed to generate a losing board4");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (_preboard[i - 1, j + 1] == _preboard[i, j] || _preboard[i - 1, j - 1] == _preboard[i, j] || _preboard[i, j - 1] == _preboard[i, j])
+                                {
+                                    while (_preboard[i - 1, j + 1] == _preboard[i, j] || _preboard[i - 1, j - 1] == _preboard[i, j])
+                                    {
+                                        r = _rand.NextDouble() * 97.01;
+                                        _preboard[i, j] = PickSlotSymbol(r, i, j);
+                                        loopCounter++;
+                                        if (loopCounter > 10000) throw new Exception("Failed to generate a losing board5");
+                                    }
+                                }
+                            }
+                        }
+                    }*/
+                }
+            }
+            if (rigged == 'L') RigSlotBoard();
+            char PickSlotSymbol(double r, int i, int j)
+            {
+                if (r < 22) return 'A';
+                else if (r < 44) return 'B';
+                else if (r < 52) return 'C';
+                else if (r < 66) return 'D';
+                else if (r < 78) return 'E';
+                else if (r < 84) return 'F';
+                else if (r < 89) return 'G';
+                else if (r < 92) return 'H';
+                else if (r < 95) return 'I';
+                else if (r < 97) return 'J';
+                else if (r < 98.5) return WILD;
+                else if (r < (j <= 2 ? 99 : 99.5)) { if (!ex.Contains(j)) { return EXPANDER; } else return WILD; }
+                else { if (fc < 5) { fc++;
+                    return FEATURE;
+                } else return WILD; }
+            }
+            void RigSlotBoard()
+            {
+                int totalRuns = 0;
+                double r;
+                List<(int r, int c)> positionsToCheck;
+                for (int row = 0; row < 5; row++)
+                {
+                    for (int col = 0; col < 5; col++)
+                    {
+                        int loopCounter = 0;
+                        if (row == 0 && col == 0) ; //do nothing
+                        if (row == 0 && col == 1)
+                        {
+                            //check 1 slot behind
+                            while (_preboard[row, col - 1] == _preboard[row, col])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[row, col] = PickSlotSymbol(r, row, col);
+                                loopCounter++;
+                                totalRuns++;
+                                if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
+                            }
+                        }
+                        if (row == 0 && col == 2)
+                        {
+                            //check 2 slots behind
+                            while (_preboard[row, col - 1] == _preboard[row, col] || _preboard[row, col - 2] == _preboard[row, col])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[row, col] = PickSlotSymbol(r, row, col);
+                                loopCounter++;
+                                totalRuns++;
+                                if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
+                            }
+                        }
+                        if (row > 0 && col == 0)
+                        {
+                            //check the diagonal above and to the right
+                            while (_preboard[row - 1, col + 1] == _preboard[row, col])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[row, col] = PickSlotSymbol(r, row, col);
+                                loopCounter++;
+                                totalRuns++;
+                                if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
+                            }
+                        }
+                        if (row > 1 && col == 0)
+                        {
+                            //check the diagnoals above and to the right for 2 spaces
+                            while (_preboard[row - 1, col + 1] == _preboard[row, col] ||
+                                   _preboard[row - 2, col + 2] == _preboard[row, col])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[row, col] = PickSlotSymbol(r, row, col);
+                                loopCounter++;
+                                totalRuns++;
+                                if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
+                            }
+                        }
+                        if (row > 0 && col == 1)
+                        {
+                            //check both diagonals above for 1 space, and one space behind
+                            while (_preboard[row - 1, col - 1] == _preboard[row, col] ||
+                                   _preboard[row + 1, col + 1] == _preboard[row, col] ||
+                                   _preboard[row, col - 1] == _preboard[row, col])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[row, col] = PickSlotSymbol(r, row, col);
+                                loopCounter++;
+                                totalRuns++;
+                                if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
+                            }
+                        }
+                        if (row > 0 && col == 2)
+                        {
+                            //check both diagonals above for 1 space and 2 spaces behind
+                            while (_preboard[row - 1, col - 1] == _preboard[row, col] ||
+                                   _preboard[row + 1, col + 1] == _preboard[row, col] ||
+                                   _preboard[row, col - 1] == _preboard[row, col] ||
+                                   _preboard[row, col - 2] == _preboard[row, col])
+                            {
+                                r = _rand.NextDouble() * 97.01;
+                                _preboard[row, col] = PickSlotSymbol(r, row, col);
+                                loopCounter++;
+                                totalRuns++;
+                                if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
+                            }
+                        }
+                    }
                 }
             }
         }
 
+        
+        
         public void Dispose()
         {
             _headerImg?.Dispose();
