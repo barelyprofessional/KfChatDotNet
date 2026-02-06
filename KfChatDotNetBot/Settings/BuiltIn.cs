@@ -512,6 +512,11 @@ public static class BuiltIn
         public static string XeetEnabled = "Xeet.Enabled";
         [BuiltInSetting("Connection string for bot's Redis", SettingValueType.Text)]
         public static string BotRedisConnectionString = "Bot.RedisConnectionString";
+        [BuiltInSetting("Whether to automatically rehost images when they're added", SettingValueType.Boolean, "true",
+            BooleanRegex)]
+        public static string BotImageRehostEnabled = "Bot.Image.RehostEnabled";
+        [BuiltInSetting("Domain to look for when determining whether to rehost", SettingValueType.Text, "i.ddos.lgbt")]
+        public static string BotImageRehostDomain = "Bot.Image.RehostDomain";
     }
 }
 

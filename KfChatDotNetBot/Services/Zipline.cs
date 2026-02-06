@@ -75,6 +75,11 @@ public static class Zipline
         return url;
     }
 
+    // public static async Task<string> RehostFile(string url)
+    // {
+    //     
+    // }
+
     public static async Task<bool> IsZiplineEnabled()
     {
         var key = await SettingsProvider.GetValueAsync(BuiltIn.Keys.ZiplineKey);
