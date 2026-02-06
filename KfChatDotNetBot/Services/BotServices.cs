@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -41,7 +41,6 @@ public class BotServices
     private ShuffleDotUs? _shuffleDotUs;
     private YouTubePubSub? _youTubePubSub;
     public KasinoRain? KasinoRain;
-    public KasinoMines KasinoMines;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -94,8 +93,7 @@ public class BotServices
             BuildOwncastLiveStatusCheck(),
             BuildShuffleDotUs(),
             BuildYouTubePubSub(),
-            BuildKasinoRain(),
-            BuildKasinoMines()
+            BuildKasinoRain()
         ];
         try
         {
@@ -116,12 +114,6 @@ public class BotServices
     {
         _logger.Debug("Building the Kasino Rain thingy");
         KasinoRain = new KasinoRain(_chatBot, _cancellationToken);
-    }
-
-    private async Task BuildKasinoMines()
-    {
-        _logger.Debug("Building the Kasino mines service");
-        KasinoMines = new KasinoMines(_chatBot, _cancellationToken);
     }
     
     private async Task BuildShuffle()

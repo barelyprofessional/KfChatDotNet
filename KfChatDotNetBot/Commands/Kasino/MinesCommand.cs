@@ -31,14 +31,16 @@ public class MinesCommand : ICommand
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(30);
     
-    private const string betPattern = @"(?<row>\d+),(?<col>\d+)";
-    private const string toolUrl = "https://i.ddos.lgbt/raw/Kasino%20Mines%20Interface.html";
+    private const string BetPattern = @"(?<row>\d+),(?<col>\d+)";
+    private const string ToolUrl = "https://i.ddos.lgbt/raw/Kasino%20Mines%20Interface.html";
     
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
         MaxInvocations = 1,
         Window = TimeSpan.FromSeconds(10)
     };
+
+    private KasinoMines? KasinoMines;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -57,6 +59,8 @@ public class MinesCommand : ICommand
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
+
+        KasinoMines = new KasinoMines(botInstance);
         
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
@@ -64,12 +68,12 @@ public class MinesCommand : ICommand
         bool cashout = false;
         if (message.Message.Contains("cashout")) cashout = true;
         //check if user has an existing game already
-        if (!botInstance.BotServices.KasinoMines.activeGames.ContainsKey(gambler.Id))
+        if (!KasinoMines.ActiveGames.ContainsKey(gambler.Id))
         {
             if (arguments.TryGetValue("refresh", out var refresh))
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, you don't have a game running. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {toolUrl}",
+                    $"{user.FormatUsername()}, you don't have a game running. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -77,7 +81,7 @@ public class MinesCommand : ICommand
             if (!arguments.TryGetValue("bet", out var bet))
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {toolUrl}",
+                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -91,7 +95,7 @@ public class MinesCommand : ICommand
             if (!arguments.TryGetValue("size", out var size) || !arguments.TryGetValue("mines", out var mines))
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {toolUrl}",
+                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -104,11 +108,11 @@ public class MinesCommand : ICommand
             }
             else if (arguments.TryGetValue("betString", out var betString)) //if they are using precise picks manually or from the tool to select specific squares to reveal
             {
-                var matches = Regex.Matches(message.Message, betPattern);
+                var matches = Regex.Matches(message.Message, BetPattern);
                 if (matches.Count == 0 || matches == null) //if invalid bet string
                 {
                     await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, invalid bet string. Example: !mines 100 10 10 1,3 1,5 2,6 - or use the tool: {toolUrl}", true, autoDeleteAfter: cleanupDelay);
+                        $"{user.FormatUsername()}, invalid bet string. Example: !mines 100 10 10 1,3 1,5 2,6 - or use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
                     return;
                 }
                 foreach (Match match in matches)
@@ -119,7 +123,7 @@ public class MinesCommand : ICommand
             else //if they didn't put anything
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {toolUrl}",
+                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -136,26 +140,26 @@ public class MinesCommand : ICommand
                 return;           
             }
             //at this point all valid values so good to continue making the game
-            await botInstance.BotServices.KasinoMines.CreateGame(gambler, wager, boardSize, minesCount);
+            await KasinoMines.CreateGame(gambler, wager, boardSize, minesCount);
             var msg = await botInstance.SendChatMessageAsync(
-                $"{botInstance.BotServices.KasinoMines.activeGames[gambler.Id].ToString()}", true);
+                $"{KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
             
             if (pick == 0) //if using coordinates
             {
-                var game = botInstance.BotServices.KasinoMines.activeGames[gambler.Id];
+                var game = KasinoMines.ActiveGames[gambler.Id];
                 foreach (var coord in precisePicks)
                 {
-                    if (game.betsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.size || coord.c <= 0 || coord.c > game.size)
+                    if (game.BetsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.Size || coord.c <= 0 || coord.c > game.Size)
                     {
-                        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't place duplicate or invalid bets. Use the tool: {toolUrl}", true, autoDeleteAfter: cleanupDelay);
+                        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't place duplicate or invalid bets. Use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
                         return;
                     }
                 }
-                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
+                await KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
             }
             else //if using picks
             {
-                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, pick, msg, cashout);
+                await KasinoMines.Bet(gambler.Id, pick, msg, cashout);
             }
         }
         else
@@ -163,7 +167,7 @@ public class MinesCommand : ICommand
             //if there is a game already running
             if (arguments.TryGetValue("refresh", out var refresh))
             {
-                await botInstance.BotServices.KasinoMines.RefreshGameMessage(gambler.Id);
+                await KasinoMines.RefreshGameMessage(gambler.Id);
                 return;
             }
             int pick = 0;
@@ -174,11 +178,11 @@ public class MinesCommand : ICommand
             }
             else if (arguments.TryGetValue("betString", out var betString)) //if they are using precise picks manually or from the tool to select specific squares to reveal
             {
-                var matches = Regex.Matches(message.Message, betPattern);
+                var matches = Regex.Matches(message.Message, BetPattern);
                 if (matches.Count == 0 || matches == null) //if invalid bet string
                 {
                     await botInstance.SendChatMessageAsync(
-                        $"{user.FormatUsername()}, invalid bet string. Example: !mines 100 10 10 1,3 1,5 2,6 - or use the tool: {toolUrl}", true, autoDeleteAfter: cleanupDelay);
+                        $"{user.FormatUsername()}, invalid bet string. Example: !mines 100 10 10 1,3 1,5 2,6 - or use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
                     return;
                 }
                 foreach (Match match in matches)
@@ -190,34 +194,34 @@ public class MinesCommand : ICommand
             {
                 if (cashout)
                 {
-                    await botInstance.BotServices.KasinoMines.Cashout(botInstance.BotServices.KasinoMines.activeGames[gambler.Id]);
+                    await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
                     return;
                 }
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, you already have a game running. !mines <picks> to reveal more spaces, !mines cashout to cash out, !mines <bet string> to place precise picks. Tool: {toolUrl}",
+                    $"{user.FormatUsername()}, you already have a game running. !mines <picks> to reveal more spaces, !mines cashout to cash out, !mines <bet string> to place precise picks. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
             var msg = await botInstance.SendChatMessageAsync(
-                $"{botInstance.BotServices.KasinoMines.activeGames[gambler.Id].ToString()}", true);
+                $"{KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
             
             if (pick == 0) //if using coordinates
             {
-                var game = botInstance.BotServices.KasinoMines.activeGames[gambler.Id];
+                var game = KasinoMines.ActiveGames[gambler.Id];
                 foreach (var coord in precisePicks)
                 {
-                    if (game.betsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.size || coord.c <= 0 || coord.c > game.size)
+                    if (game.BetsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.Size || coord.c <= 0 || coord.c > game.Size)
                     {
-                        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't place duplicate or invalid bets. Use the tool: {toolUrl}", true, autoDeleteAfter: cleanupDelay);
+                        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't place duplicate or invalid bets. Use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
                         return;
                     }
                 }
-                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
+                await KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
                 
             }
             else //if using picks
             {
-                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, pick, msg, cashout);
+                await KasinoMines.Bet(gambler.Id, pick, msg, cashout);
             }
             
         }

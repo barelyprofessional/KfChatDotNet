@@ -10,72 +10,69 @@ using StackExchange.Redis;
 
 namespace KfChatDotNetBot.Services;
 
-public class KasinoMines : IDisposable
+public class KasinoMines
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-    private Task? _minesTimerTask;
     private IDatabase? _redisDb;
     private static ChatBot _kfChatBot;
-    private CancellationToken _ct;
-    private CancellationTokenSource _minesCts = new();
-    public Dictionary<int, KasinoMinesGame>? activeGames;
+    public Dictionary<int, KasinoMinesGame>? ActiveGames;
     private decimal HOUSE_EDGE = (decimal)0.98; //used to rig win rate, payout is 100% fair. with shop i plan to implement a sort of kasino shop profile holding the investments and buffs and tracking the gamblers current house edge
     public class KasinoMinesGame
     {
-        public GamblerDbModel creator { get; set; }
-        public DateTime lastInteracted = DateTime.UtcNow;
-        public char[,] minesBoard;
-        public decimal wager { get; set; }
-        public int size { get; set; }
-        public int mines { get; set; }
-        public List<(int r, int c)> betsPlaced = new();
-        public SentMessageTrackerModel? lastMessage;
+        public GamblerDbModel Creator { get; set; }
+        public DateTimeOffset LastInteracted = DateTimeOffset.UtcNow;
+        public char[,] MinesBoard;
+        public decimal Wager { get; set; }
+        public int Size { get; set; }
+        public int Mines { get; set; }
+        public List<(int r, int c)> BetsPlaced = new();
+        public SentMessageTrackerModel? LastMessage;
         
 
         public KasinoMinesGame(GamblerDbModel creator, decimal wager, int size, int mines)
         {
-            this.creator = creator;
-            this.size = size;
-            this.mines = mines;
-            this.wager = wager;
-            minesBoard = CreateBoard();
+            this.Creator = creator;
+            this.Size = size;
+            this.Mines = mines;
+            this.Wager = wager;
+            MinesBoard = CreateBoard();
         }
 
         public async Task ResetMessage(SentMessageTrackerModel msg)
         {
-            await _kfChatBot.KfClient.DeleteMessageAsync(lastMessage.ChatMessageId.Value);
-            lastMessage = msg;
+            await _kfChatBot.KfClient.DeleteMessageAsync(LastMessage.ChatMessageId.Value);
+            LastMessage = msg;
         }
 
         public async Task RigBoard((int r, int c) coord) //moves one of the mines to a specified coordinate for house edge rigging
         {
             //find the first mine
             (int r, int c) originalMine = (11, 11);
-            for (int r = 0; r < size; r++)
+            for (int r = 0; r < Size; r++)
             {
-                for (int c = 0; c < size; c++)
+                for (int c = 0; c < Size; c++)
                 {
-                    if (minesBoard[r, c] == 'M') originalMine = (r, c);
+                    if (MinesBoard[r, c] == 'M') originalMine = (r, c);
                 }
             }
 
-            minesBoard[coord.r, coord.c] = 'M';
+            MinesBoard[coord.r, coord.c] = 'M';
             if (originalMine.r == 11)
             {
                 _logger.Error("Rigboard failed to find a mine somehow?");
                 return;
             }
-            minesBoard[originalMine.r, originalMine.c] = 'G';
+            MinesBoard[originalMine.r, originalMine.c] = 'G';
 
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
         {
-            if (lastMessage != msg)
+            if (LastMessage != msg)
             {
                 await ResetMessage(msg);
             }
             int frames = mineLocation.c;
-            if (size - mineLocation.c > frames) frames = size - mineLocation.c;
+            if (Size - mineLocation.c > frames) frames = Size - mineLocation.c;
             string str;
             bool revealedSpace;
             int yellowWave = 1;
@@ -85,13 +82,13 @@ public class KasinoMines : IDisposable
             for (int f = 0; f < frames; f++)
             {
                 str = "";
-                for (int r = 0; r < size; r++)
+                for (int r = 0; r < Size; r++)
                 {
                     await Task.Delay(100);
                     revealedSpace = false;
-                    for (int c = 0; c < size; c++)
+                    for (int c = 0; c < Size; c++)
                     {
-                        foreach (var bet in betsPlaced)
+                        foreach (var bet in BetsPlaced)
                         {
                             if (bet.r == r && bet.c == c) revealedSpace = true;
                         }
@@ -130,7 +127,7 @@ public class KasinoMines : IDisposable
                     }
                 }
 
-                await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"{str}[br]{creator.User.FormatUsername()}");
+                await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -146,12 +143,12 @@ public class KasinoMines : IDisposable
         {
             string value = "";
             bool revealedSpace;
-            for (int r = 0; r < size; r++)
+            for (int r = 0; r < Size; r++)
             {
                 revealedSpace = false;
-                for (int c = 0; c < size; c++)
+                for (int c = 0; c < Size; c++)
                 {
-                    foreach (var bet in betsPlaced)
+                    foreach (var bet in BetsPlaced)
                     {
                         if (bet.r == r && bet.c == c) revealedSpace = true;
                     }
@@ -160,33 +157,33 @@ public class KasinoMines : IDisposable
                     {
                         value += "⬜";
                     }
-                    else if (minesBoard[r, c] == 'M') value += "💣";
+                    else if (MinesBoard[r, c] == 'M') value += "💣";
                     else value += "💎";
                 }
 
                 value += "[br]";
             }
 
-            value += $"{creator.User.FormatUsername()}";
+            value += $"{Creator.User.FormatUsername()}";
             return value;
         }
         
         public char[,] CreateBoard()
         {
-            char[,] board = new char[size, size];
+            char[,] board = new char[Size, Size];
             List<(int r, int c)> minesCoords = new List<(int r, int c)>();
             (int r, int c) coord;
             int counter = 0;
-            bool gems = !(mines < (size * size)/2); //if there are more mines than gems, generate list of gem locations instead since thats less generations
+            bool gems = !(Mines < (Size * Size)/2); //if there are more mines than gems, generate list of gem locations instead since thats less generations
             int coordsCounter;
-            if (gems) coordsCounter = size * size - mines;
-            else coordsCounter = mines;
+            if (gems) coordsCounter = Size * Size - Mines;
+            else coordsCounter = Mines;
             while (minesCoords.Count != coordsCounter)
             {
-                coord = (Money.GetRandomNumber(creator, 0, size), Money.GetRandomNumber(creator, 0, size));
+                coord = (Money.GetRandomNumber(Creator, 0, Size), Money.GetRandomNumber(Creator, 0, Size));
                 if (!minesCoords.Contains(coord)) minesCoords.Add(coord);
                 else counter++;
-                if (counter >= 100000) throw new Exception($"mines failed to generate mines coordinates. Mines: {mines} | Board size: {size} | Current count of mines list {minesCoords.Count}");
+                if (counter >= 100000) throw new Exception($"mines failed to generate mines coordinates. Mines: {Mines} | Board size: {Size} | Current count of mines list {minesCoords.Count}");
             }
 
             foreach (var coords in minesCoords)
@@ -194,9 +191,9 @@ public class KasinoMines : IDisposable
                 if (gems) board[coords.r, coords.c] = 'G';
                 else board[coords.r, coords.c] = 'M';
             }
-            for (int r = 0; r < size; r++)
+            for (int r = 0; r < Size; r++)
             {
-                for (int c = 0; c < size; c++)
+                for (int c = 0; c < Size; c++)
                 {
                     if (gems)
                     {
@@ -211,16 +208,12 @@ public class KasinoMines : IDisposable
 
             return board;
         }
-        public async Task DeleteMessage(SentMessageTrackerModel msg)
-        {
-            await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
-        }
+
     }
     
-    public KasinoMines(ChatBot kfChatBot, CancellationToken ct = default)
+    public KasinoMines(ChatBot kfChatBot)
     {
         _kfChatBot = kfChatBot;
-        _ct = ct;
         var connectionString = SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRedisConnectionString).Result;
         if (string.IsNullOrEmpty(connectionString.Value))
         {
@@ -230,16 +223,17 @@ public class KasinoMines : IDisposable
 
         var redis = ConnectionMultiplexer.Connect(connectionString.Value);
         _redisDb = redis.GetDatabase();
+        GetSavedGames().Wait();
     }
 
     public async Task RefreshGameMessage(int gamblerId)
     {
         await GetSavedGames();
-        var game = activeGames[gamblerId];
-        game.lastInteracted = DateTime.UtcNow;
+        var game = ActiveGames[gamblerId];
+        game.LastInteracted = DateTimeOffset.UtcNow;
         var msg = await _kfChatBot.SendChatMessageAsync($"{game.ToString()}", true);
         await game.ResetMessage(msg);
-        activeGames[gamblerId] = game;
+        ActiveGames[gamblerId] = game;
         await SaveActiveGames();
     }
     
@@ -248,53 +242,49 @@ public class KasinoMines : IDisposable
         if (_redisDb == null) throw new InvalidOperationException("Kasino mines service isn't initialized");
         var json = await _redisDb.StringGetAsync("Mines.State");
         if (string.IsNullOrEmpty(json)) return;
-        activeGames = JsonSerializer.Deserialize<Dictionary<int, KasinoMinesGame>>(json.ToString());
-        if (activeGames == null)
+        ActiveGames = JsonSerializer.Deserialize<Dictionary<int, KasinoMinesGame>>(json.ToString());
+        if (ActiveGames == null)
         {
             _logger.Error("Potentially failed to deserialize active mines games in GetSavedGames() in KasinoMines in Services");
-            activeGames = new Dictionary<int, KasinoMinesGame>();
+            ActiveGames = new Dictionary<int, KasinoMinesGame>();
         }
     }
     public async Task SaveActiveGames()
     {
         if (_redisDb == null) throw new InvalidOperationException("Kasino mines service isn't initialized");
-        var json = JsonSerializer.Serialize(activeGames);
+        var json = JsonSerializer.Serialize(ActiveGames);
         await _redisDb.StringSetAsync("Mines.State", json, null, When.Always);
-    }
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 
     public async Task RemoveGame(int gamblerId)
     {
         await GetSavedGames();
-        activeGames?.Remove(gamblerId);
+        ActiveGames?.Remove(gamblerId);
         await SaveActiveGames();
     }
 
     public async Task Cashout(KasinoMinesGame game)
     {
         decimal payout = 0;
-        decimal possiblePicks = game.size * game.size - game.mines;
-        for (int i = 0; i < game.betsPlaced.Count; i++)
+        decimal possiblePicks = game.Size * game.Size - game.Mines;
+        for (int i = 0; i < game.BetsPlaced.Count; i++)
         {
-            payout += game.wager * (possiblePicks / game.betsPlaced.Count);
+            payout += game.Wager * (possiblePicks / game.BetsPlaced.Count);
             possiblePicks--;
         }
 
-        var newBalance = await Money.NewWagerAsync(game.creator.Id, game.wager, payout, WagerGame.Mines);
+        var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, payout, WagerGame.Mines);
         await _kfChatBot.SendChatMessageAsync(
-            $"{game.creator.User.FormatUsername()}, you won {payout.FormatKasinoCurrencyAsync()} from your {game.wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.betsPlaced.Count} gems while avoiding {game.mines} mines. Net: {(payout - game.wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}");
-        await RemoveGame(game.creator.Id);
+            $"{game.Creator.User.FormatUsername()}, you won {payout.FormatKasinoCurrencyAsync()} from your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems while avoiding {game.Mines} mines. Net: {(payout - game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}");
+        await RemoveGame(game.Creator.Id);
     }
         
     public async Task<bool> Bet(int gamblerId, int count, SentMessageTrackerModel msg, bool cashOut = false) //returns false if you hit a bomb, true if you didn't
     {
         await GetSavedGames();
-        var game = activeGames[gamblerId];
-        game.lastInteracted = DateTime.UtcNow;
-        if (game.lastMessage != msg)
+        var game = ActiveGames[gamblerId];
+        game.LastInteracted = DateTimeOffset.UtcNow;
+        if (game.LastMessage != msg)
         {
             await game.ResetMessage(msg);
         }
@@ -302,8 +292,8 @@ public class KasinoMines : IDisposable
         (int r, int c) coord;
         while (betCoords.Count != count)//creates a list of coordinates to bet on using the coordinate bet function
         {
-            coord = (Money.GetRandomNumber(game.creator, 0, game.size), Money.GetRandomNumber(game.creator, 0, game.size));
-            if (!betCoords.Contains(coord) && !game.betsPlaced.Contains(coord)) betCoords.Add(coord); 
+            coord = (Money.GetRandomNumber(game.Creator, 0, game.Size), Money.GetRandomNumber(game.Creator, 0, game.Size));
+            if (!betCoords.Contains(coord) && !game.BetsPlaced.Contains(coord)) betCoords.Add(coord); 
         }
 
         return await Bet(gamblerId, betCoords, msg, cashOut);
@@ -312,64 +302,59 @@ public class KasinoMines : IDisposable
     public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut = false)
     {
         await GetSavedGames();
-        var game = activeGames[gamblerId];
-        game.lastInteracted = DateTime.UtcNow;
-        if (game.lastMessage != msg)
+        var game = ActiveGames[gamblerId];
+        game.LastInteracted = DateTimeOffset.UtcNow;
+        if (game.LastMessage != msg)
         {
             await game.ResetMessage(msg);
         }
         foreach (var coord in coords) //the main portion of the game
         {
             await Task.Delay(100);
-            if (game.minesBoard[coord.r, coord.c] == 'M')
+            if (game.MinesBoard[coord.r, coord.c] == 'M')
             {
-                game.betsPlaced.Add(coord);
+                game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
                 game.Explode((coord.r, coord.c), msg);
-                var newBalance = await Money.NewWagerAsync(game.creator.Id, game.wager, -game.wager, WagerGame.Mines);
+                var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 await _kfChatBot.SendChatMessageAsync(
-                    $"{game.creator.User.FormatUsername()}, you lost your {game.wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.betsPlaced.Count} gems until you hit one of {game.mines} mines. Net: {(-game.wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
+                    $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(15));
                 await RemoveGame(gamblerId);
                 return false;
             }
             
-            if (Money.GetRandomNumber(game.creator, 0, 100) < 100 * HOUSE_EDGE)//if you didn't lose, check to see if the switch was flipped
+            if (Money.GetRandomNumber(game.Creator, 0, 100) < 100 * HOUSE_EDGE)//if you didn't lose, check to see if the switch was flipped
             {
-                game.betsPlaced.Add(coord);
+                game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());   
                 await game.RigBoard(coord);
                 await Task.Delay(50);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
                 game.Explode(coord, msg);
-                var newBalance = await Money.NewWagerAsync(game.creator.Id, game.wager, -game.wager, WagerGame.Mines);
+                var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 await _kfChatBot.SendChatMessageAsync(
-                    $"{game.creator.User.FormatUsername()}, you lost your {game.wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.betsPlaced.Count} gems until you hit one of {game.mines} mines. Net: {(-game.wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
+                    $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(15));
             }
             else
             {
-                game.betsPlaced.Add(coord);
+                game.BetsPlaced.Add(coord);
             }
             await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
         }
 
 
-        activeGames[gamblerId] = game;
+        ActiveGames[gamblerId] = game;
         if (cashOut) await Cashout(game);
         else await SaveActiveGames();
         return true;
-    }
-    
-    public bool IsInitialized()
-    {
-        return _redisDb != null;
     }
 
     public async Task CreateGame(GamblerDbModel gambler, decimal bet, int size, int mines)
     {
         await GetSavedGames();
-        activeGames?.Add(gambler.Id, new KasinoMinesGame(gambler, bet, size, mines));
+        ActiveGames?.Add(gambler.Id, new KasinoMinesGame(gambler, bet, size, mines));
         await SaveActiveGames();
     }
 
