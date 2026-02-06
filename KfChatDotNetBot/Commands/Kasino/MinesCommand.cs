@@ -12,14 +12,14 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class MinesCommand : ICommand
 {
     public List<Regex> Patterns => [
-        //attempting to continue a game below here
-        new Regex(@"^mines (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                                                       
-        new Regex(@"^mines (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                                                               
         //attempting to start a game below here
+        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase), 
+        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),  
         new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),        
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                          
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),           
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                                 
+        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),        
+        //attempting to continue a game below here
+        new Regex(@"^mines (?<picks>\d+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase), 
+        new Regex(@"^mines (?<betString>.+) (?<cashout>cashout|)$", RegexOptions.IgnoreCase),                              
         //cashout
         new Regex(@"^mines (?<cashout>cashout)$", RegexOptions.IgnoreCase),                                                                     
         //refresh
@@ -73,7 +73,7 @@ public class MinesCommand : ICommand
             if (arguments.TryGetValue("refresh", out var refresh))
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, you don't have a game running. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
+                    $"{user.FormatUsername()}, you tried to refresh but don't have a game running. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -81,7 +81,7 @@ public class MinesCommand : ICommand
             if (!arguments.TryGetValue("bet", out var bet))
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
+                    $"{user.FormatUsername()}, not enough arguments(bet+). !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -95,7 +95,7 @@ public class MinesCommand : ICommand
             if (!arguments.TryGetValue("size", out var size) || !arguments.TryGetValue("mines", out var mines))
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
+                    $"{user.FormatUsername()}, not enough arguments(mines and or size+). !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
@@ -123,7 +123,7 @@ public class MinesCommand : ICommand
             else //if they didn't put anything
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, not enough arguments. !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
+                    $"{user.FormatUsername()}, not enough arguments(picks or betstring). !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
