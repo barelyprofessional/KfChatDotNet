@@ -181,7 +181,7 @@ public class KasinoMines
             else coordsCounter = Mines;
             while (minesCoords.Count != coordsCounter)
             {
-                coord = (Money.GetRandomNumber(Creator, 0, Size), Money.GetRandomNumber(Creator, 0, Size));
+                coord = (Money.GetRandomNumber(Creator, 0, Size, incrementMaxParam: false), Money.GetRandomNumber(Creator, 0, Size, incrementMaxParam: false));
                 if (!minesCoords.Contains(coord)) minesCoords.Add(coord);
                 else counter++;
                 if (counter >= 100000) throw new Exception($"mines failed to generate mines coordinates. Mines: {Mines} | Board size: {Size} | Current count of mines list {minesCoords.Count}");
