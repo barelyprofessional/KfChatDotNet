@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetWsClient.Models.Events;
@@ -14,7 +15,7 @@ public class WhoisCommand : ICommand
     ];
 
     public string? HelpText => "Lookup user IDs by username";
-    public UserRight RequiredRight => UserRight.Guest;
+    public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public RateLimitOptionsModel? RateLimitOptions => null;
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
@@ -24,13 +25,30 @@ public class WhoisCommand : ICommand
         var queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == query, cancellationToken: ctx);
         if (queryUser != null)
         {
-            await botInstance.SendChatMessageAsync($"@{message.Author.Username}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
             return;
         }
 
         var users = await db.Users.Select(u => u.KfUsername).Distinct().ToListAsync(ctx);
         var result = Process.ExtractOne(query, users);
         queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == result.Value, cancellationToken: ctx);
-        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, my guess is you're looking for {queryUser!.KfUsername} whose ID is {queryUser.KfId}", true);
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, my guess is you're looking for {queryUser!.KfUsername} whose ID is {queryUser.KfId}", true);
+    }
+}
+
+public class WhoamiCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex("^whoami$", RegexOptions.IgnoreCase),
+        new Regex("^addy$", RegexOptions.IgnoreCase)
+    ];
+
+    public string? HelpText => "Dump out your addy to chat";
+    public UserRight RequiredRight => UserRight.Loser;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    {
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your addy is {user.KfId}", true);
     }
 }
