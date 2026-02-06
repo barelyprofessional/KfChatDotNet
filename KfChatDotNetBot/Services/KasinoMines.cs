@@ -68,7 +68,7 @@ public class KasinoMines
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
         {
-            if (LastMessageId != msg.ChatMessageId)
+            if (LastMessageId != msg.ChatMessageId.Value)
             {
                 await ResetMessage(msg);
             }
@@ -128,7 +128,7 @@ public class KasinoMines
                     }
                 }
 
-                await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, $"{str}[br]{Creator.User.FormatUsername()}");
+                await _kfChatBot.KfClient.EditMessageAsync(LastMessageId, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -291,7 +291,7 @@ public class KasinoMines
         await GetSavedGames();
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessageId != msg.ChatMessageId)
+        if (game.LastMessageId != msg.ChatMessageId.Value)
         {
             await game.ResetMessage(msg);
         }
@@ -299,7 +299,7 @@ public class KasinoMines
         (int r, int c) coord;
         while (betCoords.Count != count)//creates a list of coordinates to bet on using the coordinate bet function
         {
-            coord = (Money.GetRandomNumber(game.Creator, 0, game.Size), Money.GetRandomNumber(game.Creator, 0, game.Size));
+            coord = (Money.GetRandomNumber(game.Creator, 0, game.Size-1), Money.GetRandomNumber(game.Creator, 0, game.Size-1));
             if (!betCoords.Contains(coord) && !game.BetsPlaced.Contains(coord)) betCoords.Add(coord); 
         }
 
@@ -311,7 +311,7 @@ public class KasinoMines
         await GetSavedGames();
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessageId != msg.ChatMessageId)
+        if (game.LastMessageId != msg.ChatMessageId.Value)
         {
             await game.ResetMessage(msg);
         }
@@ -322,7 +322,7 @@ public class KasinoMines
             {
                 game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
-                await game.Explode((coord.r, coord.c), msg);
+                game.Explode((coord.r, coord.c), msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 await _kfChatBot.SendChatMessageAsync(
                     $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
@@ -338,7 +338,7 @@ public class KasinoMines
                 await game.RigBoard(coord);
                 await Task.Delay(50);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
-                await game.Explode(coord, msg);
+                game.Explode(coord, msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 await _kfChatBot.SendChatMessageAsync(
                     $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
