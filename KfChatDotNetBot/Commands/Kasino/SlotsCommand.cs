@@ -186,7 +186,7 @@ public class SlotsCommand : ICommand
         public decimal RunningTotalDisplay = 0;
         private int _activeFeatureTier = 0, _currentFeatureSpin = 0;
         private bool _showGoldCircle = false;
-
+        private bool _currentlyInFeature = false;
 
         private readonly RandomShim<StandardRng> _rand = RandomShim.Create(StandardRng.Create());
         private static readonly List<char> ExpanderWild =
@@ -323,7 +323,7 @@ public class SlotsCommand : ICommand
                 DrawAutoScaledText($"BET: ${_userBet.FormatKasinoCurrencyAsync(wrapInPlainBbCode: false).Result}", largeFont, Color.White, new RectangleF(20, 700, 180, 100));
                 DrawAutoScaledText($"WIN: ${RunningTotalDisplay.FormatKasinoCurrencyAsync(wrapInPlainBbCode: false).Result}", largeFont, Color.Gold, new RectangleF(380, 700, 200, 100));
 
-                if (_currentFeatureSpin > 0) {
+                if (_currentFeatureSpin > 0 && _currentlyInFeature) {
                     var total = _activeFeatureTier switch { 3 => 3, 4 => 5, 5 => 10, _ => 0 };
                     DrawAutoScaledText($"SPIN {_currentFeatureSpin}/{total}", largeFont, Color.SkyBlue, new RectangleF(210, 700, 160, 100));
                 }
@@ -378,8 +378,9 @@ public class SlotsCommand : ICommand
                 if (featureSpins == 0) {
                     _activeFeatureTier = fCount >= 5 ? 5 : (fCount >= 3 ? fCount : 0);
                     _showGoldCircle = _activeFeatureTier >= 3; _currentFeatureSpin = 0;
+                    _currentlyInFeature = false;
                 } else {
-                    _showGoldCircle = true; _currentFeatureSpin = featureSpins;
+                    _showGoldCircle = true; _currentFeatureSpin = featureSpins; _currentlyInFeature = true;
                 }
 
                 ProcessReelsAndWins();
