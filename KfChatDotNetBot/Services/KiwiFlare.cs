@@ -32,6 +32,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
     public async Task<KiwiFlareChallengeModel?> GetChallenge()
     {
         using var client = new HttpClient(GetHttpClientHandler());
+        client.Timeout = TimeSpan.FromSeconds(10);
         var response = await client.GetAsync($"https://{kfDomain}/", _ctx);
         var document = new HtmlDocument();
         document.Load(await response.Content.ReadAsStreamAsync(_ctx));
@@ -122,6 +123,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
     public async Task<string> SubmitAnswer(KiwiFlareChallengeSolutionModel solution)
     {
         using var client = new HttpClient(GetHttpClientHandler());
+        client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
         {
             new("a", solution.Salt),
@@ -149,6 +151,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
     public async Task<bool> CheckAuth(string authToken)
     {
         using var client = new HttpClient(GetHttpClientHandler());
+        client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
         {
             new("f", authToken),
