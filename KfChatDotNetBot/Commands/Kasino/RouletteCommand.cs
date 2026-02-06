@@ -18,7 +18,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using StackExchange.Redis;
 
-namespace KfChatDotNetBot.Commands.Kasino.Roulette;
+namespace KfChatDotNetBot.Commands.Kasino;
 
 [KasinoCommand]
 [WagerCommand]
