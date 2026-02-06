@@ -14,8 +14,8 @@ public class KasinoMines
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private IDatabase? _redisDb;
-    private static ChatBot _kfChatBot;
-    public Dictionary<int, KasinoMinesGame>? ActiveGames;
+    private static ChatBot _kfChatBot = null!;
+    public Dictionary<int, KasinoMinesGame> ActiveGames = new();
     private decimal HOUSE_EDGE = (decimal)0.98; //used to rig win rate, payout is 100% fair. with shop i plan to implement a sort of kasino shop profile holding the investments and buffs and tracking the gamblers current house edge
     public class KasinoMinesGame
     {
@@ -26,22 +26,23 @@ public class KasinoMines
         public int Size { get; set; }
         public int Mines { get; set; }
         public List<(int r, int c)> BetsPlaced = new();
-        public SentMessageTrackerModel? LastMessage;
+        public int LastMessageId;
         
 
         public KasinoMinesGame(GamblerDbModel creator, decimal wager, int size, int mines)
         {
-            this.Creator = creator;
-            this.Size = size;
-            this.Mines = mines;
-            this.Wager = wager;
+            Creator = creator;
+            Size = size;
+            Mines = mines;
+            Wager = wager;
             MinesBoard = CreateBoard();
         }
 
         public async Task ResetMessage(SentMessageTrackerModel msg)
         {
-            await _kfChatBot.KfClient.DeleteMessageAsync(LastMessage.ChatMessageId.Value);
-            LastMessage = msg;
+            await _kfChatBot.KfClient.DeleteMessageAsync(LastMessageId);
+            if (msg.ChatMessageId == null) throw new InvalidOperationException($"ChatMessageId was null for {msg.Reference}");
+            LastMessageId = msg.ChatMessageId.Value;
         }
 
         public async Task RigBoard((int r, int c) coord) //moves one of the mines to a specified coordinate for house edge rigging
@@ -67,7 +68,7 @@ public class KasinoMines
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
         {
-            if (LastMessage != msg)
+            if (LastMessageId != msg.ChatMessageId)
             {
                 await ResetMessage(msg);
             }
@@ -127,11 +128,11 @@ public class KasinoMines
                     }
                 }
 
-                await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId.Value, $"{str}[br]{Creator.User.FormatUsername()}");
+                await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(10));
-            await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
+            await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageId!.Value);
 
             (int vertical, int horizontal) DistanceFromMine((int r, int c) coord)
             {
@@ -139,7 +140,7 @@ public class KasinoMines
             }
         }
         
-        public string ToString()
+        public new string ToString()
         {
             string value = "";
             bool revealedSpace;
@@ -232,6 +233,7 @@ public class KasinoMines
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
         var msg = await _kfChatBot.SendChatMessageAsync($"{game.ToString()}", true);
+        await _kfChatBot.WaitForChatMessageAsync(msg);
         await game.ResetMessage(msg);
         ActiveGames[gamblerId] = game;
         await SaveActiveGames();
@@ -242,9 +244,14 @@ public class KasinoMines
         if (_redisDb == null) throw new InvalidOperationException("Kasino mines service isn't initialized");
         var json = await _redisDb.StringGetAsync("Mines.State");
         if (string.IsNullOrEmpty(json)) return;
-        ActiveGames = JsonSerializer.Deserialize<Dictionary<int, KasinoMinesGame>>(json.ToString());
-        if (ActiveGames == null)
+        try
         {
+            ActiveGames = JsonSerializer.Deserialize<Dictionary<int, KasinoMinesGame>>(json.ToString()) ??
+                          throw new InvalidOperationException();
+        }
+        catch (Exception e)
+        {
+            _logger.Error(e);
             _logger.Error("Potentially failed to deserialize active mines games in GetSavedGames() in KasinoMines in Services");
             ActiveGames = new Dictionary<int, KasinoMinesGame>();
         }
@@ -284,7 +291,7 @@ public class KasinoMines
         await GetSavedGames();
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessage != msg)
+        if (game.LastMessageId != msg.ChatMessageId)
         {
             await game.ResetMessage(msg);
         }
@@ -304,7 +311,7 @@ public class KasinoMines
         await GetSavedGames();
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessage != msg)
+        if (game.LastMessageId != msg.ChatMessageId)
         {
             await game.ResetMessage(msg);
         }
@@ -315,7 +322,7 @@ public class KasinoMines
             {
                 game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
-                game.Explode((coord.r, coord.c), msg);
+                await game.Explode((coord.r, coord.c), msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 await _kfChatBot.SendChatMessageAsync(
                     $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
@@ -331,7 +338,7 @@ public class KasinoMines
                 await game.RigBoard(coord);
                 await Task.Delay(50);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
-                game.Explode(coord, msg);
+                await game.Explode(coord, msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 await _kfChatBot.SendChatMessageAsync(
                     $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
@@ -354,7 +361,7 @@ public class KasinoMines
     public async Task CreateGame(GamblerDbModel gambler, decimal bet, int size, int mines)
     {
         await GetSavedGames();
-        ActiveGames?.Add(gambler.Id, new KasinoMinesGame(gambler, bet, size, mines));
+        ActiveGames.Add(gambler.Id, new KasinoMinesGame(gambler, bet, size, mines));
         await SaveActiveGames();
     }
 

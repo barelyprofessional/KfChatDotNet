@@ -448,7 +448,6 @@ public class SlotsCommand : ICommand
             for (var i = 0; i < 5; i++) {
                 for (var j = 0; j < 5; j++)
                 {
-                    int loopCounter = 0;
                     var r = _rand.NextDouble() * 100.6;
                     if (f != 0 && j > 2) r *= 1.1;
                     if (rigged == 'L') r = _rand.NextDouble() * 97.01;
@@ -601,13 +600,11 @@ public class SlotsCommand : ICommand
             {
                 int totalRuns = 0;
                 double r;
-                List<(int r, int c)> positionsToCheck;
                 for (int row = 0; row < 5; row++)
                 {
                     for (int col = 0; col < 5; col++)
                     {
                         int loopCounter = 0;
-                        if (row == 0 && col == 0) ; //do nothing
                         if (row == 0 && col == 1)
                         {
                             //check 1 slot behind
