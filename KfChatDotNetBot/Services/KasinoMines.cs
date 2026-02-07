@@ -316,7 +316,9 @@ public class KasinoMines
         //randomly pull from that list to add coordinates to bet on
         for (int i = 0; i < count; i++)
         {
-            betCoords.Add(validBets[Money.GetRandomNumber(game.Creator, 0, validBets.Count-1)]);
+            int rand = Money.GetRandomNumber(game.Creator, 0, validBets.Count - 1);
+            betCoords.Add(validBets[rand]);
+            validBets.Remove(betCoords[rand]);
         }
 
         return await Bet(gamblerId, betCoords, msg, cashOut);
