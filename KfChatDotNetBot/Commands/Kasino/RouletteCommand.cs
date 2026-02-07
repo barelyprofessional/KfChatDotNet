@@ -147,6 +147,15 @@ public class RouletteCommand : ICommand
             return;
         }
 
+        decimal wagerLimit = 25;
+        if (wager > wagerLimit)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, wagers are temporarily limited to {await wagerLimit.FormatKasinoCurrencyAsync()} during testing",
+                true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+            return;
+        }
+
         // Parse and validate bet
         var betInfo = ParseBet(betStr);
         if (betInfo == null)
