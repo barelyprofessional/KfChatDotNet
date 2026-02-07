@@ -36,8 +36,8 @@ public class MinesCommand : ICommand
     
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
-        MaxInvocations = 1,
-        Window = TimeSpan.FromSeconds(40)
+        MaxInvocations = 3,
+        Window = TimeSpan.FromSeconds(10)
     };
 
     private KasinoMines? KasinoMines;
