@@ -322,7 +322,7 @@ public class KasinoMines
             {
                 game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
-                game.Explode((coord.r, coord.c), msg);
+                _ = game.Explode((coord.r, coord.c), msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 var net = -game.Wager;
                 await _kfChatBot.SendChatMessageAsync(
@@ -339,7 +339,7 @@ public class KasinoMines
                 await game.RigBoard(coord);
                 await Task.Delay(50);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
-                game.Explode(coord, msg);
+                _ = game.Explode(coord, msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 var net = -game.Wager;
                 await _kfChatBot.SendChatMessageAsync(
