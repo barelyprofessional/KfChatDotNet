@@ -40,6 +40,7 @@ public class KasinoMines
 
         public async Task ResetMessage(SentMessageTrackerModel msg)
         {
+            _logger.Info("Resetting message");
             await _kfChatBot.KfClient.DeleteMessageAsync(LastMessageId);
             if (msg.ChatMessageId == null) throw new InvalidOperationException($"ChatMessageId was null for {msg.Reference}");
             LastMessageId = msg.ChatMessageId.Value;
