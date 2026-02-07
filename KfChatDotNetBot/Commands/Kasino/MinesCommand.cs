@@ -142,7 +142,7 @@ public class MinesCommand : ICommand
             int minesCount = Convert.ToInt32(mines.Value);
             if (minesCount < 1 || minesCount > (boardSize * boardSize) - 1)
             {
-                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, number of mines must be between 1 and {boardSize * boardSize - 1}(boardSize * boardSize - 1).",true, autoDeleteAfter: cleanupDelay);
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, number of mines must be between 1 and {boardSize * boardSize - 1}(size^2 - 1).",true, autoDeleteAfter: cleanupDelay);
                 return;           
             }
             //at this point all valid values so good to continue making the game
@@ -185,6 +185,11 @@ public class MinesCommand : ICommand
             }
             else if (arguments.TryGetValue("betString", out var betString)) //if they are using precise picks manually or from the tool to select specific squares to reveal
             {
+                if (betString.Value == "cashout" || betString.Value == " cashout")
+                {
+                    await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
+                    return;
+                }
                 var matches = Regex.Matches(message.Message, BetPattern);
                 if (matches.Count == 0 || matches == null) //if invalid bet string
                 {
