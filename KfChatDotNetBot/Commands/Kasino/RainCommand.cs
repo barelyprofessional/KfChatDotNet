@@ -11,8 +11,7 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class RainCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^rain (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^rain (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^rain (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex(@"^rain", RegexOptions.IgnoreCase)
     ];
 
