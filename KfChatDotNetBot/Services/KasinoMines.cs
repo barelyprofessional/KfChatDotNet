@@ -151,9 +151,9 @@ public class KasinoMines
             bool revealedSpace;
             for (int r = 0; r < Size; r++)
             {
-                revealedSpace = false;
                 for (int c = 0; c < Size; c++)
                 {
+                    revealedSpace = false;
                     foreach (var bet in BetsPlaced)
                     {
                         if (bet.r == r && bet.c == c) revealedSpace = true;
@@ -324,7 +324,7 @@ public class KasinoMines
         return await Bet(gamblerId, betCoords, msg, cashOut);
     }
 
-    public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut = false)
+    public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut)
     {
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
