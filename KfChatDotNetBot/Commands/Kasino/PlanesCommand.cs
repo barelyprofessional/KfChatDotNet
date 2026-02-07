@@ -16,8 +16,7 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class Planes : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^planes (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^planes (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^planes (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^planes$")
     ];
     public string? HelpText => "!planes <bet amount>";
