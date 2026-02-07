@@ -40,7 +40,6 @@ public class MinesCommand : ICommand
         Window = TimeSpan.FromSeconds(10)
     };
 
-    private KasinoMines? KasinoMines;
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
@@ -59,8 +58,6 @@ public class MinesCommand : ICommand
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
-
-        KasinoMines = new KasinoMines(botInstance);
         
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
@@ -68,7 +65,7 @@ public class MinesCommand : ICommand
         bool cashout = false;
         if (message.Message.Contains("cashout")) cashout = true;
         //check if user has an existing game already
-        if (!KasinoMines.ActiveGames.ContainsKey(gambler.Id))
+        if (!botInstance.BotServices.KasinoMines.ActiveGames.ContainsKey(gambler.Id))
         {
             if (arguments.TryGetValue("refresh", out var refresh))
             {
@@ -140,14 +137,14 @@ public class MinesCommand : ICommand
                 return;           
             }
             //at this point all valid values so good to continue making the game
-            await KasinoMines.CreateGame(gambler, wager, boardSize, minesCount);
+            await botInstance.BotServices.KasinoMines.CreateGame(gambler, wager, boardSize, minesCount);
             var msg = await botInstance.SendChatMessageAsync(
-                $"{KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
+                $"{botInstance.BotServices.KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
             var msgSuccess = await botInstance.WaitForChatMessageAsync(msg, ct: ctx);
             if (!msgSuccess) throw new InvalidOperationException("Timed out waiting for the message");
             if (pick == 0) //if using coordinates
             {
-                var game = KasinoMines.ActiveGames[gambler.Id];
+                var game = botInstance.BotServices.KasinoMines.ActiveGames[gambler.Id];
                 foreach (var coord in precisePicks)
                 {
                     if (game.BetsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.Size || coord.c <= 0 || coord.c > game.Size)
@@ -156,11 +153,11 @@ public class MinesCommand : ICommand
                         return;
                     }
                 }
-                await KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
+                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
             }
             else //if using picks
             {
-                await KasinoMines.Bet(gambler.Id, pick, msg, cashout);
+                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, pick, msg, cashout);
             }
         }
         else
@@ -168,7 +165,7 @@ public class MinesCommand : ICommand
             //if there is a game already running
             if (arguments.TryGetValue("refresh", out var refresh))
             {
-                await KasinoMines.RefreshGameMessage(gambler.Id);
+                await botInstance.BotServices.KasinoMines.RefreshGameMessage(gambler.Id);
                 return;
             }
             int pick = 0;
@@ -195,7 +192,7 @@ public class MinesCommand : ICommand
             {
                 if (cashout)
                 {
-                    await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
+                    await botInstance.BotServices.KasinoMines.Cashout(botInstance.BotServices.KasinoMines.ActiveGames[gambler.Id]);
                     return;
                 }
                 await botInstance.SendChatMessageAsync(
@@ -204,12 +201,12 @@ public class MinesCommand : ICommand
                 return;
             }
             var msg = await botInstance.SendChatMessageAsync(
-                $"{KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
+                $"{botInstance.BotServices.KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
             var msgSuccess = await botInstance.WaitForChatMessageAsync(msg, ct: ctx);
             if (!msgSuccess) throw new InvalidOperationException("Timed out waiting for the message");
             if (pick == 0) //if using coordinates
             {
-                var game = KasinoMines.ActiveGames[gambler.Id];
+                var game = botInstance.BotServices.KasinoMines.ActiveGames[gambler.Id];
                 foreach (var coord in precisePicks)
                 {
                     if (game.BetsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.Size || coord.c <= 0 || coord.c > game.Size)
@@ -218,12 +215,12 @@ public class MinesCommand : ICommand
                         return;
                     }
                 }
-                await KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
+                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
                 
             }
             else //if using picks
             {
-                await KasinoMines.Bet(gambler.Id, pick, msg, cashout);
+                await botInstance.BotServices.KasinoMines.Bet(gambler.Id, pick, msg, cashout);
             }
             
         }
