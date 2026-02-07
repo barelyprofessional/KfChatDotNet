@@ -13,10 +13,8 @@ public class MinesCommand : ICommand
 {
     public List<Regex> Patterns => [
         //attempting to start a game below here
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase), 
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<picks>\d+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),  
-        new Regex(@"^mines (?<bet>\d+\.\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),        
-        new Regex(@"^mines (?<bet>\d+) (?<size>\d+) (?<mines>\d+) (?<betString>.+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),        
+        new Regex(@"^mines (?<bet>\d+(?:\.\d+)?) (?<size>\d+) (?<mines>\d+) (?<picks>\d+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase), 
+        new Regex(@"^mines (?<bet>\d+(?:\.\d+)?) (?<size>\d+) (?<mines>\d+) (?<betString>.+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),
         //attempting to continue a game below here
         new Regex(@"^mines (?<picks>\d+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase), 
         new Regex(@"^mines (?<betString>.+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),                              
