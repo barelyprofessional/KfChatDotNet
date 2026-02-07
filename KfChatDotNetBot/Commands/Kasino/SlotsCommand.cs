@@ -116,7 +116,7 @@ public class SlotsCommand : ICommand
         using (var board = new KiwiSlotBoard(wager))
         {
             board.LoadAssets();
-            board.ExecuteGameLoop(spins, rigged);
+            board.ExecuteGameLoop(spins, 0, rigged);
             using (var finalImageStream = board.ExportAndCleanup())
             {
                 if (finalImageStream == null)
