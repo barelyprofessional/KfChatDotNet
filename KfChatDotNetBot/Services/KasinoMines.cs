@@ -217,7 +217,7 @@ public class KasinoMines
 
     }
     
-    public KasinoMines(ChatBot kfChatBot)
+    public KasinoMines(ChatBot kfChatBot, int gamblerId)
     {
         _kfChatBot = kfChatBot;
         var connectionString = SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRedisConnectionString).Result;
@@ -229,25 +229,25 @@ public class KasinoMines
 
         var redis = ConnectionMultiplexer.Connect(connectionString.Value);
         _redisDb = redis.GetDatabase();
-        GetSavedGames().Wait();
+        GetSavedGames(gamblerId).Wait();
     }
 
     public async Task RefreshGameMessage(int gamblerId)
     {
-        await GetSavedGames();
+        await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
         var msg = await _kfChatBot.SendChatMessageAsync($"{game.ToString()}", true);
         await _kfChatBot.WaitForChatMessageAsync(msg);
         await game.ResetMessage(msg);
         ActiveGames[gamblerId] = game;
-        await SaveActiveGames();
+        await SaveActiveGames(gamblerId);
     }
     
-    public async Task GetSavedGames()
+    public async Task GetSavedGames(int gamblerId)
     {
         if (_redisDb == null) throw new InvalidOperationException("Kasino mines service isn't initialized");
-        var json = await _redisDb.StringGetAsync("Mines.State");
+        var json = await _redisDb.StringGetAsync($"Mines.State.{gamblerId}");
         if (string.IsNullOrEmpty(json)) return;
         try
         {
@@ -261,18 +261,18 @@ public class KasinoMines
             ActiveGames = new Dictionary<int, KasinoMinesGame>();
         }
     }
-    public async Task SaveActiveGames()
+    public async Task SaveActiveGames(int gamblerId)
     {
         if (_redisDb == null) throw new InvalidOperationException("Kasino mines service isn't initialized");
         var json = JsonSerializer.Serialize(ActiveGames);
-        await _redisDb.StringSetAsync("Mines.State", json, null, When.Always);
+        await _redisDb.StringSetAsync($"Mines.State.{gamblerId}", json, null, When.Always);
     }
 
     public async Task RemoveGame(int gamblerId)
     {
-        await GetSavedGames();
+        await GetSavedGames(gamblerId);
         ActiveGames?.Remove(gamblerId);
-        await SaveActiveGames();
+        await SaveActiveGames(gamblerId);
     }
 
     public async Task Cashout(KasinoMinesGame game)
@@ -294,7 +294,7 @@ public class KasinoMines
         
     public async Task<bool> Bet(int gamblerId, int count, SentMessageTrackerModel msg, bool cashOut = false) //returns false if you hit a bomb, true if you didn't
     {
-        await GetSavedGames();
+        await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
         if (game.LastMessageId != msg.ChatMessageId!.Value)
@@ -314,7 +314,7 @@ public class KasinoMines
 
     public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut = false)
     {
-        await GetSavedGames();
+        await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
         if (game.LastMessageId != msg.ChatMessageId!.Value)
@@ -362,15 +362,15 @@ public class KasinoMines
 
         ActiveGames[gamblerId] = game;
         if (cashOut) await Cashout(game);
-        else await SaveActiveGames();
+        else await SaveActiveGames(gamblerId);
         return true;
     }
 
     public async Task CreateGame(GamblerDbModel gambler, decimal bet, int size, int mines)
     {
-        await GetSavedGames();
+        await GetSavedGames(gambler.Id);
         ActiveGames.Add(gambler.Id, new KasinoMinesGame(gambler, bet, size, mines));
-        await SaveActiveGames();
+        await SaveActiveGames(gambler.Id);
     }
 
 }

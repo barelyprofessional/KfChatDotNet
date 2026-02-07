@@ -59,12 +59,11 @@ public class MinesCommand : ICommand
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
-
-        KasinoMines = new KasinoMines(botInstance);
         
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        KasinoMines = new KasinoMines(botInstance, gambler.Id);
         bool cashout = false;
         if (message.Message.Contains("cashout")) cashout = true;
         //check if user has an existing game already
