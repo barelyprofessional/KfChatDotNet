@@ -68,7 +68,7 @@ public class KasinoMines
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
         {
-            if (LastMessageId != msg.ChatMessageId.Value)
+            if (LastMessageId != msg.ChatMessageId!.Value)
             {
                 await ResetMessage(msg);
             }
@@ -291,7 +291,7 @@ public class KasinoMines
         await GetSavedGames();
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessageId != msg.ChatMessageId.Value)
+        if (game.LastMessageId != msg.ChatMessageId!.Value)
         {
             await game.ResetMessage(msg);
         }
@@ -311,7 +311,7 @@ public class KasinoMines
         await GetSavedGames();
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessageId != msg.ChatMessageId.Value)
+        if (game.LastMessageId != msg.ChatMessageId!.Value)
         {
             await game.ResetMessage(msg);
         }
