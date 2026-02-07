@@ -92,6 +92,15 @@ public class MinesCommand : ICommand
                     $"{user.FormatUsername()}, your balance is too low. Balance: {gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
                 return;
             }
+
+            decimal wagerLimit = 10;
+            if (wager > wagerLimit)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, mines is temporarily limited to wagers of {await wagerLimit.FormatKasinoCurrencyAsync()} during testing",
+                    true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+                return;
+            }
             if (!arguments.TryGetValue("size", out var size) || !arguments.TryGetValue("mines", out var mines))
             {
                 await botInstance.SendChatMessageAsync(
