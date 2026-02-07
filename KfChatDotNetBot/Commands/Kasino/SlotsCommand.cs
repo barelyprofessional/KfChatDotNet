@@ -23,15 +23,11 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class SlotsCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^slots (?<amount>\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^slots (?<amount>\d+\.\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^slots (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^slots (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^slots (?<amount>\d+(?:\.\d+)?) (?<spins>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^slots (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^slots$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+\.\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^sluts (?<amount>\d+(?:\.\d+)?) (?<spins>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^sluts (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^sluts", RegexOptions.IgnoreCase)
     ];
 
