@@ -147,6 +147,15 @@ public class RouletteCommand : ICommand
             return;
         }
 
+        decimal wagerLimit = 25;
+        if (wager > wagerLimit)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, wagers are temporarily limited to {await wagerLimit.FormatKasinoCurrencyAsync()} during testing",
+                true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+            return;
+        }
+
         // Parse and validate bet
         var betInfo = ParseBet(betStr);
         if (betInfo == null)
@@ -229,7 +238,10 @@ public class RouletteCommand : ICommand
         if (isFirstBet)
         {
             _ = Task.Run(async () => await RunCountdown(botInstance, countdownDuration), CancellationToken.None);
+            return;
         }
+
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your bet has been accepted", true, autoDeleteAfter: TimeSpan.FromSeconds(10));
     }
 
     private async Task RunCountdown(ChatBot botInstance, TimeSpan countdownDuration)
@@ -826,7 +838,9 @@ public class RouletteCommand : ICommand
     private string GetNumberColor(int number)
     {
         if (number == 0) return "GREEN";
-        return RedNumbers.Contains(number) ? "RED" : "BLACK";
+        if (RedNumbers.Contains(number)) return "RED";
+        if (BlackNumbers.Contains(number)) return "BLACK";
+        return "???";
     }
 
     private async Task<RouletteRound?> GetRound()
