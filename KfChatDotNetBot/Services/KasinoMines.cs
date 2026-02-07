@@ -3,9 +3,7 @@ using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
-using Microsoft.EntityFrameworkCore;
 using NLog;
-using SixLabors.Fonts;
 using StackExchange.Redis;
 
 namespace KfChatDotNetBot.Services;
@@ -41,7 +39,11 @@ public class KasinoMines
         public async Task ResetMessage(SentMessageTrackerModel msg)
         {
             _logger.Info("Resetting message");
-            await _kfChatBot.KfClient.DeleteMessageAsync(LastMessageId);
+            // 0 is the default for int
+            if (LastMessageId != 0)
+            {
+                await _kfChatBot.KfClient.DeleteMessageAsync(LastMessageId);
+            }
             if (msg.ChatMessageId == null) throw new InvalidOperationException($"ChatMessageId was null for {msg.Reference}");
             LastMessageId = msg.ChatMessageId.Value;
         }
