@@ -107,7 +107,7 @@ internal class BotCommands
                     if (isRateLimited.IsRateLimited)
                     {
                         _ = SendCooldownResponse(user, command.RateLimitOptions, isRateLimited.OldestEntryExpires!.Value, command.GetType().Name);
-                        continue;
+                        break;
                     }
                     RateLimitService.AddEntry(user, command, message.MessageRawHtmlDecoded);
                 }
