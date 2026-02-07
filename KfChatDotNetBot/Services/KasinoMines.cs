@@ -302,11 +302,21 @@ public class KasinoMines
             await game.ResetMessage(msg);
         }
         List<(int r, int c)> betCoords = new();
-        (int r, int c) coord;
-        while (betCoords.Count != count)//creates a list of coordinates to bet on using the coordinate bet function
+        List<(int r, int c)> validBets = new();
+        
+        
+        //first get a list of valid coordinates that could be bet on
+        for (int r = 0; r < game.Size; r++)
         {
-            coord = (Money.GetRandomNumber(game.Creator, 0, game.Size-1), Money.GetRandomNumber(game.Creator, 0, game.Size-1));
-            if (!betCoords.Contains(coord) && !game.BetsPlaced.Contains(coord)) betCoords.Add(coord); 
+            for (int c = 0; c < game.Size; c++)
+            {
+                if (game.MinesBoard[r, c] == 'G' && !game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
+            }
+        }
+        //randomly pull from that list to add coordinates to bet on
+        for (int i = 0; i < count; i++)
+        {
+            betCoords.Add(validBets[Money.GetRandomNumber(game.Creator, 0, validBets.Count-1)]);
         }
 
         return await Bet(gamblerId, betCoords, msg, cashOut);
@@ -349,8 +359,10 @@ public class KasinoMines
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
                 var net = -game.Wager;
                 await _kfChatBot.SendChatMessageAsync(
-                    $"{game.Creator.User.FormatUsername()}, you lost your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}",
+                    $"R! {game.Creator.User.FormatUsername()}, you lost your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(15));
+                await RemoveGame(gamblerId);
+                return false;
             }
             else
             {
