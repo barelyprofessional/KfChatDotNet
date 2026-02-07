@@ -324,8 +324,9 @@ public class KasinoMines
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
                 game.Explode((coord.r, coord.c), msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
+                var net = -game.Wager;
                 await _kfChatBot.SendChatMessageAsync(
-                    $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
+                    $"{game.Creator.User.FormatUsername()}, you lost your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(15));
                 await RemoveGame(gamblerId);
                 return false;
@@ -340,8 +341,9 @@ public class KasinoMines
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
                 game.Explode(coord, msg);
                 var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, -game.Wager, WagerGame.Mines);
+                var net = -game.Wager;
                 await _kfChatBot.SendChatMessageAsync(
-                    $"{game.Creator.User.FormatUsername()}, you lost your {game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {(-game.Wager).FormatKasinoCurrencyAsync()}. Balance: {newBalance.FormatKasinoCurrencyAsync()}",
+                    $"{game.Creator.User.FormatUsername()}, you lost your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems until you hit one of {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(15));
             }
             else
