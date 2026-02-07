@@ -126,8 +126,10 @@ public class KasinoMines
                             str += "⬜";
                         }
                     }
+                    str += "[br]";
                 }
 
+                await Task.Delay(100);
                 await _kfChatBot.KfClient.EditMessageAsync(LastMessageId, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
@@ -332,7 +334,7 @@ public class KasinoMines
                 return false;
             }
             
-            if (Money.GetRandomNumber(game.Creator, 0, 100) < 100 * HOUSE_EDGE)//if you didn't lose, check to see if the switch was flipped
+            if (Money.GetRandomNumber(game.Creator, 0, 100) > 100 * HOUSE_EDGE)//if you didn't lose, check to see if the switch was flipped
             {
                 game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());   
