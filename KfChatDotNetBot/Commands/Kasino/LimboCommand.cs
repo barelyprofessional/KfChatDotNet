@@ -15,12 +15,8 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class LimboCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^limbo (?<amount>\d+) (?<number>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+\.\d+) (?<number>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+\.\d+) (?<number>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+) (?<number>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^limbo (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^limbo (?<amount>\d+(?:\.\d+)?) (?<number>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
+        new Regex(@"^limbo (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^limbo")
     ];
     public string? HelpText => "!limbo <bet amount> <optional number, default 2>";
