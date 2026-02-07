@@ -23,15 +23,11 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class SlotsCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^slots (?<amount>\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^slots (?<amount>\d+\.\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^slots (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^slots (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^slots (?<amount>\d+(?:\.\d+)?) (?<spins>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^slots (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^slots$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+\.\d+) (?<spins>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^sluts (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^sluts (?<amount>\d+(?:\.\d+)?) (?<spins>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^sluts (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^sluts", RegexOptions.IgnoreCase)
     ];
 
@@ -59,7 +55,7 @@ public class SlotsCommand : ICommand
         {
             var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, planes is currently disabled.", 
+                $"{user.FormatUsername()}, slots is currently disabled.", 
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
@@ -100,7 +96,7 @@ public class SlotsCommand : ICommand
         }
 
         char rigged = '0';
-        int rigCheck = Money.GetRandomNumber(gambler, 0, 1, 1);
+        decimal rigCheck = (decimal)Money.GetRandomDouble(gambler);
         if (HOUSE_EDGE > 1)
         {
             if (HOUSE_EDGE - rigCheck > 1) rigged = 'W';
@@ -659,7 +655,7 @@ public class SlotsCommand : ICommand
                         {
                             //check both diagonals above for 1 space, and one space behind
                             while (_preboard[row - 1, col - 1] == _preboard[row, col] ||
-                                   _preboard[row + 1, col + 1] == _preboard[row, col] ||
+                                   _preboard[row - 1, col + 1] == _preboard[row, col] ||
                                    _preboard[row, col - 1] == _preboard[row, col])
                             {
                                 r = _rand.NextDouble() * 97.01;

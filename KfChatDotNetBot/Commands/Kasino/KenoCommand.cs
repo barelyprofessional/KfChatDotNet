@@ -14,13 +14,11 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class KenoCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex("^keno$")
+        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+(?:\.\d+)?) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+(?:\.\d+)?) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
+        new Regex("^keno")
     ];
     public string? HelpText => "!keno [bet amount] [numbers to pick(optional, default 10)]";
     public UserRight RequiredRight => UserRight.Loser;
