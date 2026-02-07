@@ -292,7 +292,7 @@ public class KasinoMines
         await RemoveGame(game.Creator.Id);
     }
         
-    public async Task<bool> Bet(int gamblerId, int count, SentMessageTrackerModel msg, bool cashOut = false) //returns false if you hit a bomb, true if you didn't
+    public async Task<bool> Bet(int gamblerId, int count, SentMessageTrackerModel msg, bool cashOut) //returns false if you hit a bomb, true if you didn't
     {
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
@@ -303,16 +303,33 @@ public class KasinoMines
         }
         List<(int r, int c)> betCoords = new();
         List<(int r, int c)> validBets = new();
-        
+        int numGems = 0;
         
         //first get a list of valid coordinates that could be bet on
         for (int r = 0; r < game.Size; r++)
         {
             for (int c = 0; c < game.Size; c++)
             {
-                if (game.MinesBoard[r, c] == 'G' && !game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
+                if (game.MinesBoard[r,c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
+                else if (!game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
+                
             }
         }
+
+        if (count > numGems)
+        {
+            count = numGems;
+            await _kfChatBot.SendChatMessageAsync(
+                $"{game.Creator.User.FormatUsername()}, there are only {numGems} gems left, so you bet on {count} gems, and will automatically cash out if you win.",
+                true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+            cashOut = true;
+        }
+        else if (count == numGems && cashOut == false)
+        {
+            await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, you bet on all gems, so you will automatically cash out if you win.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+            cashOut = true;
+        }
+        
         //randomly pull from that list to add coordinates to bet on
         for (int i = 0; i < count; i++)
         {
@@ -321,11 +338,12 @@ public class KasinoMines
             validBets.Remove(betCoords[rand]);
         }
 
-        return await Bet(gamblerId, betCoords, msg, cashOut);
+        return await Bet(gamblerId, betCoords, msg, cashOut, true);
     }
 
-    public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut)
+    public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut, bool calledFromBet = false)
     {
+        
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
@@ -333,7 +351,59 @@ public class KasinoMines
         {
             await game.ResetMessage(msg);
         }
-        foreach (var coord in coords) //the main portion of the game
+
+        List<(int r, int c)> bets = new();
+        if (!calledFromBet)
+        {
+            List<(int r, int c)> validBets = new();
+            int numGems = 0;
+        
+            //first get a list of valid coordinates that could be bet on
+            for (int r = 0; r < game.Size; r++)
+            {
+                for (int c = 0; c < game.Size; c++)
+                {
+                    if (game.MinesBoard[r,c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
+                    else if (!game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
+                
+                }
+            }
+
+            var invalidBetMsg = await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, checking bets...", true);
+            await Task.Delay(3);
+            foreach (var bet in coords)
+            {
+                if (!validBets.Contains(bet) || game.BetsPlaced.Contains(bet) || bets.Contains(bet))
+                {
+                    await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
+                        $"{game.Creator.User.FormatUsername()}, invalid bet of {bet.r},{bet.c} removed (already placed, duplicate, or invalid coordinate)");
+                    await Task.Delay(3);
+                }
+                else bets.Add(bet);
+            }
+
+            await _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId!.Value);
+            if (bets.Count > numGems)
+            {
+
+                await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
+                    $"{game.Creator.User.FormatUsername()}, you bet on {bets.Count} gems, but there are only {numGems} left. Your list of bets was automatically truncated, and the game will automatically cash out if you win.");
+                bets.RemoveRange(numGems, bets.Count - numGems);
+                cashOut = true;
+            }
+            else if (bets.Count == numGems)
+            {
+                await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
+                    $"{game.Creator.User.FormatUsername()}, you bet on all gems, so you will automatically cash out if you win.");
+                cashOut = true;
+            }
+
+            await Task.Delay(5);
+            _ = _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId.Value);
+
+        }
+        else bets = coords;
+        foreach (var coord in bets) //the main portion of the game
         {
             await Task.Delay(100);
             if (game.MinesBoard[coord.r, coord.c] == 'M')
