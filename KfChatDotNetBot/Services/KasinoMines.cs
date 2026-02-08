@@ -23,7 +23,7 @@ public class KasinoMines
         public decimal Wager { get; set; }
         public int Size { get; set; }
         public int Mines { get; set; }
-        public List<(int r, int c)> BetsPlaced = new();
+        public List<(int r, int c)> BetsPlaced;
         public int LastMessageId;
         
 
@@ -34,6 +34,7 @@ public class KasinoMines
             Mines = mines;
             Wager = wager;
             MinesBoard = CreateBoard();
+            BetsPlaced = new();
         }
 
         public async Task ResetMessage(SentMessageTrackerModel msg)
@@ -52,12 +53,19 @@ public class KasinoMines
         {
             //find the first mine
             (int r, int c) originalMine = (11, 11);
+            bool brek = false;
             for (int r = 0; r < Size; r++)
             {
                 for (int c = 0; c < Size; c++)
                 {
-                    if (MinesBoard[r, c] == 'M') originalMine = (r, c);
+                    if (MinesBoard[r, c] == 'M')
+                    {
+                        originalMine = (r, c);
+                        brek = true;
+                        break;
+                    }
                 }
+                if (brek) break;
             }
 
             MinesBoard[coord.r, coord.c] = 'M';
@@ -278,11 +286,11 @@ public class KasinoMines
     public async Task Cashout(KasinoMinesGame game)
     {
         decimal payout = 0;
-        decimal possiblePicks = game.Size * game.Size - game.Mines;
+        decimal numGems = game.Size * game.Size - game.Mines;
         for (int i = 0; i < game.BetsPlaced.Count; i++)
         {
-            payout += game.Wager * (possiblePicks / game.BetsPlaced.Count);
-            possiblePicks--;
+            payout += game.Wager * (game.Size * game.Size / numGems);
+            numGems--;
         }
 
         var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, payout, WagerGame.Mines);
@@ -316,6 +324,12 @@ public class KasinoMines
             }
         }
 
+        if (validBets.Count == 0)
+        {
+            await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, unable to generate valid betting positions, game closed.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+            return false;
+        }
+
         if (count > numGems)
         {
             count = numGems;
@@ -329,13 +343,14 @@ public class KasinoMines
             await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, you bet on all gems, so you will automatically cash out if you win.", true, autoDeleteAfter: TimeSpan.FromSeconds(5));
             cashOut = true;
         }
+
         
         //randomly pull from that list to add coordinates to bet on
         for (int i = 0; i < count; i++)
         {
             int rand = Money.GetRandomNumber(game.Creator, 0, validBets.Count - 1);
             betCoords.Add(validBets[rand]);
-            validBets.Remove(betCoords[rand]);
+            validBets.RemoveAt(rand);
         }
 
         return await Bet(gamblerId, betCoords, msg, cashOut, true);
@@ -370,18 +385,19 @@ public class KasinoMines
             }
 
             var invalidBetMsg = await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, checking bets...", true);
-            await _kfChatBot.WaitForChatMessageAsync(invalidBetMsg);
+            await Task.Delay(3);
             foreach (var bet in coords)
             {
                 if (!validBets.Contains(bet) || game.BetsPlaced.Contains(bet) || bets.Contains(bet))
                 {
                     await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
                         $"{game.Creator.User.FormatUsername()}, invalid bet of {bet.r},{bet.c} removed (already placed, duplicate, or invalid coordinate)");
+                    await Task.Delay(3);
                 }
                 else bets.Add(bet);
             }
 
-            await _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId!.Value);
+            
             if (bets.Count > numGems)
             {
 
@@ -397,6 +413,7 @@ public class KasinoMines
                 cashOut = true;
             }
 
+            await Task.Delay(5);
             _ = _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId.Value);
 
         }
