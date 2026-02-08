@@ -146,6 +146,14 @@ public class RouletteCommand : ICommand
                 true, autoDeleteAfter: TimeSpan.FromSeconds(10));
             return;
         }
+        
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(10));
+            return;
+        }
 
         decimal wagerLimit = 25;
         if (wager > wagerLimit)

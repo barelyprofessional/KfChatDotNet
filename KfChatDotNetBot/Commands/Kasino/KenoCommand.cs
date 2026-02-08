@@ -92,6 +92,14 @@ public class KenoCommand : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
+        
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
+            return;
+        }
 
         if (numbers is < 1 or > 10) //if user picks invalid numbers
         {

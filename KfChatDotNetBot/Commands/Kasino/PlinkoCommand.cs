@@ -153,6 +153,14 @@ public class PlinkoCommand : ICommand
             return;
         }
         
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
         List<PlinkoBall> ballsNotInPlay = new List<PlinkoBall>();
         List<PlinkoBall> ballsInPlay = new List<PlinkoBall>();
         for (int i = 0; i < numberOfBalls; i++)

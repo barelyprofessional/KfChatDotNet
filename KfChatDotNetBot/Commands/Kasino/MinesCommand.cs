@@ -86,7 +86,15 @@ public class MinesCommand : ICommand
             if (gambler.Balance < wager)
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, your balance is too low. Balance: {gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
+                    $"{user.FormatUsername()}, your balance is too low. Balance: {await gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+            
+            if (wager == 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                    autoDeleteAfter: cleanupDelay);
                 return;
             }
 
