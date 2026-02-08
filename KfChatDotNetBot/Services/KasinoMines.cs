@@ -370,14 +370,13 @@ public class KasinoMines
             }
 
             var invalidBetMsg = await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, checking bets...", true);
-            await Task.Delay(3);
+            await _kfChatBot.WaitForChatMessageAsync(invalidBetMsg);
             foreach (var bet in coords)
             {
                 if (!validBets.Contains(bet) || game.BetsPlaced.Contains(bet) || bets.Contains(bet))
                 {
                     await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
                         $"{game.Creator.User.FormatUsername()}, invalid bet of {bet.r},{bet.c} removed (already placed, duplicate, or invalid coordinate)");
-                    await Task.Delay(3);
                 }
                 else bets.Add(bet);
             }
@@ -398,7 +397,6 @@ public class KasinoMines
                 cashOut = true;
             }
 
-            await Task.Delay(5);
             _ = _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId.Value);
 
         }
