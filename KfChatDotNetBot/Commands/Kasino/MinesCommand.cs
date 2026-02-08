@@ -238,10 +238,8 @@ public class MinesCommand : ICommand
                     true, autoDeleteAfter: cleanupDelay);
                 return;
             }
-            var msg = await botInstance.SendChatMessageAsync(
-                $"{KasinoMines.ActiveGames[gambler.Id].ToString()}", true);
-            var msgSuccess = await botInstance.WaitForChatMessageAsync(msg, ct: ctx);
-            if (!msgSuccess) throw new InvalidOperationException("Timed out waiting for the message");
+
+            var msg = KasinoMines.ActiveGames[gambler.Id].LastMessage;
             if (pick == 0) //if using coordinates
             {
                 var game = KasinoMines.ActiveGames[gambler.Id];
