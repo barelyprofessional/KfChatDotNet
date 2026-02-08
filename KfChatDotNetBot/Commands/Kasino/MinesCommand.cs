@@ -13,17 +13,19 @@ public class MinesCommand : ICommand
 {
     public List<Regex> Patterns => [
         //cashout
-        new Regex(@"^mines(?<cashout> cashout)$", RegexOptions.IgnoreCase),                                                                     
+        new Regex(@"^mines\s+cashout$", RegexOptions.IgnoreCase),                                                                     
         //refresh
-        new Regex(@"^mines(?<refresh> refresh)$", RegexOptions.IgnoreCase), 
-        //attempting to start a game below here
-        new Regex(@"^mines (?<bet>\d+(?:\.\d+)?) (?<size>\d+) (?<mines>\d+) (?<picks>\d+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase), 
-        new Regex(@"^mines (?<bet>\d+(?:\.\d+)?) (?<size>\d+) (?<mines>\d+) (?<betString>.+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),  
-        //attempting to continue a game below here
-        new Regex(@"^mines (?<picks>\d+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase), 
-        new Regex(@"^mines (?<betString>.+)(?<cashout> cashout|)$", RegexOptions.IgnoreCase),                              
+        new Regex(@"^mines\s+refresh$", RegexOptions.IgnoreCase), 
+        //start game with number of picks
+        new Regex(@"^mines\s+(?<bet>\d+(?:\.\d+)?)\s+(?<size>\d+)\s+(?<mines>\d+)\s+(?<picks>\d+)(?:\s+(?<cashout>cashout))?$", RegexOptions.IgnoreCase), 
+        //start game with coordinate string (must contain comma)
+        new Regex(@"^mines\s+(?<bet>\d+(?:\.\d+)?)\s+(?<size>\d+)\s+(?<mines>\d+)\s+(?<betString>\d+,\d+(?:\s+\d+,\d+)*)(?:\s+(?<cashout>cashout))?$", RegexOptions.IgnoreCase),  
+        //continue game with number of picks
+        new Regex(@"^mines\s+(?<picks>\d+)(?:\s+(?<cashout>cashout))?$", RegexOptions.IgnoreCase), 
+        //continue game with coordinate string (must contain comma)
+        new Regex(@"^mines\s+(?<betString>\d+,\d+(?:\s+\d+,\d+)*)(?:\s+(?<cashout>cashout))?$", RegexOptions.IgnoreCase),                              
         //get info
-        new Regex("^mines$")                                                                                                                     
+        new Regex(@"^mines$", RegexOptions.IgnoreCase)                                                                                                                     
     ];
     public string? HelpText => "!mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: https://i.ddos.lgbt/raw/UJ9Dty.html";
     public UserRight RequiredRight => UserRight.Loser;
@@ -63,7 +65,22 @@ public class MinesCommand : ICommand
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
         KasinoMines = new KasinoMines(botInstance, gambler.Id);
         bool cashout = false;
-        if (message.Message.Contains("cashout")) cashout = true;
+        if (arguments.TryGetValue("cashout", out var cashOut)||message.Message.Contains("cashout")) cashout = true;
+        
+        if (!Regex.IsMatch(message.Message, @"\d") && cashout) //if the message has no ints its a cashout attempt
+        {
+            if (KasinoMines.ActiveGames.ContainsKey(gambler.Id))
+            {
+                await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
+                return;
+            }
+            else
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have a game running to cash out.", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+        }
+        
         //check if user has an existing game already
         if (!KasinoMines.ActiveGames.ContainsKey(gambler.Id))
         {
@@ -86,15 +103,7 @@ public class MinesCommand : ICommand
             if (gambler.Balance < wager)
             {
                 await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, your balance is too low. Balance: {await gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
-                return;
-            }
-            
-            if (wager == 0)
-            {
-                await botInstance.SendChatMessageAsync(
-                    $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
-                    autoDeleteAfter: cleanupDelay);
+                    $"{user.FormatUsername()}, your balance is too low. Balance: {gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
                 return;
             }
 
@@ -104,6 +113,13 @@ public class MinesCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, mines is temporarily limited to wagers of {await wagerLimit.FormatKasinoCurrencyAsync()} during testing",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+                return;
+            }
+
+            if (wager <= 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, you have to bet something to play mines.", true, autoDeleteAfter: cleanupDelay);
                 return;
             }
             if (!arguments.TryGetValue("size", out var size) || !arguments.TryGetValue("mines", out var mines))
@@ -164,7 +180,7 @@ public class MinesCommand : ICommand
                 var game = KasinoMines.ActiveGames[gambler.Id];
                 foreach (var coord in precisePicks)
                 {
-                    if (game.BetsPlaced.Contains(coord) || coord.r <= 0 || coord.r > game.Size || coord.c <= 0 || coord.c > game.Size)
+                    if (game.BetsPlaced.Contains(coord) || coord.r < 0 || coord.r > game.Size || coord.c < 0 || coord.c > game.Size)
                     {
                         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't place duplicate or invalid bets. Use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
                         return;
