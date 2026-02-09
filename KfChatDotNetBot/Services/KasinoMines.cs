@@ -259,7 +259,8 @@ public class KasinoMines
         if (string.IsNullOrEmpty(json)) return;
         try
         {
-            ActiveGames = JsonSerializer.Deserialize<Dictionary<int, KasinoMinesGame>>(json.ToString()) ??
+            var options = new JsonSerializerOptions{IncludeFields = true};
+            ActiveGames = JsonSerializer.Deserialize<Dictionary<int, KasinoMinesGame>>(json.ToString(), options) ??
                           throw new InvalidOperationException();
         }
         catch (Exception e)
@@ -272,7 +273,12 @@ public class KasinoMines
     public async Task SaveActiveGames(int gamblerId)
     {
         if (_redisDb == null) throw new InvalidOperationException("Kasino mines service isn't initialized");
-        var json = JsonSerializer.Serialize(ActiveGames);
+        var options = new JsonSerializerOptions
+        {
+            IncludeFields = true,
+            WriteIndented = false
+        };
+        var json = JsonSerializer.Serialize(ActiveGames, options);
         await _redisDb.StringSetAsync($"Mines.State.{gamblerId}", json, null, When.Always);
     }
 
