@@ -165,7 +165,6 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         var handler = GetHttpClientHandler();
         var container = new CookieContainer();
         handler.CookieContainer = container;
-        handler.UseCookies = true;
         using var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
@@ -185,6 +184,8 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         }
 
         var cookies = container.GetAllCookies();
+        _logger.Debug("JSON serialization of all the cookies");
+        _logger.Debug(JsonSerializer.Serialize(cookies));
         return cookies["ttrs_clearance"]?.Value ?? throw new InvalidOperationException();
     }
 }
