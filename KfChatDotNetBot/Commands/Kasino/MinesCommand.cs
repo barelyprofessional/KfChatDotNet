@@ -16,6 +16,8 @@ public class MinesCommand : ICommand
         new Regex(@"^mines\s+cashout$", RegexOptions.IgnoreCase),                                                                     
         //refresh
         new Regex(@"^mines\s+refresh$", RegexOptions.IgnoreCase), 
+        //clear - admin only
+        new Regex(@"^mines\s+clear$", RegexOptions.IgnoreCase),                                                                 
         //start game with number of picks
         new Regex(@"^mines\s+(?<bet>\d+(?:\.\d+)?)\s+(?<size>\d+)\s+(?<mines>\d+)\s+(?<picks>\d+)(?:\s+(?<cashout>cashout))?$", RegexOptions.IgnoreCase), 
         //start game with coordinate string (must contain comma)
@@ -46,6 +48,7 @@ public class MinesCommand : ICommand
         CancellationToken ctx)
     {
         
+        
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoMinesCleanupDelay, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
             BuiltIn.Keys.KasinoMinesEnabled, BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay
@@ -64,6 +67,21 @@ public class MinesCommand : ICommand
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
         KasinoMines = new KasinoMines(botInstance, gambler.Id);
+        if (message.Message.Contains("clear"))
+        {
+            if (user.UserRight == UserRight.Admin || user.UserRight == UserRight.TrueAndHonest)
+            {
+                KasinoMines.GetSavedGames(gambler.Id);
+                KasinoMines.ActiveGames.Clear();
+                KasinoMines.SaveActiveGames(gambler.Id);
+                return;
+            }
+            else
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have permission to clear saved games.", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+        }
         bool cashout = false;
         if (arguments.TryGetValue("cashout", out var cashOut)||message.Message.Contains("cashout")) cashout = true;
         
@@ -239,7 +257,19 @@ public class MinesCommand : ICommand
                 return;
             }
 
-            var msg = KasinoMines.ActiveGames[gambler.Id].LastMessage;
+            var lastmsg = KasinoMines.ActiveGames[gambler.Id].LastMessageId;
+            SentMessageTrackerModel msg;
+            if (lastmsg == 0)
+            {
+                msg = (await botInstance.SendChatMessageAsync($"{KasinoMines.ActiveGames[gambler.Id].ToString()}", true));
+                await botInstance.WaitForChatMessageAsync(msg, ct: ctx);
+                if (msg.ChatMessageId == null) throw new InvalidOperationException("Timed out waiting for the message");
+            }
+            else
+            {
+                msg = botInstance.GetSentMessageStatus(KasinoMines.ActiveGames[gambler.Id].LastMessageReference);
+            }
+            
             if (pick == 0) //if using coordinates
             {
                 var game = KasinoMines.ActiveGames[gambler.Id];
