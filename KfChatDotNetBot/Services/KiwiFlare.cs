@@ -46,8 +46,8 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             if (challengeData == null)
             {
                 _logger.Info("challengeData was still null even looking for ttrs");
+                return null;
             }
-            return null;
         }
 
         if (!challengeData.Attributes.Contains($"data-{pow}-challenge")) throw new Exception($"data-{pow}-challenge attribute missing");
