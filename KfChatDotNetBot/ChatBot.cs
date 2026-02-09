@@ -53,20 +53,11 @@ public class ChatBot
         _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
             settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         
-        KfClient = new ChatClient(new ChatClientConfigModel
-        {
-            WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
-            XfSessionToken = _kfTokenService.GetXfSessionCookie(),
-            CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
-            Proxy = settings[BuiltIn.Keys.Proxy].Value,
-            ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
-        });
-        
-        if (_kfTokenService.GetXfSessionCookie() == null)
+        if (_kfTokenService.GetCookies().Count == 0)
         {
             try
             {
-                RefreshXfToken().Wait(_cancellationToken);
+                RefreshXfToken(false).Wait(_cancellationToken);
             }
             catch (Exception e)
             {
@@ -74,6 +65,15 @@ public class ChatBot
                 _logger.Error(e);
             }
         }
+        
+        KfClient = new ChatClient(new ChatClientConfigModel
+        {
+            WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
+            Cookies = _kfTokenService.GetCookies(),
+            CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
+            Proxy = settings[BuiltIn.Keys.Proxy].Value,
+            ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
+        });
   
         _logger.Debug("Creating bot command instance");
         _botCommands = new BotCommands(this, _cancellationToken);
@@ -118,10 +118,6 @@ public class ChatBot
             _logger.Error("Caught an exception while trying to refresh the XF token");
             _logger.Error(e);
         }
-        _kfTokenService.SaveCookies().Wait(_cancellationToken);
-        // Shouldn't be null if we've just refreshed the token
-        // It's only null if a logon has never been attempted since the cookie DB entry was created
-        KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
         _logger.Info("Retrieved fresh token. Reconnecting.");
         KfClient.Disconnect();
         KfClient.StartWsClient().Wait(_cancellationToken);
@@ -227,7 +223,7 @@ public class ChatBot
         }
     }
 
-    private async Task RefreshXfToken()
+    private async Task RefreshXfToken(bool autoConnect = true)
     {
         try
         {
@@ -259,6 +255,13 @@ public class ChatBot
         }
 
         _logger.Info("Successfully logged in");
+        if (autoConnect && !KfClient.IsConnected())
+        {
+            _logger.Info("Updating cookies and reconnecting");
+            await _kfTokenService.SaveCookies();
+            KfClient.UpdateCookies(_kfTokenService.GetCookies());
+            await KfClient.StartWsClient();
+        }
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
@@ -650,6 +653,11 @@ public class ChatBot
         _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
+        if (disconnectionInfo.Exception!.Message.Contains("status code '203'"))
+        {
+            _logger.Info("Chat 203'd, getting a new token");
+            RefreshXfToken().Wait(_cancellationToken);
+        }
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)

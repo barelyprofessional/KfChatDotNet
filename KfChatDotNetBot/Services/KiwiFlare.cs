@@ -46,13 +46,13 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             if (challengeData == null)
             {
                 _logger.Info("challengeData was still null even looking for ttrs");
+                return null;
             }
-            return null;
         }
 
         if (!challengeData.Attributes.Contains($"data-{pow}-challenge")) throw new Exception($"data-{pow}-challenge attribute missing");
         if (!challengeData.Attributes.Contains($"data-{pow}-difficulty")) throw new Exception($"data-{pow}-difficulty attribute missing");
-        var patience = TimeSpan.MaxValue;
+        var patience = TimeSpan.FromMinutes(5);
         // ttrs has no patience value
         if (challengeData.Attributes.Contains("data-sssg-patience"))
         {
@@ -165,7 +165,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         var handler = GetHttpClientHandler();
         var container = new CookieContainer();
         handler.CookieContainer = container;
-        handler.UseCookies = true;
+        handler.AllowAutoRedirect = false;
         using var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
@@ -184,8 +184,11 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             throw new Exception($"ttrs didn't accept our solution with reason: {reason}");
         }
 
-        var cookies = container.GetAllCookies();
-        return cookies["ttrs_clearance"]?.Value ?? throw new InvalidOperationException();
+        _logger.Debug($"Set-Cookie header -> {JsonSerializer.Serialize(response.Headers.GetValues("Set-Cookie"))}");
+        var header = response.Headers.GetValues("Set-Cookie").First();
+        var token = $"{header.Split("ttrs_clearance=")[1].Split("; ")[0]}";
+        _logger.Debug($"Parsed token from the header: {token}");
+        return token;
     }
 }
 

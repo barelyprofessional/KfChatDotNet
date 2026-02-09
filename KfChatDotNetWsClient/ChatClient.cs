@@ -39,9 +39,9 @@ public class ChatClient
         _config = config;
     }
 
-    public void UpdateToken(string newToken)
+    public void UpdateCookies(Dictionary<string, string> cookies)
     {
-        _config.XfSessionToken = newToken;
+        _config.Cookies = cookies;
     }
 
     public async Task StartWsClient()
@@ -80,13 +80,16 @@ public class ChatClient
                 clientWs.Options.Proxy = new WebProxy(_config.Proxy);
             }
             // Guest mode
-            if (_config.XfSessionToken == null)
+            if (_config.Cookies.Keys.Count == 0)
             {
                 return clientWs;
             }
 
             var cookieContainer = new CookieContainer();
-            cookieContainer.Add(new Cookie("xf_session", _config.XfSessionToken, "/", _config.CookieDomain));
+            foreach (var key in _config.Cookies.Keys)
+            {
+                cookieContainer.Add(new Cookie(key, _config.Cookies[key], "/", _config.CookieDomain));
+            }
             clientWs.Options.Cookies = cookieContainer;
 
             return clientWs;

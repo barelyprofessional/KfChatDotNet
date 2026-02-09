@@ -113,7 +113,13 @@ public class KfTokenService
             throw new Exception("data-logged-in attribute missing");
         }
 
-        return html.Attributes["data-logged-in"].Value == "true";
+        var success = html.Attributes["data-logged-in"].Value == "true";
+        if (success)
+        {
+            await SaveCookies();
+        }
+
+        return success;
     }
 
     public async Task PerformLogin(string username, string password)
@@ -164,6 +170,11 @@ public class KfTokenService
         var cookie = _cookies.GetAllCookies()["xf_session"];
         _logger.Debug($"xf_session => {cookie?.Value}");
         return cookie?.Value;
+    }
+
+    public Dictionary<string, string> GetCookies()
+    {
+        return _cookies.GetAllCookies().ToDictionary(cookie => cookie.Name, cookie => cookie.Value);
     }
 
     public async Task SaveCookies()

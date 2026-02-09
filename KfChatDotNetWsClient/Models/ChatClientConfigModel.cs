@@ -2,8 +2,7 @@ namespace KfChatDotNetWsClient.Models;
 
 public class ChatClientConfigModel
 {
-    // XF session token. Sent as a cookie to auth the user
-    public string? XfSessionToken { get; set; }
+    public required Dictionary<string, string> Cookies { get; set; } = new();
     // Currently wss://kiwifarms.net/chat.ws
     public required Uri WsUri { get; set; }
     public int ReconnectTimeout { get; set; } = 30;
