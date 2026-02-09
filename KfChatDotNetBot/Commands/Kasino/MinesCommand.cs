@@ -69,18 +69,15 @@ public class MinesCommand : ICommand
         KasinoMines = new KasinoMines(botInstance, gambler.Id);
         if (message.Message.Contains("clear"))
         {
-            if (user.UserRight == UserRight.Admin || user.UserRight == UserRight.TrueAndHonest)
+            if (user.UserRight >= UserRight.TrueAndHonest)
             {
-                KasinoMines.GetSavedGames(gambler.Id);
+                await KasinoMines.GetSavedGames(gambler.Id);
                 KasinoMines.ActiveGames.Clear();
-                KasinoMines.SaveActiveGames(gambler.Id);
+                await KasinoMines.SaveActiveGames(gambler.Id);
                 return;
             }
-            else
-            {
-                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have permission to clear saved games.", true, autoDeleteAfter: cleanupDelay);
-                return;
-            }
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have permission to clear saved games.", true, autoDeleteAfter: cleanupDelay);
+            return;
         }
         bool cashout = false;
         if (arguments.TryGetValue("cashout", out var cashOut)||message.Message.Contains("cashout")) cashout = true;
