@@ -52,7 +52,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
 
         if (!challengeData.Attributes.Contains($"data-{pow}-challenge")) throw new Exception($"data-{pow}-challenge attribute missing");
         if (!challengeData.Attributes.Contains($"data-{pow}-difficulty")) throw new Exception($"data-{pow}-difficulty attribute missing");
-        var patience = TimeSpan.MaxValue;
+        var patience = TimeSpan.FromMinutes(5);
         // ttrs has no patience value
         if (challengeData.Attributes.Contains("data-sssg-patience"))
         {
