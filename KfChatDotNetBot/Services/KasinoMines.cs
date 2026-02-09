@@ -141,7 +141,7 @@ public class KasinoMines
                 }
 
                 await Task.Delay(100);
-                await _kfChatBot.KfClient.EditMessageAsync(LastMessage.ChatMessageId.Value, $"{str}[br]{Creator.User.FormatUsername()}");
+                await _kfChatBot.KfClient.EditMessageAsync(LastMessage.ChatMessageId!.Value, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(10));
