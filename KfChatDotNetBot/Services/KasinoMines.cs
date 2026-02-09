@@ -24,7 +24,7 @@ public class KasinoMines
         public int Size { get; set; }
         public int Mines { get; set; }
         public List<(int r, int c)> BetsPlaced;
-        public SentMessageTrackerModel LastMessage;
+        public SentMessageTrackerModel LastMessage = null!;
         
 
         public KasinoMinesGame(GamblerDbModel creator, decimal wager, int size, int mines)
@@ -34,14 +34,14 @@ public class KasinoMines
             Mines = mines;
             Wager = wager;
             MinesBoard = CreateBoard();
-            BetsPlaced = new();
+            BetsPlaced = [];
         }
 
         public async Task ResetMessage(SentMessageTrackerModel msg)
         {
             _logger.Info("Resetting message");
             // 0 is the default for int
-            if (LastMessage.ChatMessageId.Value != 0)
+            if (LastMessage.ChatMessageId != null)
             {
                 await _kfChatBot.KfClient.DeleteMessageAsync(LastMessage.ChatMessageId.Value);
             }
@@ -79,7 +79,7 @@ public class KasinoMines
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
         {
-            if (LastMessage.ChatMessageId.Value != msg.ChatMessageId!.Value)
+            if (LastMessage.ChatMessageId!.Value != msg.ChatMessageId!.Value)
             {
                 await ResetMessage(msg);
             }
@@ -305,7 +305,7 @@ public class KasinoMines
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessage.ChatMessageId.Value != msg.ChatMessageId!.Value)
+        if (game.LastMessage.ChatMessageId!.Value != msg.ChatMessageId!.Value)
         {
             await game.ResetMessage(msg);
         }
@@ -362,7 +362,7 @@ public class KasinoMines
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessage.ChatMessageId.Value != msg.ChatMessageId!.Value)
+        if (game.LastMessage.ChatMessageId!.Value != msg.ChatMessageId!.Value)
         {
             await game.ResetMessage(msg);
         }
@@ -385,7 +385,7 @@ public class KasinoMines
             }
 
             var invalidBetMsg = await _kfChatBot.SendChatMessageAsync($"{game.Creator.User.FormatUsername()}, checking bets...", true);
-            await Task.Delay(3);
+            await _kfChatBot.WaitForChatMessageAsync(invalidBetMsg);
             foreach (var bet in coords)
             {
                 if (!validBets.Contains(bet) || game.BetsPlaced.Contains(bet) || bets.Contains(bet))
@@ -413,8 +413,8 @@ public class KasinoMines
                 cashOut = true;
             }
 
-            await Task.Delay(5);
-            _ = _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId.Value);
+            await Task.Delay(50);
+            _ = _kfChatBot.KfClient.DeleteMessageAsync(invalidBetMsg.ChatMessageId!.Value);
 
         }
         else bets = coords;
