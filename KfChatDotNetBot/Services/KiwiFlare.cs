@@ -183,6 +183,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             throw new Exception($"ttrs didn't accept our solution with reason: {reason}");
         }
 
+        _logger.Debug($"Set-Cookie header -> {JsonSerializer.Serialize(response.Headers.GetValues("Set-Cookie"))}");
         var cookies = container.GetAllCookies();
         _logger.Debug("JSON serialization of all the cookies");
         _logger.Debug(JsonSerializer.Serialize(cookies));
