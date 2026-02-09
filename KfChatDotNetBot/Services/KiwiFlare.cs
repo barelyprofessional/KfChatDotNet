@@ -165,6 +165,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         var handler = GetHttpClientHandler();
         var container = new CookieContainer();
         handler.CookieContainer = container;
+        handler.AllowAutoRedirect = false;
         using var client = new HttpClient();
         client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
