@@ -166,6 +166,11 @@ public class KfTokenService
         return cookie?.Value;
     }
 
+    public Dictionary<string, string> GetCookies()
+    {
+        return _cookies.GetAllCookies().ToDictionary(cookie => cookie.Name, cookie => cookie.Value);
+    }
+
     public async Task SaveCookies()
     {
         _logger.Debug("Saving cookies");

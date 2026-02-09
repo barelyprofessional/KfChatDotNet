@@ -53,15 +53,6 @@ public class ChatBot
         _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
             settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         
-        KfClient = new ChatClient(new ChatClientConfigModel
-        {
-            WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
-            XfSessionToken = _kfTokenService.GetXfSessionCookie(),
-            CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
-            Proxy = settings[BuiltIn.Keys.Proxy].Value,
-            ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
-        });
-        
         if (_kfTokenService.GetXfSessionCookie() == null)
         {
             try
@@ -74,6 +65,15 @@ public class ChatBot
                 _logger.Error(e);
             }
         }
+        
+        KfClient = new ChatClient(new ChatClientConfigModel
+        {
+            WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
+            Cookies = _kfTokenService.GetCookies(),
+            CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
+            Proxy = settings[BuiltIn.Keys.Proxy].Value,
+            ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
+        });
   
         _logger.Debug("Creating bot command instance");
         _botCommands = new BotCommands(this, _cancellationToken);
@@ -121,7 +121,7 @@ public class ChatBot
         _kfTokenService.SaveCookies().Wait(_cancellationToken);
         // Shouldn't be null if we've just refreshed the token
         // It's only null if a logon has never been attempted since the cookie DB entry was created
-        KfClient.UpdateToken(_kfTokenService.GetXfSessionCookie()!);
+        KfClient.UpdateCookies(_kfTokenService.GetCookies());
         _logger.Info("Retrieved fresh token. Reconnecting.");
         KfClient.Disconnect();
         KfClient.StartWsClient().Wait(_cancellationToken);
