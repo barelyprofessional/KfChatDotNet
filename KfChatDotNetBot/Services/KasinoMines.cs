@@ -24,7 +24,8 @@ public class KasinoMines
         public int Size { get; set; }
         public int Mines { get; set; }
         public List<(int r, int c)> BetsPlaced;
-        public SentMessageTrackerModel LastMessage = null!;
+        public int LastMessageId = 0;
+        public string LastMessageReference = "";
         
 
         public KasinoMinesGame(GamblerDbModel creator, decimal wager, int size, int mines)
@@ -41,12 +42,13 @@ public class KasinoMines
         {
             _logger.Info("Resetting message");
             // 0 is the default for int
-            if (LastMessage.ChatMessageId != null)
+            if (LastMessageId != 0)
             {
-                await _kfChatBot.KfClient.DeleteMessageAsync(LastMessage.ChatMessageId.Value);
+                await _kfChatBot.KfClient.DeleteMessageAsync(LastMessageId);
             }
             if (msg.ChatMessageId == null) throw new InvalidOperationException($"ChatMessageId was null for {msg.Reference}");
-            LastMessage = msg;
+            LastMessageId = msg.ChatMessageId.Value;
+            LastMessageReference = msg.Reference;
         }
 
         public async Task RigBoard((int r, int c) coord) //moves one of the mines to a specified coordinate for house edge rigging
@@ -79,7 +81,7 @@ public class KasinoMines
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
         {
-            if (LastMessage.ChatMessageId == null || LastMessage.ChatMessageId != msg.ChatMessageId)
+            if (LastMessageId == 0 || LastMessageId != msg.ChatMessageId)
             {
                 await ResetMessage(msg);
             }
@@ -141,7 +143,7 @@ public class KasinoMines
                 }
 
                 await Task.Delay(100);
-                await _kfChatBot.KfClient.EditMessageAsync(LastMessage.ChatMessageId!.Value, $"{str}[br]{Creator.User.FormatUsername()}");
+                await _kfChatBot.KfClient.EditMessageAsync(LastMessageId, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(10));
@@ -311,8 +313,9 @@ public class KasinoMines
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessage.ChatMessageId == null || game.LastMessage.ChatMessageId != msg.ChatMessageId)
+        if (game.LastMessageId == 0 || game.LastMessageId != msg.ChatMessageId)
         {
+            
             await game.ResetMessage(msg);
         }
         List<(int r, int c)> betCoords = new();
@@ -368,7 +371,7 @@ public class KasinoMines
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
-        if (game.LastMessage.ChatMessageId == null || game.LastMessage.ChatMessageId != msg.ChatMessageId)
+        if (game.LastMessageId == 0 || game.LastMessageId != msg.ChatMessageId)
         {
             await game.ResetMessage(msg);
         }
