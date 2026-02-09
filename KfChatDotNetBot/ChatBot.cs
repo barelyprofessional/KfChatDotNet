@@ -53,11 +53,11 @@ public class ChatBot
         _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
             settings[BuiltIn.Keys.Proxy].Value, _cancellationToken);
         
-        if (_kfTokenService.GetXfSessionCookie() == null)
+        if (_kfTokenService.GetCookies().Count == 0)
         {
             try
             {
-                RefreshXfToken().Wait(_cancellationToken);
+                RefreshXfToken(false).Wait(_cancellationToken);
             }
             catch (Exception e)
             {
@@ -118,10 +118,6 @@ public class ChatBot
             _logger.Error("Caught an exception while trying to refresh the XF token");
             _logger.Error(e);
         }
-        _kfTokenService.SaveCookies().Wait(_cancellationToken);
-        // Shouldn't be null if we've just refreshed the token
-        // It's only null if a logon has never been attempted since the cookie DB entry was created
-        KfClient.UpdateCookies(_kfTokenService.GetCookies());
         _logger.Info("Retrieved fresh token. Reconnecting.");
         KfClient.Disconnect();
         KfClient.StartWsClient().Wait(_cancellationToken);
@@ -227,7 +223,7 @@ public class ChatBot
         }
     }
 
-    private async Task RefreshXfToken()
+    private async Task RefreshXfToken(bool autoConnect = true)
     {
         try
         {
@@ -259,6 +255,13 @@ public class ChatBot
         }
 
         _logger.Info("Successfully logged in");
+        if (autoConnect && !KfClient.IsConnected())
+        {
+            _logger.Info("Updating cookies and reconnecting");
+            await _kfTokenService.SaveCookies();
+            KfClient.UpdateCookies(_kfTokenService.GetCookies());
+            await KfClient.StartWsClient();
+        }
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
