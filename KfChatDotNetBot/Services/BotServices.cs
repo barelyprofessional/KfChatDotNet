@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
