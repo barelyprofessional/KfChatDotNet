@@ -326,14 +326,16 @@ public class KasinoMines
         List<(int r, int c)> validBets = new();
         int numGems = 0;
         
-        //first get a list of valid coordinates that could be bet on
+        //first get a list of valid coordinates that could be bet on (any unrevealed tile - gem or mine)
         for (int r = 0; r < game.Size; r++)
         {
             for (int c = 0; c < game.Size; c++)
             {
-                if (game.MinesBoard[r][c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
-                else if (!game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
-                
+                if (!game.BetsPlaced.Contains((r, c)))
+                {
+                    validBets.Add((r, c));
+                    if (game.MinesBoard[r][c] == 'G') numGems++;
+                }
             }
         }
 
@@ -386,14 +388,16 @@ public class KasinoMines
             List<(int r, int c)> validBets = new();
             int numGems = 0;
         
-            //first get a list of valid coordinates that could be bet on
+            //first get a list of valid coordinates that could be bet on (any unrevealed cell for user-provided coords)
             for (int r = 0; r < game.Size; r++)
             {
                 for (int c = 0; c < game.Size; c++)
                 {
-                    if (game.MinesBoard[r][c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
-                    else if (!game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
-                
+                    if (!game.BetsPlaced.Contains((r, c)))
+                    {
+                        validBets.Add((r, c));
+                        if (game.MinesBoard[r][c] == 'G') numGems++;
+                    }
                 }
             }
 
