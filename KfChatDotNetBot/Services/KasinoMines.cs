@@ -5,6 +5,7 @@ using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using NLog;
 using StackExchange.Redis;
+using System.Text.Json.Serialization;
 
 namespace KfChatDotNetBot.Services;
 
@@ -19,7 +20,8 @@ public class KasinoMines
     {
         public GamblerDbModel Creator { get; set; }
         public DateTimeOffset LastInteracted = DateTimeOffset.UtcNow;
-        public char[,] MinesBoard;
+        
+        public char[][] MinesBoard;
         public decimal Wager { get; set; }
         public int Size { get; set; }
         public int Mines { get; set; }
@@ -60,7 +62,7 @@ public class KasinoMines
             {
                 for (int c = 0; c < Size; c++)
                 {
-                    if (MinesBoard[r, c] == 'M')
+                    if (MinesBoard[r][ c] == 'M')
                     {
                         originalMine = (r, c);
                         brek = true;
@@ -70,13 +72,13 @@ public class KasinoMines
                 if (brek) break;
             }
 
-            MinesBoard[coord.r, coord.c] = 'M';
+            MinesBoard[coord.r][ coord.c] = 'M';
             if (originalMine.r == 11)
             {
                 _logger.Error("Rigboard failed to find a mine somehow?");
                 return;
             }
-            MinesBoard[originalMine.r, originalMine.c] = 'G';
+            MinesBoard[originalMine.r][ originalMine.c] = 'G';
 
         }
         public async Task Explode((int r, int c) mineLocation, SentMessageTrackerModel msg)
@@ -173,7 +175,7 @@ public class KasinoMines
                     {
                         value += "⬜";
                     }
-                    else if (MinesBoard[r, c] == 'M') value += "💣";
+                    else if (MinesBoard[r][ c] == 'M') value += "💣";
                     else value += "💎";
                 }
 
@@ -184,9 +186,11 @@ public class KasinoMines
             return value;
         }
         
-        public char[,] CreateBoard()
+        public char[][] CreateBoard()
         {
-            char[,] board = new char[Size, Size];
+            char[][] board = new char[Size][];
+            for (int i = 0; i < Size; i++) board[i] = new char[Size];
+            
             List<(int r, int c)> minesCoords = new List<(int r, int c)>();
             (int r, int c) coord;
             int counter = 0;
@@ -204,8 +208,8 @@ public class KasinoMines
 
             foreach (var coords in minesCoords)
             {
-                if (gems) board[coords.r, coords.c] = 'G';
-                else board[coords.r, coords.c] = 'M';
+                if (gems) board[coords.r][ coords.c] = 'G';
+                else board[coords.r][ coords.c] = 'M';
             }
             for (int r = 0; r < Size; r++)
             {
@@ -213,11 +217,11 @@ public class KasinoMines
                 {
                     if (gems)
                     {
-                        if (!(board[r,c] == 'G'))  board[r, c] = 'M';
+                        if (!(board[r][c] == 'G'))  board[r][ c] = 'M';
                     }
                     else
                     {
-                        if (!(board[r,c] == 'M'))  board[r, c] = 'G';
+                        if (!(board[r][c] == 'M'))  board[r][ c] = 'G';
                     }
                 }
             }
@@ -327,7 +331,7 @@ public class KasinoMines
         {
             for (int c = 0; c < game.Size; c++)
             {
-                if (game.MinesBoard[r,c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
+                if (game.MinesBoard[r][c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
                 else if (!game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
                 
             }
@@ -387,7 +391,7 @@ public class KasinoMines
             {
                 for (int c = 0; c < game.Size; c++)
                 {
-                    if (game.MinesBoard[r,c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
+                    if (game.MinesBoard[r][c] == 'G' && !game.BetsPlaced.Contains((r, c))) numGems++;
                     else if (!game.BetsPlaced.Contains((r, c))) validBets.Add((r, c));
                 
                 }
@@ -430,7 +434,7 @@ public class KasinoMines
         foreach (var coord in bets) //the main portion of the game
         {
             await Task.Delay(100);
-            if (game.MinesBoard[coord.r, coord.c] == 'M')
+            if (game.MinesBoard[coord.r][ coord.c] == 'M')
             {
                 game.BetsPlaced.Add(coord);
                 await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageId!.Value, game.ToString());
