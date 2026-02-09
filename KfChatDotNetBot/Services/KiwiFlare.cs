@@ -187,7 +187,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         _logger.Debug($"Set-Cookie header -> {JsonSerializer.Serialize(response.Headers.GetValues("Set-Cookie"))}");
         var header = response.Headers.GetValues("Set-Cookie").First();
         var token = $"{header.Split("ttrs_clearance=")[1].Split("; ")[0]}";
-        _logger.Debug($"Parsed token form the header: {token}");
+        _logger.Debug($"Parsed token from the header: {token}");
         return token;
     }
 }

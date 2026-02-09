@@ -113,7 +113,13 @@ public class KfTokenService
             throw new Exception("data-logged-in attribute missing");
         }
 
-        return html.Attributes["data-logged-in"].Value == "true";
+        var success = html.Attributes["data-logged-in"].Value == "true";
+        if (success)
+        {
+            await SaveCookies();
+        }
+
+        return success;
     }
 
     public async Task PerformLogin(string username, string password)
