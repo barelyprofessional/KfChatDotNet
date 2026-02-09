@@ -174,9 +174,9 @@ public class MinesCommand : ICommand
                 return;
             }
             int boardSize = Convert.ToInt32(size.Value);
-            if (boardSize < 2 || boardSize > 10)
+            if (boardSize < 2 || boardSize > 9)
             {
-                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, board size must be between 2 and 10.",true, autoDeleteAfter: cleanupDelay);
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, board size must be between 2 and 9.",true, autoDeleteAfter: cleanupDelay);
                 return;
             }
             int minesCount = Convert.ToInt32(mines.Value);
