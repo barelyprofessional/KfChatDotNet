@@ -101,9 +101,10 @@ public class KasinoMines
                 for (int r = 0; r < Size; r++)
                 {
                     await Task.Delay(100);
-                    revealedSpace = false;
+                    
                     for (int c = 0; c < Size; c++)
                     {
+                        revealedSpace = false;
                         foreach (var bet in BetsPlaced)
                         {
                             if (bet.r == r && bet.c == c) revealedSpace = true;
@@ -150,6 +151,7 @@ public class KasinoMines
 
             await Task.Delay(TimeSpan.FromSeconds(10));
             await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageId!.Value);
+            LastMessageId = 0;
 
             (int vertical, int horizontal) DistanceFromMine((int r, int c) coord)
             {
@@ -291,6 +293,8 @@ public class KasinoMines
     public async Task RemoveGame(int gamblerId)
     {
         await GetSavedGames(gamblerId);
+        //attempt to delete the message if its there
+        if (ActiveGames[gamblerId].LastMessageId != 0) _kfChatBot.KfClient.DeleteMessage(ActiveGames[gamblerId].LastMessageId);
         ActiveGames?.Remove(gamblerId);
         await SaveActiveGames(gamblerId);
     }
