@@ -650,6 +650,11 @@ public class ChatBot
         _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
+        if (disconnectionInfo.Exception!.Message.Contains("status code '203'"))
+        {
+            _logger.Info("Chat 203'd, getting a new token");
+            RefreshXfToken().Wait(_cancellationToken);
+        }
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
