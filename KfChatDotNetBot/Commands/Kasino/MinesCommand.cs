@@ -80,7 +80,8 @@ public class MinesCommand : ICommand
             return;
         }
         bool cashout = false;
-        if (arguments.TryGetValue("cashout", out var cashOut)||message.Message.Contains("cashout")) cashout = true;
+        if (arguments.TryGetValue("cashout", out var cashOut) && cashOut.Success && !string.IsNullOrWhiteSpace(cashOut.Value)) 
+            cashout = true;
         
         if (!Regex.IsMatch(message.Message, @"\d") && cashout) //if the message has no ints its a cashout attempt
         {
