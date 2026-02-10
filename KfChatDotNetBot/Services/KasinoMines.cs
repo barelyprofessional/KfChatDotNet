@@ -294,7 +294,7 @@ public class KasinoMines
     {
         await GetSavedGames(gamblerId);
         //attempt to delete the message if its there
-        if (ActiveGames[gamblerId].LastMessageId != 0) _kfChatBot.KfClient.DeleteMessage(ActiveGames[gamblerId].LastMessageId);
+        if (ActiveGames[gamblerId].LastMessageId != 0) await _kfChatBot.KfClient.DeleteMessageAsync(ActiveGames[gamblerId].LastMessageId);
         ActiveGames?.Remove(gamblerId);
         await SaveActiveGames(gamblerId);
     }
@@ -302,17 +302,19 @@ public class KasinoMines
     public async Task Cashout(KasinoMinesGame game)
     {
         decimal payout = 0;
-        decimal numGems = game.Size * game.Size - game.Mines;
+        decimal mines = game.Mines;
+        decimal size2 = game.Size * game.Size;
+        decimal gems = size2 - mines;
         for (int i = 0; i < game.BetsPlaced.Count; i++)
         {
-            payout += game.Wager * (game.Size * game.Size / numGems);
-            numGems--;
+            payout += game.Wager * ((size2 - i) / gems);
         }
 
         var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, payout, WagerGame.Mines);
         var net = payout - game.Wager;
         await _kfChatBot.SendChatMessageAsync(
-            $"{game.Creator.User.FormatUsername()}, you won {await payout.FormatKasinoCurrencyAsync()} from your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems while avoiding {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}");
+            $"{game.Creator.User.FormatUsername()}, you won {await payout.FormatKasinoCurrencyAsync()} from your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems while avoiding {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(15));
+        await Task.Delay(TimeSpan.FromSeconds(15));
         await RemoveGame(game.Creator.Id);
     }
         
@@ -413,7 +415,7 @@ public class KasinoMines
                 {
                     await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
                         $"{game.Creator.User.FormatUsername()}, invalid bet of {bet.r},{bet.c} removed (already placed, duplicate, or invalid coordinate)");
-                    await Task.Delay(3);
+                    await Task.Delay(5);
                 }
                 else bets.Add(bet);
             }
