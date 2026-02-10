@@ -294,7 +294,7 @@ public class KasinoMines
     {
         await GetSavedGames(gamblerId);
         //attempt to delete the message if its there
-        if (ActiveGames[gamblerId].LastMessageId != 0) _kfChatBot.KfClient.DeleteMessage(ActiveGames[gamblerId].LastMessageId);
+        if (ActiveGames[gamblerId].LastMessageId != 0) await _kfChatBot.KfClient.DeleteMessageAsync(ActiveGames[gamblerId].LastMessageId);
         ActiveGames?.Remove(gamblerId);
         await SaveActiveGames(gamblerId);
     }
@@ -312,7 +312,8 @@ public class KasinoMines
         var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, payout, WagerGame.Mines);
         var net = payout - game.Wager;
         await _kfChatBot.SendChatMessageAsync(
-            $"{game.Creator.User.FormatUsername()}, you won {await payout.FormatKasinoCurrencyAsync()} from your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems while avoiding {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}");
+            $"{game.Creator.User.FormatUsername()}, you won {await payout.FormatKasinoCurrencyAsync()} from your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems while avoiding {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(15));
+        await Task.Delay(TimeSpan.FromSeconds(15));
         await RemoveGame(game.Creator.Id);
     }
         
@@ -413,7 +414,7 @@ public class KasinoMines
                 {
                     await _kfChatBot.KfClient.EditMessageAsync(invalidBetMsg.ChatMessageId!.Value,
                         $"{game.Creator.User.FormatUsername()}, invalid bet of {bet.r},{bet.c} removed (already placed, duplicate, or invalid coordinate)");
-                    await Task.Delay(3);
+                    await Task.Delay(5);
                 }
                 else bets.Add(bet);
             }
