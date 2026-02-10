@@ -230,6 +230,13 @@ public class ChatBot
             if (await _kfTokenService.IsLoggedIn())
             {
                 _logger.Info("We were already logged in and should have a fresh cookie for chat now");
+                if (autoConnect && !KfClient.IsConnected())
+                {
+                    _logger.Info("Updating cookies and reconnecting");
+                    await _kfTokenService.SaveCookies();
+                    KfClient.UpdateCookies(_kfTokenService.GetCookies());
+                    await KfClient.StartWsClient();
+                }
                 // Only seems to happen if the bot thinks it's already logged in
                 return;
             }
