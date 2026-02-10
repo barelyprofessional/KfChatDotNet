@@ -13,7 +13,7 @@ public class MinesCommand : ICommand
 {
     public List<Regex> Patterns => [
         //cashout
-        new Regex(@"^mines\s+cashout$", RegexOptions.IgnoreCase),                                                                     
+        new Regex(@"^mines\s+(?<cashout>cashout)$", RegexOptions.IgnoreCase),                                                                     
         //refresh
         new Regex(@"^mines\s+refresh$", RegexOptions.IgnoreCase), 
         //clear - admin only
@@ -72,8 +72,13 @@ public class MinesCommand : ICommand
             if (user.UserRight >= UserRight.TrueAndHonest)
             {
                 await KasinoMines.GetSavedGames(gambler.Id);
+                foreach (var game in KasinoMines.ActiveGames.Values)
+                {
+                    await botInstance.KfClient.DeleteMessageAsync(game.LastMessageId);
+                }
                 KasinoMines.ActiveGames.Clear();
                 await KasinoMines.SaveActiveGames(gambler.Id);
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, cleared all mines games.", true, autoDeleteAfter: cleanupDelay);
                 return;
             }
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have permission to clear saved games.", true, autoDeleteAfter: cleanupDelay);
@@ -174,7 +179,7 @@ public class MinesCommand : ICommand
                 return;
             }
             int boardSize = Convert.ToInt32(size.Value);
-            if (boardSize < 2 || boardSize > 9)
+            if (boardSize < 2 || boardSize > 8)
             {
                 await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, board size must be between 2 and 9.",true, autoDeleteAfter: cleanupDelay);
                 return;
@@ -244,6 +249,7 @@ public class MinesCommand : ICommand
             }
             else //if they didn't put anything
             {
+                if (message.Message.Contains("cashout")) cashout = true;
                 if (cashout)
                 {
                     await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
@@ -252,6 +258,7 @@ public class MinesCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, you already have a game running. !mines <picks> to reveal more spaces, !mines cashout to cash out, !mines <bet string> to place precise picks. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
+                
                 return;
             }
 
