@@ -5,6 +5,7 @@ using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using KfChatDotNetWsClient.Models.Events;
+using NLog.LayoutRenderers;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
@@ -29,12 +30,12 @@ public class MinesCommand : ICommand
         //get info
         new Regex(@"^mines$", RegexOptions.IgnoreCase)                                                                                                                     
     ];
-    public string? HelpText => "!mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: https://i.ddos.lgbt/raw/UJ9Dty.html";
+    public string? HelpText => "!mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: https://i.ddos.lgbt/raw/baV63V.html";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(30);
     
     private const string BetPattern = @"(?<row>\d+),(?<col>\d+)";
-    private const string ToolUrl = "https://i.ddos.lgbt/raw/Kasino%20Mines%20Interface.html";
+    private const string ToolUrl = "https://i.ddos.lgbt/raw/baV63V.html";
     
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
@@ -253,6 +254,11 @@ public class MinesCommand : ICommand
                 if (cashout)
                 {
                     await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
+                    return;
+                }
+                else if (message.Message.Contains("refresh"))
+                {
+                    await KasinoMines.RefreshGameMessage(gambler.Id);
                     return;
                 }
                 await botInstance.SendChatMessageAsync(
