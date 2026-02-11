@@ -57,7 +57,7 @@ public class ChatBot
         {
             try
             {
-                RefreshXfToken(false).Wait(_cancellationToken);
+                RefreshXfToken().Wait(_cancellationToken);
             }
             catch (Exception e)
             {
@@ -223,20 +223,16 @@ public class ChatBot
         }
     }
 
-    private async Task RefreshXfToken(bool autoConnect = true)
+    private async Task RefreshXfToken()
     {
         try
         {
             if (await _kfTokenService.IsLoggedIn())
             {
                 _logger.Info("We were already logged in and should have a fresh cookie for chat now");
-                if (autoConnect && !KfClient.IsConnected())
-                {
-                    _logger.Info("Updating cookies and reconnecting");
-                    await _kfTokenService.SaveCookies();
-                    KfClient.UpdateCookies(_kfTokenService.GetCookies());
-                    await KfClient.StartWsClient();
-                }
+                _logger.Info("Updating cookies");
+                await _kfTokenService.SaveCookies();
+                KfClient.UpdateCookies(_kfTokenService.GetCookies());
                 // Only seems to happen if the bot thinks it's already logged in
                 return;
             }
@@ -262,13 +258,9 @@ public class ChatBot
         }
 
         _logger.Info("Successfully logged in");
-        if (autoConnect && !KfClient.IsConnected())
-        {
-            _logger.Info("Updating cookies and reconnecting");
-            await _kfTokenService.SaveCookies();
-            KfClient.UpdateCookies(_kfTokenService.GetCookies());
-            await KfClient.StartWsClient();
-        }
+        _logger.Info("Updating cookies");
+        await _kfTokenService.SaveCookies();
+        KfClient.UpdateCookies(_kfTokenService.GetCookies());
     }
 
     private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
@@ -665,6 +657,10 @@ public class ChatBot
             _logger.Info("Chat 203'd, getting a new token");
             RefreshXfToken().Wait(_cancellationToken);
         }
+
+        if (disconnectionInfo.Type == DisconnectionType.ByUser) return;
+        _logger.Info("Forcing reconnect");
+        KfClient.StartWsClient().Wait(_cancellationToken);
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
