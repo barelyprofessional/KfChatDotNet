@@ -17,7 +17,8 @@ internal class BotCommands
 {
     private ChatBot _bot;
     private Logger _logger = LogManager.GetCurrentClassLogger();
-    private char CommandPrefix = '!';
+    // TODO CryingLaughing: REVERT THIS TO '!'
+    private char CommandPrefix = '+'; 
     private IEnumerable<ICommand> Commands;
     private CancellationToken _cancellationToken;
 
