@@ -129,14 +129,14 @@ public class MinesCommand : ICommand
                 return;
             }
 
-            decimal wagerLimit = 10;
+            /*decimal wagerLimit = 10;
             if (wager > wagerLimit)
             {
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, mines is temporarily limited to wagers of {await wagerLimit.FormatKasinoCurrencyAsync()} during testing",
                     true, autoDeleteAfter: TimeSpan.FromSeconds(10));
                 return;
-            }
+            }*/
 
             if (wager <= 0)
             {
