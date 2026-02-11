@@ -171,6 +171,9 @@ public class ChatBot
                 _logger.Error($"inactivityTime -> {inactivityTime:g}");
                 _logger.Error($"deadTime -> {deadTime:g}");
                 if (shouldExit) Environment.Exit(1);
+                _logger.Error("Since we didn't exit, let's try forcing a connection");
+                await KfClient.DisconnectAsync();
+                await KfClient.StartWsClient();
             }
         }
     }
@@ -657,10 +660,6 @@ public class ChatBot
             _logger.Info("Chat 203'd, getting a new token");
             RefreshXfToken().Wait(_cancellationToken);
         }
-
-        if (disconnectionInfo.Type == DisconnectionType.ByUser) return;
-        _logger.Info("Forcing reconnect");
-        KfClient.StartWsClient().Wait(_cancellationToken);
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
