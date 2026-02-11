@@ -301,13 +301,13 @@ public class KasinoMines
 
     public async Task Cashout(KasinoMinesGame game)
     {
-        decimal payout = 0;
+        decimal payout = game.Wager;
         decimal mines = game.Mines;
         decimal size2 = game.Size * game.Size;
         decimal gems = size2 - mines;
         for (int i = 0; i < game.BetsPlaced.Count; i++)
         {
-            payout += game.Wager * ((size2 - i) / gems);
+            payout *= ((size2 - i) / (gems-i));
         }
 
         var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, payout, WagerGame.Mines);
