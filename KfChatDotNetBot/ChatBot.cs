@@ -147,8 +147,7 @@ public class ChatBot
                 // Yeah, super dodgy
                 KfClient.LastPacketReceived = DateTime.UtcNow;
                 _logger.Error("Forcing disconnect and restart as bot is completely dead");
-                await KfClient.DisconnectAsync();
-                await KfClient.StartWsClient();
+                await KfClient.ReconnectAsync();
             }
         }
     }
@@ -171,9 +170,8 @@ public class ChatBot
                 _logger.Error($"inactivityTime -> {inactivityTime:g}");
                 _logger.Error($"deadTime -> {deadTime:g}");
                 if (shouldExit) Environment.Exit(1);
-                _logger.Error("Since we didn't exit, let's try forcing a connection");
-                await KfClient.DisconnectAsync();
-                await KfClient.StartWsClient();
+                _logger.Error("Since we didn't exit, let's try forcing a reconnect");
+                await KfClient.ReconnectAsync();
             }
         }
     }
@@ -659,6 +657,8 @@ public class ChatBot
         {
             _logger.Info("Chat 203'd, getting a new token");
             RefreshXfToken().Wait(_cancellationToken);
+            _logger.Info("Reconnecting");
+            KfClient.ReconnectAsync().Wait(_cancellationToken);
         }
     }
     
