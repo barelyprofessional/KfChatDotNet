@@ -156,15 +156,15 @@ internal class BotCommands
         try
         {
             if (!(await SettingsProvider.GetValueAsync(BuiltIn.Keys.MoneyEnabled)).ToBoolean()) return;
-            _logger.Info("Money is enabled. Calculating VIP maybe?");
+            _logger.Debug("Money is enabled. Calculating VIP maybe?");
             var wagerCommand = HasAttribute<WagerCommand>(command);
             if (!wagerCommand) return;
-            _logger.Info("It's a wager command");
+            _logger.Debug("It's a wager command");
             var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: _cancellationToken);
             if (gambler == null) return;
-            _logger.Info($"Gambler ID is {gambler.Id}");
+            _logger.Debug($"Gambler ID is {gambler.Id}");
             if (gambler.TotalWagered < gambler.NextVipLevelWagerRequirement) return;
-            _logger.Info("They've met the wager requirement");
+            _logger.Debug("They've met the wager requirement");
             // The reason for doing this instead of passing in TotalWagered is that otherwise VIP levels might
             // get skipped if the user is a low VIP level but wagering very large amounts
             var newLevel = Money.GetNextVipLevel(gambler.NextVipLevelWagerRequirement);
