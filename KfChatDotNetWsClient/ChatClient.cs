@@ -308,7 +308,16 @@ public class ChatClient
         {
             _logger.Debug($"{JsonSerializer.Serialize(messages[0])}");
         }
-        OnMessages?.Invoke(this, messages, data);
+
+        try
+        {
+            OnMessages?.Invoke(this, messages, data);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Our handler for chat messages threw an exception");
+            _logger.Error(e);
+        }
     }
 
     private void WsChatUsersJoined(ResponseMessage message)
