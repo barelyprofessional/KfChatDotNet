@@ -309,9 +309,8 @@ public class KasinoMines
         {
             payout *= ((size2 - i) / (gems-i));
         }
-
-        var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, payout, WagerGame.Mines);
         var net = payout - game.Wager;
+        var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, net, WagerGame.Mines);
         await _kfChatBot.SendChatMessageAsync(
             $"{game.Creator.User.FormatUsername()}, you won {await payout.FormatKasinoCurrencyAsync()} from your {await game.Wager.FormatKasinoCurrencyAsync()} bet on mines, collecting {game.BetsPlaced.Count} gems while avoiding {game.Mines} mines. Net: {await net.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(15));
         await Task.Delay(TimeSpan.FromSeconds(15));
