@@ -119,8 +119,7 @@ public class ChatBot
             _logger.Error(e);
         }
         _logger.Info("Retrieved fresh token. Reconnecting.");
-        KfClient.Disconnect();
-        KfClient.StartWsClient().Wait(_cancellationToken);
+        KfClient.ReconnectAsync().Wait(_cancellationToken);
         _logger.Info("Client should be reconnecting now");
     }
 
