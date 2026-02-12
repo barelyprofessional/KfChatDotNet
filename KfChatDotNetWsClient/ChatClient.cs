@@ -64,7 +64,7 @@ public class ChatClient
         await _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket");
     }
 
-    public async Task Reconnect()
+    public async Task ReconnectAsync()
     {
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.Reconnect();
