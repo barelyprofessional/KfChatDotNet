@@ -145,6 +145,10 @@ public class KasinoMines
                     str += "[br]";
                 }
 
+                yellowWave++;
+                orangeWave++;
+                redWave++;
+                whiteWave++;
                 await Task.Delay(100);
                 await _kfChatBot.KfClient.EditMessageAsync(LastMessageId, $"{str}[br]{Creator.User.FormatUsername()}");
             }
