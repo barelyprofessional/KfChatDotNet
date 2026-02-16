@@ -666,11 +666,11 @@ public class SlotsCommand : ICommand
                                 if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
                             }
                         }
-                        if (row > 0 && col == 2)
+                        if (row > 0  && col == 2)
                         {
                             //check both diagonals above for 1 space and 2 spaces behind
                             while (_preboard[row - 1, col - 1] == _preboard[row, col] ||
-                                   _preboard[row + 1, col + 1] == _preboard[row, col] ||
+                                   _preboard[row - 1, col + 1] == _preboard[row, col] ||
                                    _preboard[row, col - 1] == _preboard[row, col] ||
                                    _preboard[row, col - 2] == _preboard[row, col])
                             {
@@ -681,6 +681,7 @@ public class SlotsCommand : ICommand
                                 if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
                             }
                         }
+
                     }
                 }
             }
