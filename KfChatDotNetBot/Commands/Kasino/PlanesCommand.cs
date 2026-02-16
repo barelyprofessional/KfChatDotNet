@@ -36,7 +36,7 @@ public class Planes : ICommand
     private const string Multi = "*️⃣";
     private const string Carrier = "⛴";
     private const string Water = "🌊";
-    private const string Air = "☁"; // cloud
+    private const string Air = "🌫"; // fog
     private const string BlankSpace = "⠀"; //need 35?
     private bool _rigged = false;
     private bool _riggedWin = false;
