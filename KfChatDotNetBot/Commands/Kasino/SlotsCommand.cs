@@ -156,6 +156,7 @@ public class SlotsCommand : ICommand
         string winstr = netwin ? "" : "-";
         newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, winnings, WagerGame.Slots, ct: ctx);
         winnings = Math.Abs(winnings);
+        await Task.Delay(TimeSpan.FromSeconds(spins * 2));
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await rawWinnings.FormatKasinoCurrencyAsync()} from {spins} spins worth {await wager.FormatKasinoCurrencyAsync()}! Net: {winstr}{await winnings.FormatKasinoCurrencyAsync()} Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
@@ -665,11 +666,11 @@ public class SlotsCommand : ICommand
                                 if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
                             }
                         }
-                        if (row > 0 && col == 2)
+                        if (row > 0  && col == 2)
                         {
                             //check both diagonals above for 1 space and 2 spaces behind
                             while (_preboard[row - 1, col - 1] == _preboard[row, col] ||
-                                   _preboard[row + 1, col + 1] == _preboard[row, col] ||
+                                   _preboard[row - 1, col + 1] == _preboard[row, col] ||
                                    _preboard[row, col - 1] == _preboard[row, col] ||
                                    _preboard[row, col - 2] == _preboard[row, col])
                             {
@@ -680,6 +681,7 @@ public class SlotsCommand : ICommand
                                 if (loopCounter > 10000) throw new Exception($"Failed to rig slot board after 10000 attempts. Got stuck on row {row} col {col}.");
                             }
                         }
+
                     }
                 }
             }
