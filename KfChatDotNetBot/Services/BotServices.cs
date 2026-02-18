@@ -108,7 +108,6 @@ public class BotServices
         _logger.Info("Starting websocket watchdog and Howl.gg user stats timer");
         _websocketWatchdog = WebsocketWatchdog();
         _howlggGetUserTimer = HowlggGetUserTimer();
-        ConversationContextManager.StartCleanupTimer(_cancellationToken);
     }
 
     private async Task BuildKasinoRain()

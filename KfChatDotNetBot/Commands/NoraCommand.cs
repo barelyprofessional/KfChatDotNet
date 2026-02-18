@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -36,70 +37,28 @@ public class NoraCommand : ICommand
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    private static readonly string? PromptFilePath = FindPromptFile();
-    private static string? _cachedPrompt;
-    private static DateTime _cachedPromptLastModified;
-
-    private static string? FindPromptFile()
-    {
-        // Check next to the executable first, then fall back to the Commands directory in the source tree
-        var exeDir = AppContext.BaseDirectory;
-        var candidate = Path.Combine(exeDir, "Commands", "NoraPrompt.txt");
-        if (File.Exists(candidate)) return candidate;
-
-        candidate = Path.Combine(exeDir, "NoraPrompt.txt");
-        if (File.Exists(candidate)) return candidate;
-
-        Logger.Error("NoraPrompt.txt not found in {exeDir}/Commands/ or {exeDir}/", exeDir);
-        return null;
-    }
-
-    private static string? LoadPrompt()
-    {
-        if (PromptFilePath == null) return null;
-
-        var lastWrite = File.GetLastWriteTimeUtc(PromptFilePath);
-        if (_cachedPrompt != null && lastWrite == _cachedPromptLastModified)
-            return _cachedPrompt;
-
-        try
-        {
-            _cachedPrompt = File.ReadAllText(PromptFilePath).Trim();
-            _cachedPromptLastModified = lastWrite;
-            Logger.Info("Loaded Nora prompt from {path} ({length} chars)", PromptFilePath, _cachedPrompt.Length);
-            return _cachedPrompt;
-        }
-        catch (Exception ex)
-        {
-            Logger.Error(ex, "Failed to read NoraPrompt.txt");
-            return null;
-        }
-    }
-
     public List<Regex> Patterns => [
         new Regex(@"^nora\s+(?<message>.+)", RegexOptions.IgnoreCase)
     ];
 
-    public string? HelpText => "Ask Nora AI a question (max 15 words, 140 chars). Use '!nora reset' to clear context.";
+    public string HelpText => "Ask Nora AI a question (max 15 words, 140 chars). Use '!nora reset' to clear context.";
 
     public UserRight RequiredRight => UserRight.Loser;
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(30);
 
-    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    public RateLimitOptionsModel RateLimitOptions => new()
     {
         Window = TimeSpan.FromMinutes(1),
         MaxInvocations = 3,
         Flags = RateLimitFlags.None
     };
 
-    private const int MaxWords = 30;
-    private const int MaxCharacters = 300;
-
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user,
         GroupCollection arguments, CancellationToken ctx)
     {
         var userMessage = arguments["message"].Value.Trim();
+        var manager = new ConversationContextManager();
 
         // Handle !nora reset — clear conversation context
         if (userMessage.Equals("reset", StringComparison.OrdinalIgnoreCase))
@@ -116,8 +75,8 @@ public class NoraCommand : ICommand
                 return;
             }
 
-            var resetKey = ConversationContextManager.GetContextKey(mode, user.KfId, message.RoomId);
-            var cleared = ConversationContextManager.ClearContext(resetKey);
+            var resetKey = ConversationContextManager.GetContextKeyAsync(mode, user.KfId, message.RoomId);
+            var cleared = await manager.ClearContextAsync(resetKey);
             await botInstance.SendChatMessageAsync(
                 cleared
                     ? $"{user.FormatUsername()}, your conversation context has been cleared."
@@ -127,22 +86,24 @@ public class NoraCommand : ICommand
             return;
         }
 
+        var maxWords = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraMaxWords)).ToType<int>();
+        var maxCharacters = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraMaxCharacters)).ToType<int>();
         // Validate word count
         var wordCount = userMessage.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        if (wordCount > MaxWords)
+        if (wordCount > maxWords)
         {
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, your message has {wordCount} words. Maximum is {MaxWords} words.",
+                $"{user.FormatUsername()}, your message has {wordCount} words. Maximum is {maxWords} words.",
                 true,
                 autoDeleteAfter: TimeSpan.FromSeconds(15));
             return;
         }
 
         // Validate character count
-        if (userMessage.Length > MaxCharacters)
+        if (userMessage.Length > maxCharacters)
         {
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, your message has {userMessage.Length} characters. Maximum is {MaxCharacters} characters.",
+                $"{user.FormatUsername()}, your message has {userMessage.Length} characters. Maximum is {maxCharacters} characters.",
                 true,
                 autoDeleteAfter: TimeSpan.FromSeconds(15));
             return;
@@ -177,7 +138,7 @@ public class NoraCommand : ICommand
         }
 
         // Step 2: Build conversation context and get Grok AI response
-        var basePrompt = LoadPrompt();
+        var basePrompt = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraPrompt)).Value;
         if (basePrompt == null)
         {
             Logger.Error("Nora prompt file is missing or unreadable");
@@ -200,7 +161,7 @@ public class NoraCommand : ICommand
         // Compute context key once (used for mood and later for context messages)
         string? contextKey = null;
         if (!contextDisabled)
-            contextKey = ConversationContextManager.GetContextKey(contextMode, user.KfId, message.RoomId);
+            contextKey = ConversationContextManager.GetContextKeyAsync(contextMode, user.KfId, message.RoomId);
 
         // Optionally inject user info into the system prompt
         var userInfoEnabled = settings[BuiltIn.Keys.GrokNoraUserInfoEnabled].Value?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
@@ -209,23 +170,27 @@ public class NoraCommand : ICommand
             var infoParts = new List<string>
             {
                 $"Username: {user.KfUsername}",
-                $"Permission level: {user.UserRight}"
+                $"Permission level: {user.UserRight.Humanize()}"
             };
 
-            var gambler = await Money.GetGamblerEntityAsync(user.Id, createIfNoneExists: false, ct: ctx);
-            if (gambler != null && gambler.State == GamblerState.Active)
+            var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+            if (gambler is { State: GamblerState.Active })
             {
-                infoParts.Add($"Kasino balance: {gambler.Balance:N2} KKK");
-                infoParts.Add($"Total wagered: {gambler.TotalWagered:N2} KKK");
+                infoParts.Add($"Kasino balance: {await gambler.Balance.FormatKasinoCurrencyAsync()}");
+                infoParts.Add($"Total wagered: {await gambler.TotalWagered.FormatKasinoCurrencyAsync()}");
                 var vipPerk = await Money.GetVipLevelAsync(gambler, ctx);
                 if (vipPerk != null)
+                {
                     infoParts.Add($"VIP rank: {vipPerk.PerkName} (Tier {vipPerk.PerkTier})");
+                }
                 else
+                {
                     infoParts.Add("VIP rank: None (hasn't reached first VIP level)");
+                }
             }
             else
             {
-                infoParts.Add("Kasino status: Not an active gambler");
+                infoParts.Add("Kasino status: Permanently excluded");
             }
 
             systemPrompt += "\n\nThe customer you are currently speaking to has the following profile:\n" + string.Join("\n", infoParts);
@@ -233,8 +198,8 @@ public class NoraCommand : ICommand
 
         // Inject mood into system prompt
         var mood = contextKey != null
-            ? ConversationContextManager.GetOrAssignMood(contextKey)
-            : NoraMoods.GetRandomMood();
+            ? await manager.GetOrAssignMoodAsync(contextKey)
+            : await ConversationContextManager.GetRandomMoodAsync();
         systemPrompt += "\n\n" + mood;
 
         string? grokResponse;
@@ -254,7 +219,7 @@ public class NoraCommand : ICommand
                 ? $"{user.KfUsername}: {userMessage}"
                 : userMessage;
 
-            var contextMessages = ConversationContextManager.GetMessagesForApi(contextKey!);
+            var contextMessages = await manager.GetMessagesForApiAsync(contextKey!);
             contextMessages.Add(new ConversationMessage { Role = "user", Content = contentForContext });
 
             grokResponse = await GrokApi.GetChatCompletionAsync(systemPrompt, contextMessages);
@@ -262,11 +227,11 @@ public class NoraCommand : ICommand
             if (grokResponse != null)
             {
                 // Store the exchange in context
-                ConversationContextManager.AddMessage(contextKey!, "user", contentForContext);
-                ConversationContextManager.AddMessage(contextKey!, "assistant", grokResponse);
+                await manager.AddMessageAsync(contextKey!, "user", contentForContext);
+                await manager.AddMessageAsync(contextKey!, "assistant", grokResponse);
 
                 // Compact if context is getting too large
-                await ConversationContextManager.CompactIfNeededAsync(contextKey!);
+                await manager.CompactIfNeededAsync(contextKey!);
             }
         }
 
@@ -296,7 +261,6 @@ public class NoraCommand : ICommand
 
         await botInstance.SendChatMessageAsync(
             formattedResponse,
-            true,
-            ChatBot.LengthLimitBehavior.TruncateNicely);
+            true);
     }
 }

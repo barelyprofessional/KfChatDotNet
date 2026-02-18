@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using KfChatDotNetBot.Settings;
+using Newtonsoft.Json;
 using NLog;
+using StackExchange.Redis;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace KfChatDotNetBot.Services;
 
@@ -29,52 +32,96 @@ public class ConversationContext
     }
 }
 
-public static class ConversationContextManager
+public class ConversationContextManager
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-    private static readonly ConcurrentDictionary<string, ConversationContext> Contexts = new();
     private static Task? _cleanupTask;
     private static CancellationToken _cancellationToken;
+    private IDatabase _redisDb;
 
-    public static void StartCleanupTimer(CancellationToken cancellationToken)
+    public ConversationContextManager()
     {
-        _cancellationToken = cancellationToken;
-        _cleanupTask = CleanupLoop();
+        var connectionString = SettingsProvider.GetValueAsync(BuiltIn.Keys.BotRedisConnectionString).Result;
+        if (string.IsNullOrEmpty(connectionString.Value))
+        {
+            Logger.Error($"Can't initialize the Nora ConversationContextManager service as Redis isn't configured in {BuiltIn.Keys.BotRedisConnectionString}");
+            throw new InvalidOperationException("Redis isn't configured");
+        }
+        
+        var redis = ConnectionMultiplexer.Connect(connectionString.Value);
+        _redisDb = redis.GetDatabase();
     }
 
-    public static string GetContextKey(string mode, int userId, int roomId)
+    public static string GetContextKeyAsync(string mode, int userId, int roomId)
     {
         return mode.ToLowerInvariant() switch
         {
-            "perchatter" => $"user:{userId}",
-            "perroom" => $"room:{roomId}",
-            _ => $"user:{userId}" // fallback to per-chatter
+            "perchatter" => $"Nora:User:{userId}",
+            "perroom" => $"Nora:Room:{roomId}",
+            _ => $"Nora:User:{userId}" // fallback to per-chatter
         };
     }
 
-    public static string GetOrAssignMood(string contextKey)
+    public async Task<string> GetOrAssignMoodAsync(string contextKey)
     {
-        var context = Contexts.GetOrAdd(contextKey, _ => new ConversationContext());
+        var data = await _redisDb.StringGetAsync(contextKey);
+        var context = new ConversationContext();
+        if (data.HasValue)
+        {
+            context = JsonSerializer.Deserialize<ConversationContext>(data.ToString());
+        }
+
+        if (context == null)
+        {
+            throw new InvalidOperationException($"Caught a null when deserializing {contextKey}");
+        }
         if (context.Mood == null)
         {
-            context.Mood = Commands.NoraMoods.GetRandomMood();
+            context.Mood = await GetRandomMoodAsync();
             Logger.Debug($"Assigned mood for {contextKey}: {context.Mood}");
+            var expiration =
+                TimeSpan.FromMinutes((await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraContextExpiryMinutes))
+                    .ToType<int>());
+            await _redisDb.StringSetAsync(contextKey, JsonSerializer.Serialize(context), expiration, When.Always);
         }
+
         return context.Mood;
     }
 
-    public static void AddMessage(string contextKey, string role, string content)
+    public async Task AddMessageAsync(string contextKey, string role, string content)
     {
-        var context = Contexts.GetOrAdd(contextKey, _ => new ConversationContext());
+        var data = await _redisDb.StringGetAsync(contextKey);
+        var context = new ConversationContext();
+        if (data.HasValue)
+        {
+            context = JsonSerializer.Deserialize<ConversationContext>(data.ToString());
+        }
+        if (context == null)
+        {
+            throw new InvalidOperationException($"Caught a null when deserializing {contextKey}");
+        }
         context.Messages.Add(new ConversationMessage { Role = role, Content = content });
         context.LastActivity = DateTime.UtcNow;
         context.RecalculateTokens();
+        var expiration =
+            TimeSpan.FromMinutes((await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraContextExpiryMinutes))
+                .ToType<int>());
+        await _redisDb.StringSetAsync(contextKey, JsonSerializer.Serialize(context), expiration, When.Always);
     }
 
-    public static List<ConversationMessage> GetMessagesForApi(string contextKey)
+    public async Task<List<ConversationMessage>> GetMessagesForApiAsync(string contextKey)
     {
-        if (!Contexts.TryGetValue(contextKey, out var context))
+        var data = await _redisDb.StringGetAsync(contextKey);
+        if (data.IsNullOrEmpty)
+        {
             return [];
+        }
+
+        var context = JsonSerializer.Deserialize<ConversationContext>(data.ToString());
+        if (context == null)
+        {
+            throw new InvalidOperationException($"Caught a null when deserializing {contextKey}");
+        }
 
         var messages = new List<ConversationMessage>();
 
@@ -91,10 +138,19 @@ public static class ConversationContextManager
         return messages;
     }
 
-    public static async Task CompactIfNeededAsync(string contextKey)
+    public async Task CompactIfNeededAsync(string contextKey)
     {
-        if (!Contexts.TryGetValue(contextKey, out var context))
+        var data = await _redisDb.StringGetAsync(contextKey);
+        if (data.IsNullOrEmpty)
+        {
             return;
+        }
+
+        var context = JsonSerializer.Deserialize<ConversationContext>(data.ToString());
+        if (context == null)
+        {
+            throw new InvalidOperationException($"Caught a null when deserializing {contextKey}");
+        }
 
         var maxTokensSetting = await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraContextMaxTokens);
         var maxTokens = int.TryParse(maxTokensSetting.Value, out var mt) ? mt : 800;
@@ -140,43 +196,24 @@ public static class ConversationContextManager
             context.Messages = toKeep;
             context.RecalculateTokens();
         }
+        var expiration =
+            TimeSpan.FromMinutes((await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraContextExpiryMinutes))
+                .ToType<int>());
+        await _redisDb.StringSetAsync(contextKey, JsonSerializer.Serialize(context), expiration, When.Always);
     }
-
-    public static bool ClearContext(string contextKey)
+    
+    public async Task<bool> ClearContextAsync(string contextKey)
     {
-        return Contexts.TryRemove(contextKey, out _);
+        return await _redisDb.KeyDeleteAsync(contextKey);
     }
-
-    private static async Task CleanupLoop()
+    
+    public static async Task<string> GetRandomMoodAsync()
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
-        while (await timer.WaitForNextTickAsync(_cancellationToken))
+        var moods = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraMoods)).JsonDeserialize<List<string>>();
+        if (moods == null)
         {
-            try
-            {
-                await CleanupExpired();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Error during conversation context cleanup");
-            }
+            throw new InvalidOperationException("Caught a null when deserializing Nora's moods");
         }
-    }
-
-    private static async Task CleanupExpired()
-    {
-        var expirySetting = await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraContextExpiryMinutes);
-        var expiryMinutes = int.TryParse(expirySetting.Value, out var em) ? em : 30;
-        var cutoff = DateTime.UtcNow.AddMinutes(-expiryMinutes);
-
-        var expired = Contexts.Where(kvp => kvp.Value.LastActivity < cutoff).Select(kvp => kvp.Key).ToList();
-        foreach (var key in expired)
-        {
-            Contexts.TryRemove(key, out _);
-            Logger.Debug($"Expired conversation context: {key}");
-        }
-
-        if (expired.Count > 0)
-            Logger.Info($"Cleaned up {expired.Count} expired conversation contexts");
+        return moods[Random.Shared.Next(moods.Count)];
     }
 }
