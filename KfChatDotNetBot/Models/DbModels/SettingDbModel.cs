@@ -26,10 +26,22 @@ public class SettingDbModel
 public enum SettingValueType
 {
     Boolean,
-    Text, // This includes values which are only decimals
-    Array, // It's presumed that your array contains text, don't use this if your array contains complex types
-    // You can use the array value type on delimited values or JSON arrays. For JSON, it's presumed to be like ['str']
-    Complex, // Basically for JSON blobs that are encoded into settings
-    Undefined // Default value. Should only be set to this for orphaned settings. My suggestion is you don't allow users
-    // to interact with settings with an undefined type
+    /// <summary>
+    /// This includes values which are only decimals
+    /// </summary>
+    Text,
+    /// <summary>
+    /// It's presumed that your array contains text, don't use this if your array contains complex types
+    /// You can use the array value type on delimited values or JSON arrays. For JSON, it's presumed to be like ['str']
+    /// </summary>
+    Array,
+    /// <summary>
+    /// Basically for JSON blobs that are encoded into settings
+    /// </summary>
+    Complex,
+    /// <summary>
+    /// Default value. Should only be set to this for orphaned settings. My suggestion is you don't allow users
+    /// to interact with settings with an undefined type
+    /// </summary>
+    Undefined
 }
