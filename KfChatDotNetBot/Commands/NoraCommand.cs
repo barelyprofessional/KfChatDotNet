@@ -258,9 +258,11 @@ public class NoraCommand : ICommand
 
         // var formattedResponse = $"{avatarTag}[b]Nora to {user.FormatUsername()}:[/b] {grokResponse}";
         var formattedResponse = $"[b]Nora to {user.FormatUsername()}:[/b] {grokResponse}";
-
+        var autoDeleteAfter =
+            TimeSpan.FromMilliseconds((await SettingsProvider.GetValueAsync(BuiltIn.Keys.GrokNoraAutoDeleteDelay))
+                .ToType<int>());
         await botInstance.SendChatMessageAsync(
             formattedResponse,
-            true);
+            true, autoDeleteAfter: autoDeleteAfter);
     }
 }
