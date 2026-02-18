@@ -469,6 +469,26 @@ public static class BuiltIn
         public static string ZiplineKey = "Zipline.Key";
         [BuiltInSetting("Base URL for Zipline", SettingValueType.Text, defaultValue: "https://i.ddos.lgbt")]
         public static string ZiplineUrl = "Zipline.Url";
+        [BuiltInSetting("OpenAI API Key for moderation", SettingValueType.Text, isSecret: true)]
+        public static string OpenAiApiKey = "OpenAi.ApiKey";
+        [BuiltInSetting("OpenAI Moderation API endpoint", SettingValueType.Text,
+            "https://api.openai.com/v1/moderations")]
+        public static string OpenAiModerationEndpoint = "OpenAi.Moderation.Endpoint";
+        [BuiltInSetting("Grok API Key (xAI)", SettingValueType.Text, isSecret: true)]
+        public static string GrokApiKey = "Grok.ApiKey";
+        [BuiltInSetting("Grok API endpoint for chat completions", SettingValueType.Text,
+            "https://api.x.ai/v1/chat/completions")]
+        public static string GrokChatEndpoint = "Grok.Chat.Endpoint";
+        [BuiltInSetting("Grok model to use for Nora command", SettingValueType.Text, "grok-4-1-fast-reasoning")]
+        public static string GrokNoraModel = "Grok.Nora.Model";
+        [BuiltInSetting("Context mode for Nora conversations (perChatter, perRoom, disabled)", SettingValueType.Text, "perChatter")]
+        public static string GrokNoraContextMode = "Grok.Nora.ContextMode";
+        [BuiltInSetting("Max estimated tokens for conversation context before compaction", SettingValueType.Text, "2400", WholeNumberRegex)]
+        public static string GrokNoraContextMaxTokens = "Grok.Nora.ContextMaxTokens";
+        [BuiltInSetting("Minutes of inactivity before conversation context expires", SettingValueType.Text, "30", WholeNumberRegex)]
+        public static string GrokNoraContextExpiryMinutes = "Grok.Nora.ContextExpiryMinutes";
+        [BuiltInSetting("Whether to inject user info (balance, VIP level, rank) into Nora's system prompt", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string GrokNoraUserInfoEnabled = "Grok.Nora.UserInfoEnabled";
         [BuiltInSetting("Delay in milliseconds before cleaning up blackjack", SettingValueType.Text, "20000", WholeNumberRegex)]
         public static string KasinoBlackjackCleanupDelay = "Kasino.Blackjack.CleanupDelay";
         [BuiltInSetting("Amount for the daily dollar to pay out", SettingValueType.Text, "100", WholeNumberRegex)]
