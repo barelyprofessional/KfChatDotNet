@@ -1,9 +1,7 @@
-using System.Collections.Concurrent;
+using System.Text.Json;
 using KfChatDotNetBot.Settings;
-using Newtonsoft.Json;
 using NLog;
 using StackExchange.Redis;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace KfChatDotNetBot.Services;
 
@@ -35,8 +33,6 @@ public class ConversationContext
 public class ConversationContextManager
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-    private static Task? _cleanupTask;
-    private static CancellationToken _cancellationToken;
     private IDatabase _redisDb;
 
     public ConversationContextManager()
