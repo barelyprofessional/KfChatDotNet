@@ -1,9 +1,10 @@
-﻿using Humanizer;
+﻿using System.Text.Json;
+using System.Xml;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NLog;
 using RandN;
 using RandN.Compat;
@@ -348,7 +349,7 @@ public static class Money
         string? metaJson = null;
         if (gameMeta != null)
         {
-            metaJson = JsonConvert.SerializeObject(gameMeta, Formatting.Indented);
+            metaJson = JsonSerializer.Serialize(gameMeta, Formatting.Indented);
             _logger.Debug("Serialized metadata follows");
             _logger.Debug(metaJson);
         }
