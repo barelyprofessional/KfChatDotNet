@@ -349,7 +349,7 @@ public static class Money
         string? metaJson = null;
         if (gameMeta != null)
         {
-            metaJson = JsonSerializer.Serialize(gameMeta, Formatting.Indented);
+            metaJson = JsonSerializer.Serialize(gameMeta, new JsonSerializerOptions { WriteIndented = true });
             _logger.Debug("Serialized metadata follows");
             _logger.Debug(metaJson);
         }
