@@ -178,7 +178,7 @@ internal class BotCommands
             _logger.Info($"Payout is {payout:N2}");
             await _bot.SendChatMessageAsync(
                 $"🤑🤑 {user.FormatUsername()} has leveled up to to {newLevel.VipLevel.Icon} {newLevel.VipLevel.Name} Tier {newLevel.Tier} " +
-                $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true);
+                $"and received a bonus of {await payout.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
             _logger.Info("Sent notification");
         }
         catch (Exception e)
