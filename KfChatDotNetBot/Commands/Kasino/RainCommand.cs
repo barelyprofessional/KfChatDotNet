@@ -94,6 +94,14 @@ public class RainCommand : ICommand
             return;
         }
 
+        decimal rainMin = 100;
+        if (decAmount < rainMin)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, rain at least {await rainMin.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
+            return;
+        }
+
         rain = new KasinoRainModel
         {
             Participants = [],
