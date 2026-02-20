@@ -76,6 +76,9 @@ public class LambchopCommand : ICommand
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
+
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, fuck you", true);
+        return;
         
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoLambchopCleanupDelay].ToType<int>());
         
