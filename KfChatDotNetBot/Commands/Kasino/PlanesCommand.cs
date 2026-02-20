@@ -92,14 +92,14 @@ public class Planes : ICommand
 
         if (HOUSE_EDGE < 1)
         {
-            if (Money.GetRandomDouble(gambler, 1) > (double)HOUSE_EDGE)
+            if (Money.GetRandomDouble(gambler) > (double)HOUSE_EDGE)
             {
                 _rigged = true;
             }
         }
         else
         {
-            if ((double)HOUSE_EDGE - Money.GetRandomDouble(gambler, 1) > 1)
+            if ((double)HOUSE_EDGE - Money.GetRandomDouble(gambler) > 1)
             {
                 _riggedWin = true;
             }
