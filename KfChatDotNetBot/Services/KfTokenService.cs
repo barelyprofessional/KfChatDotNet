@@ -43,21 +43,8 @@ public class KfTokenService
         return handler;
     }
 
-    private async Task CheckClearanceToken()
+    private async Task GetNewClearanceToken()
     {
-        var clearanceCookie = _cookies.GetAllCookies()["sssg_clearance"];
-        _logger.Debug($"Got clearance cookie with value: {clearanceCookie}");
-        if (await _kiwiFlare.CheckAuth(Guid.NewGuid().ToString()))
-        {
-            _logger.Debug("KiwiFlare has been turned off as it's accepting a non-existent sssg_clearance");
-            return;
-        };
-        if (clearanceCookie != null)
-        {
-            if (await _kiwiFlare.CheckAuth(clearanceCookie.Value)) return;
-            _logger.Debug("Cookie is no longer valid, removing");
-            _cookies.GetAllCookies().Remove(clearanceCookie);
-        }
         _logger.Debug("Getting a new clearance token");
         var i = 0;
         // Shitty retry logic as the forum is still annoyingly unstable
@@ -73,8 +60,18 @@ public class KfTokenService
                     return;
                 }
                 var solution = await _kiwiFlare.SolveChallenge(challenge);
-                var token = await _kiwiFlare.SubmitAnswer(solution);
-                _cookies.Add(new Cookie("sssg_clearance", token, "/", _kfDomain));
+                string token;
+                if (challenge.IsTtrs)
+                {
+                    token = await _kiwiFlare.SubmitAnswerTtrs(solution);
+                    _cookies.Add(new Cookie("ttrs_clearance", token, "/", _kfDomain));
+
+                }
+                else
+                {
+                    token = await _kiwiFlare.SubmitAnswer(solution);
+                    _cookies.Add(new Cookie("sssg_clearance", token, "/", _kfDomain));
+                }
                 _logger.Debug("Successfully retrieved a new token and added to the cookie container");
                 return;
             }
@@ -90,19 +87,17 @@ public class KfTokenService
 
     private async Task<string> GetLoginPage()
     {
-        _logger.Debug("Checking clearance token is actually valid first");
-        await CheckClearanceToken();
         using var client = new HttpClient(GetHttpClientHandler());
         var response = await client.GetAsync($"https://{_kfDomain}/login", _ctx);
         response.EnsureSuccessStatusCode();
         var content = await response.Content.ReadAsStringAsync(_ctx);
-        var document = new HtmlDocument();
-        document.LoadHtml(content);
-        var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
-        if (response.StatusCode == HttpStatusCode.NonAuthoritativeInformation && challengeData != null)
+        if (response.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
         {
-            _logger.Error("Caught a 203 response when trying to load logon page which means we were KiwiFlare challenged");
-            throw new KiwiFlareChallengedException();
+            _logger.Info("Caught a 203 response when trying to load the logon page which means we have to solve a KiwiFlare challenge");
+            await GetNewClearanceToken();
+            _logger.Info("Solved the challenge, now going to grab the login page again");
+            response = await client.GetAsync($"https://{_kfDomain}/login", _ctx);
+            content = await response.Content.ReadAsStringAsync(_ctx);
         }
         return content;
     }
@@ -118,7 +113,13 @@ public class KfTokenService
             throw new Exception("data-logged-in attribute missing");
         }
 
-        return html.Attributes["data-logged-in"].Value == "true";
+        var success = html.Attributes["data-logged-in"].Value == "true";
+        if (success)
+        {
+            await SaveCookies();
+        }
+
+        return success;
     }
 
     public async Task PerformLogin(string username, string password)
@@ -171,6 +172,11 @@ public class KfTokenService
         return cookie?.Value;
     }
 
+    public Dictionary<string, string> GetCookies()
+    {
+        return _cookies.GetAllCookies().ToDictionary(cookie => cookie.Name, cookie => cookie.Value);
+    }
+
     public async Task SaveCookies()
     {
         _logger.Debug("Saving cookies");
@@ -184,6 +190,5 @@ public class KfTokenService
         _cookies = new CookieContainer();
     }
     
-    public class KiwiFlareChallengedException : Exception;
     public class KiwiFarmsLogonFailedException : Exception;
 }

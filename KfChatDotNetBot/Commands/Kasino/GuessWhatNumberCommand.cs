@@ -65,6 +65,14 @@ public class GuessWhatNumberCommand : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
+        
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
+            return;
+        }
 
         var answer = Money.GetRandomNumber(gambler, 1, 10);
         decimal newBalance;

@@ -39,9 +39,9 @@ public class ChatClient
         _config = config;
     }
 
-    public void UpdateToken(string newToken)
+    public void UpdateCookies(Dictionary<string, string> cookies)
     {
-        _config.XfSessionToken = newToken;
+        _config.Cookies = cookies;
     }
 
     public async Task StartWsClient()
@@ -64,7 +64,7 @@ public class ChatClient
         await _wsClient.Stop(WebSocketCloseStatus.NormalClosure, "Closing websocket");
     }
 
-    public async Task Reconnect()
+    public async Task ReconnectAsync()
     {
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         await _wsClient.Reconnect();
@@ -80,13 +80,16 @@ public class ChatClient
                 clientWs.Options.Proxy = new WebProxy(_config.Proxy);
             }
             // Guest mode
-            if (_config.XfSessionToken == null)
+            if (_config.Cookies.Keys.Count == 0)
             {
                 return clientWs;
             }
 
             var cookieContainer = new CookieContainer();
-            cookieContainer.Add(new Cookie("xf_session", _config.XfSessionToken, "/", _config.CookieDomain));
+            foreach (var key in _config.Cookies.Keys)
+            {
+                cookieContainer.Add(new Cookie(key, _config.Cookies[key], "/", _config.CookieDomain));
+            }
             clientWs.Options.Cookies = cookieContainer;
 
             return clientWs;
@@ -305,7 +308,16 @@ public class ChatClient
         {
             _logger.Debug($"{JsonSerializer.Serialize(messages[0])}");
         }
-        OnMessages?.Invoke(this, messages, data);
+
+        try
+        {
+            OnMessages?.Invoke(this, messages, data);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Our handler for chat messages threw an exception");
+            _logger.Error(e);
+        }
     }
 
     private void WsChatUsersJoined(ResponseMessage message)

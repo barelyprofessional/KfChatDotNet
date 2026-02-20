@@ -32,28 +32,41 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
     public async Task<KiwiFlareChallengeModel?> GetChallenge()
     {
         using var client = new HttpClient(GetHttpClientHandler());
+        client.Timeout = TimeSpan.FromSeconds(10);
         var response = await client.GetAsync($"https://{kfDomain}/", _ctx);
         var document = new HtmlDocument();
         document.Load(await response.Content.ReadAsStreamAsync(_ctx));
-        var challengeData = document.DocumentNode.SelectSingleNode("//html[@id=\"sssg\"]");
+        var pow = "sssg";
+        var challengeData = document.DocumentNode.SelectSingleNode($"//html[@id=\"{pow}\"]");
         if (challengeData == null)
         {
-            _logger.Info("challengeData was null. Couldn't find html element with id = sssg, returning null");
-            return null;
+            _logger.Info("challengeData was null. Couldn't find html element with id = sssg, trying ttrs");
+            pow = "ttrs";
+            challengeData = document.DocumentNode.SelectSingleNode($"//html[@id=\"{pow}\"]");
+            if (challengeData == null)
+            {
+                _logger.Info("challengeData was still null even looking for ttrs");
+                return null;
+            }
         }
 
-        if (!challengeData.Attributes.Contains("data-sssg-challenge")) throw new Exception("data-sssg-challenge attribute missing");
-        if (!challengeData.Attributes.Contains("data-sssg-difficulty")) throw new Exception("data-sssg-difficulty attribute missing");
-        if (!challengeData.Attributes.Contains("data-sssg-patience")) throw new Exception("data-sssg-patience attribute missing");
-        var salt = challengeData.Attributes["data-sssg-challenge"].Value;
-        var difficulty = Convert.ToInt32(challengeData.Attributes["data-sssg-difficulty"].Value);
-        var patience = TimeSpan.FromMinutes(Convert.ToDouble(challengeData.Attributes["data-sssg-patience"].Value));
-        _logger.Info($"Got sssg challenge parameters. Salt = {salt}, Difficulty = {difficulty}, Patience = {patience.TotalMinutes} minutes");
+        if (!challengeData.Attributes.Contains($"data-{pow}-challenge")) throw new Exception($"data-{pow}-challenge attribute missing");
+        if (!challengeData.Attributes.Contains($"data-{pow}-difficulty")) throw new Exception($"data-{pow}-difficulty attribute missing");
+        var patience = TimeSpan.FromMinutes(5);
+        // ttrs has no patience value
+        if (challengeData.Attributes.Contains("data-sssg-patience"))
+        {
+            patience = TimeSpan.FromMinutes(Convert.ToDouble(challengeData.Attributes["data-sssg-patience"].Value));
+        }
+        var salt = challengeData.Attributes[$"data-{pow}-challenge"].Value;
+        var difficulty = Convert.ToInt32(challengeData.Attributes[$"data-{pow}-difficulty"].Value);
+        _logger.Info($"Got {pow} challenge parameters. IsTtrs = {pow == "ttrs"}, Salt = {salt}, Difficulty = {difficulty}, Patience = {patience.TotalMinutes} minutes");
         return new KiwiFlareChallengeModel
         {
             Salt = salt,
             Difficulty = difficulty,
-            Patience = patience
+            Patience = patience,
+            IsTtrs = pow == "ttrs"
         };
     }
 
@@ -122,6 +135,7 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
     public async Task<string> SubmitAnswer(KiwiFlareChallengeSolutionModel solution)
     {
         using var client = new HttpClient(GetHttpClientHandler());
+        client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
         {
             new("a", solution.Salt),
@@ -145,36 +159,36 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
         _logger.Error(json.GetRawText());
         throw new Exception($"Auth property was missing from sssg response: {json.GetRawText()}");
     }
-    
-    public async Task<bool> CheckAuth(string authToken)
+
+    public async Task<string> SubmitAnswerTtrs(KiwiFlareChallengeSolutionModel solution)
     {
-        using var client = new HttpClient(GetHttpClientHandler());
+        var handler = GetHttpClientHandler();
+        var container = new CookieContainer();
+        handler.CookieContainer = container;
+        handler.AllowAutoRedirect = false;
+        using var client = new HttpClient();
+        client.Timeout = TimeSpan.FromSeconds(10);
         var formData = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>
         {
-            new("f", authToken),
+            new("salt", solution.Salt),
+            new("nonce", solution.Nonce.ToString())
         });
-
-        var response = await client.PostAsync($"https://{kfDomain}/.sssg/api/check", formData, _ctx);
-        // KiwiFlare has been turned off
-        if (response.StatusCode == HttpStatusCode.NotFound)
-        {
-            return true;
-        }
+        
+        var response = await client.PostAsync($"https://{kfDomain}/.ttrs/challenge", formData, _ctx);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(_ctx);
-        if (json.TryGetProperty("error", out var error))
+        var success = json.GetProperty("success").GetBoolean();
+        if (!success)
         {
-            _logger.Error($"Received error when checking the auth token: {error.GetString()}");
-            return false;
+            var reason = json.GetProperty("reason").GetString();
+            _logger.Error($"ttrs didn't accept our solution with reason: {reason}");
+            throw new Exception($"ttrs didn't accept our solution with reason: {reason}");
         }
 
-        if (json.TryGetProperty("auth", out _))
-        {
-            return true;
-        }
-
-        _logger.Error("Auth property was missing from sssg response");
-        _logger.Error(json.GetRawText());
-        return false;
+        _logger.Debug($"Set-Cookie header -> {JsonSerializer.Serialize(response.Headers.GetValues("Set-Cookie"))}");
+        var header = response.Headers.GetValues("Set-Cookie").First();
+        var token = $"{header.Split("ttrs_clearance=")[1].Split("; ")[0]}";
+        _logger.Debug($"Parsed token from the header: {token}");
+        return token;
     }
 }
 
@@ -183,6 +197,7 @@ public class KiwiFlareChallengeModel
     public required string Salt { get; set; }
     public required int Difficulty { get; set; }
     public required TimeSpan Patience { get; set; }
+    public required bool IsTtrs { get; set; }
 }
 
 public class KiwiFlareChallengeSolutionModel

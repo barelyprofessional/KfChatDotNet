@@ -18,7 +18,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using StackExchange.Redis;
 
-namespace KfChatDotNetBot.Commands.Kasino.Roulette;
+namespace KfChatDotNetBot.Commands.Kasino;
 
 [KasinoCommand]
 [WagerCommand]
@@ -48,10 +48,10 @@ public class RouletteCommand : ICommand
     private ApplicationDbContext _dbContext = new();
 
     // European Roulette wheel configuration
-    private static readonly HashSet<int> RedNumbers = new() 
+    private static readonly HashSet<int> BlackNumbers = new() 
         { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
     
-    private static readonly HashSet<int> BlackNumbers = new() 
+    private static readonly HashSet<int> RedNumbers = new() 
         { 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35 };
 
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
@@ -146,6 +146,14 @@ public class RouletteCommand : ICommand
                 true, autoDeleteAfter: TimeSpan.FromSeconds(10));
             return;
         }
+        
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(10));
+            return;
+        }
 
         // Parse and validate bet
         var betInfo = ParseBet(betStr);
@@ -229,7 +237,10 @@ public class RouletteCommand : ICommand
         if (isFirstBet)
         {
             _ = Task.Run(async () => await RunCountdown(botInstance, countdownDuration), CancellationToken.None);
+            return;
         }
+
+        await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your bet has been accepted", true, autoDeleteAfter: TimeSpan.FromSeconds(10));
     }
 
     private async Task RunCountdown(ChatBot botInstance, TimeSpan countdownDuration)
@@ -826,7 +837,9 @@ public class RouletteCommand : ICommand
     private string GetNumberColor(int number)
     {
         if (number == 0) return "GREEN";
-        return RedNumbers.Contains(number) ? "RED" : "BLACK";
+        if (RedNumbers.Contains(number)) return "RED";
+        if (BlackNumbers.Contains(number)) return "BLACK";
+        return "???";
     }
 
     private async Task<RouletteRound?> GetRound()

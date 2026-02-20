@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Caching;
 using System.Text.RegularExpressions;
 using Humanizer;
+using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
@@ -371,6 +372,13 @@ public class IgnoreCommand : ICommand
         if (targetUser.Ignored)
         {
             await botInstance.SendChatMessageAsync($"User {targetUser.KfUsername} has already been ignored", true);
+            return;
+        }
+
+        if (targetUser.UserRight > user.UserRight)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you can't ignore someone who is more powerful than you", true);
             return;
         }
 

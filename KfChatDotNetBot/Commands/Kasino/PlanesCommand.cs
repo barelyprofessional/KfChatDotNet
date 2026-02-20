@@ -16,8 +16,7 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class Planes : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^planes (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^planes (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^planes (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex("^planes$")
     ];
     public string? HelpText => "!planes <bet amount>";
@@ -82,17 +81,25 @@ public class Planes : ICommand
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
+        
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
+            return;
+        }
 
         if (HOUSE_EDGE < 1)
         {
-            if (Money.GetRandomDouble(gambler, 1) > (double)HOUSE_EDGE)
+            if (Money.GetRandomDouble(gambler) > (double)HOUSE_EDGE)
             {
                 _rigged = true;
             }
         }
         else
         {
-            if ((double)HOUSE_EDGE - Money.GetRandomDouble(gambler, 1) > 1)
+            if ((double)HOUSE_EDGE - Money.GetRandomDouble(gambler) > 1)
             {
                 _riggedWin = true;
             }

@@ -1,12 +1,14 @@
-﻿using Humanizer;
+﻿using System.Text.Json;
+using System.Xml;
+using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using NLog;
 using RandN;
 using RandN.Compat;
+using RandN.Distributions;
 
 namespace KfChatDotNetBot.Services;
 
@@ -348,7 +350,7 @@ public static class Money
         string? metaJson = null;
         if (gameMeta != null)
         {
-            metaJson = JsonConvert.SerializeObject(gameMeta, Formatting.Indented);
+            metaJson = JsonSerializer.Serialize(gameMeta, new JsonSerializerOptions { WriteIndented = true });
             _logger.Debug("Serialized metadata follows");
             _logger.Debug(metaJson);
         }
@@ -447,22 +449,13 @@ public static class Money
     /// Get random number double [0, 1]
     /// </summary>
     /// <param name="gambler">Gambler entity to reference their random seed</param>
-    /// <param name="iterations">Number of random number generator iterations to run before returning a result</param>
     /// <returns>A random number based on the given parameters</returns>
     /// <exception cref="ArgumentException"></exception>
-    public static double GetRandomDouble(GamblerDbModel gambler, int iterations = 10)
+    public static double GetRandomDouble(GamblerDbModel gambler)
     {
         var rng = StandardRng.Create();
-        var random = RandomShim.Create(rng);
-        var result = 0.0;
-        var i = 0;
-        if (iterations <= 0) throw new ArgumentException("Iterations cannot be 0 or lower");
-        while (i < iterations)
-        {
-            i++;
-            result = random.NextDouble();
-        }
-        return result;
+        var dist = Uniform.New(0.0, 1.0);
+        return dist.Sample(rng);
     }
     
     /// <summary>

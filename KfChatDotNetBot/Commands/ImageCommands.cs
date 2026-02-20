@@ -167,7 +167,6 @@ public class GetRandomImage : ICommand
     public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
-        var logger = LogManager.GetCurrentClassLogger();
         await using var db = new ApplicationDbContext();
         var key = arguments["key"].Value.ToLower();
         var images = db.Images.Where(i => i.Key == key);

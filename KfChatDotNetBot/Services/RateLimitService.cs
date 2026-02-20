@@ -46,7 +46,7 @@ public static class RateLimitService
         if (entries.Count >= command.RateLimitOptions.MaxInvocations)
         {
             result.IsRateLimited = true;
-            result.OldestEntryExpires = entries.OrderBy(x => x.EntryCreated).Last().EntryExpires;
+            result.OldestEntryExpires = entries.OrderBy(x => x.EntryCreated).First().EntryExpires;
         }
         return result;
     }

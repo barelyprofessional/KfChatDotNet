@@ -14,13 +14,11 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class KenoCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+\.\d+) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^keno (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
-        new Regex("^keno$")
+        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+(?:\.\d+)?) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<difficulty>classic|low|medium|high) (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+(?:\.\d+)?) (?<numbers>\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^keno (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
+        new Regex("^keno")
     ];
     public string? HelpText => "!keno [bet amount] [numbers to pick(optional, default 10)]";
     public UserRight RequiredRight => UserRight.Loser;
@@ -31,8 +29,8 @@ public class KenoCommand : ICommand
         Window = TimeSpan.FromSeconds(10)
     };
 
-    private List<int> playerNumbers;
-    private List<int> casinoNumbers;
+    private List<int> _playerNumbers = [];
+    private List<int> _casinoNumbers = [];
     private decimal HOUSE_EDGE = (decimal)0.98;
     private const string PlayerNumberDisplay = "⬜";
     private const string CasinoNumberDisplay = "🔶";
@@ -92,6 +90,14 @@ public class KenoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
+        if (wager == 0)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
             return;
         }
 
@@ -165,12 +171,12 @@ public class KenoCommand : ICommand
             { "classic", payoutMultipliersClassic}
         };
 
-    playerNumbers = GenerateKenoNumbers(numbers, gambler);
-        casinoNumbers = GenerateKenoNumbers(10, gambler, true);
-        var matches = playerNumbers.Intersect(casinoNumbers).ToList();
+    _playerNumbers = GenerateKenoNumbers(numbers, gambler);
+        _casinoNumbers = GenerateKenoNumbers(10, gambler, true);
+        var matches = _playerNumbers.Intersect(_casinoNumbers).ToList();
         var payoutMulti = payoutMultipliers[difficultyString][numbers - 1, matches.Count];
         
-        await AnimatedDisplayTable(playerNumbers, casinoNumbers, matches, botInstance);
+        await AnimatedDisplayTable(_playerNumbers, _casinoNumbers, matches, botInstance);
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
@@ -281,7 +287,7 @@ public class KenoCommand : ICommand
                 var randomNum = Money.GetRandomNumber(gambler, 1, 40);
                 if (numbers.Contains(randomNum)) continue;
                 if (kasino && Money.GetRandomDouble(gambler) > (double)HOUSE_EDGE &&
-                    playerNumbers.Contains(randomNum)) continue; //rigging function
+                    _playerNumbers.Contains(randomNum)) continue; //rigging function
                 numbers.Add(randomNum);
                 repeatNum = false;
             }

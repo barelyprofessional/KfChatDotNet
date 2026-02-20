@@ -11,8 +11,7 @@ namespace KfChatDotNetBot.Commands.Kasino;
 public class RainCommand : ICommand
 {
     public List<Regex> Patterns => [
-        new Regex(@"^rain (?<amount>\d+)$", RegexOptions.IgnoreCase),
-        new Regex(@"^rain (?<amount>\d+\.\d+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^rain (?<amount>\d+(?:\.\d+)?)$", RegexOptions.IgnoreCase),
         new Regex(@"^rain", RegexOptions.IgnoreCase)
     ];
 
@@ -92,6 +91,14 @@ public class RainCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance {await gambler.Balance.FormatKasinoCurrencyAsync()} is not enough to make it rain for {await decAmount.FormatKasinoCurrencyAsync()}.",
                 true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+
+        decimal rainMin = 100;
+        if (decAmount < rainMin)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, rain at least {await rainMin.FormatKasinoCurrencyAsync()}", true,
+                autoDeleteAfter: cleanupDelay);
             return;
         }
 
