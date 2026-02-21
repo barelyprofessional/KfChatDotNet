@@ -44,7 +44,7 @@ public class RainbetWs : IDisposable
             var clientWs = new ClientWebSocket();
             clientWs.Options.SetRequestHeader("Origin", "https://rainbet.com");
             clientWs.Options.SetRequestHeader("User-Agent", _userAgent);
-            clientWs.Options.SetRequestHeader("Cookie", string.Join("; ", _cookies!));
+            //clientWs.Options.SetRequestHeader("Cookie", string.Join("; ", _cookies!));
             if (_proxy == null) return clientWs;
             _logger.Debug($"Using proxy address {_proxy}");
             clientWs.Options.Proxy = new WebProxy(_proxy);
