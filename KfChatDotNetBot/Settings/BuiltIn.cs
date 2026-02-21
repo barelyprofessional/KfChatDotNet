@@ -547,6 +547,8 @@ public static class BuiltIn
         public static string BotImageRehostEnabled = "Bot.Image.RehostEnabled";
         [BuiltInSetting("Domain to look for when determining whether to rehost", SettingValueType.Text, "i.ddos.lgbt")]
         public static string BotImageRehostDomain = "Bot.Image.RehostDomain";
+        [BuiltInSetting("Array of cookies as a shitty hack to get Rainbet going", SettingValueType.Array, "[]")]
+        public static string RainbetCookies = "Rainbet.Cookies";
     }
 }
 

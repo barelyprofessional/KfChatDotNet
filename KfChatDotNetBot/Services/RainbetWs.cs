@@ -39,12 +39,14 @@ public class RainbetWs : IDisposable
 
     private async Task CreateWsClient()
     {
+        var cookies =
+            (await SettingsProvider.GetValueAsync(BuiltIn.Keys.RainbetCookies)).JsonDeserialize<List<string>>();
         var factory = new Func<ClientWebSocket>(() =>
         {
             var clientWs = new ClientWebSocket();
             clientWs.Options.SetRequestHeader("Origin", "https://rainbet.com");
-            clientWs.Options.SetRequestHeader("User-Agent", _userAgent);
-            //clientWs.Options.SetRequestHeader("Cookie", string.Join("; ", _cookies!));
+            clientWs.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0");
+            clientWs.Options.SetRequestHeader("Cookie", string.Join("; ", cookies!));
             if (_proxy == null) return clientWs;
             _logger.Debug($"Using proxy address {_proxy}");
             clientWs.Options.Proxy = new WebProxy(_proxy);
