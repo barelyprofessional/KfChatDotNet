@@ -327,28 +327,20 @@ public class LambchopCommand : ICommand
             {
                 return -1; // No death tile (player succeeds)
             }
-
+            
             // Player fails - calculate where the death tile appears
             double riggingFactor = Money.GetRandomDouble(gambler);
             if (_houseEdge > 0 && riggingFactor < _houseEdge * 2) // shitty hack because I made the decision to clamp houseEdge to max 50%
             {
-                // Player fails - calculate where the death tile appears
-                double riggingFactor = Money.GetRandomDouble(gambler);
-                if (_houseEdge > 0 && riggingFactor < _houseEdge * 2) // shitty hack because I made the decision to clamp houseEdge to max 50%
-                {
-                    // More rigging means death tile is more likely near the end
-                    int minDeathTile = Math.Max(0, FIELD_LENGTH - 3);
-                    return Money.GetRandomNumber(gambler, minDeathTile, FIELD_LENGTH, incrementMaxParam:false); // return 15 means dying on the last tile xd
-                }
-                else
-                {
-                    // Player fail, random tile in the path becomes death tile
-                    return Money.GetRandomNumber(gambler,0, FIELD_LENGTH, incrementMaxParam:false);
-                }
+                // More rigging means death tile is more likely near the end
+                int minDeathTile = Math.Max(0, FIELD_LENGTH - 3);
+                return Money.GetRandomNumber(gambler, minDeathTile, FIELD_LENGTH, incrementMaxParam:false); // return 15 means dying on the last tile xd
             }
-
-            // Player fail, random tile in the path becomes death tile
-            return Money.GetRandomNumber(gambler,0, FIELD_LENGTH);
+            else
+            {
+                // Player fail, random tile in the path becomes death tile
+                return Money.GetRandomNumber(gambler,0, FIELD_LENGTH, incrementMaxParam:false);
+            }
         }
 
         // Tiles 1 - 15
