@@ -193,9 +193,9 @@ public class KenoCommand : ICommand
         }
 
         //you win
-        var win = wager * (decimal)payoutMulti;
+        var win = (wager * (decimal)payoutMulti) - wager;
         // Required to avoid compiler errors when trying to format it in the win message
-        newBalance = await Money.NewWagerAsync(gambler.Id, wager, wager * (decimal)payoutMulti, WagerGame.Keno, ct: ctx);
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, win, WagerGame.Keno, ct: ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
             true, autoDeleteAfter: cleanupDelay);
