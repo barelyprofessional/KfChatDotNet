@@ -845,7 +845,7 @@ public class BotServices
     // TODO: Figure out why this never works
     private void DiscordOnPresenceUpdated(object sender, DiscordPresenceUpdateModel presence)
     {
-        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon]).Result;
+        var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.DiscordBmjId, BuiltIn.Keys.DiscordIcon, BuiltIn.Keys.TwitchBossmanJackUsername]).Result;
         if (presence.User.Id != settings[BuiltIn.Keys.DiscordBmjId].Value)
         {
             return;
@@ -857,7 +857,7 @@ public class BotServices
         // }
         // _lastDiscordStatus = presence.Status;
         var clientStatus = presence.ClientStatus.Keys.Aggregate(string.Empty, (current, device) => current + $"{device} is {presence.ClientStatus[device]}; ");
-        _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {presence.User.GlobalName ?? presence.User.Username} has updated his Discord presence: {clientStatus}");
+        _chatBot.SendChatMessage($"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {presence.User.GlobalName ?? presence.User.Username ?? settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value} has updated his Discord presence: {clientStatus}");
         UpdateBossmanLastSighting($"going {presence.Status} on Discord").Wait(_cancellationToken);
     }
 
