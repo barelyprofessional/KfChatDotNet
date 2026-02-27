@@ -65,6 +65,7 @@ public class SlotsCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you need to bet something to play. !slots [bet]",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -75,6 +76,7 @@ public class SlotsCommand : ICommand
         if (spins < 1 || spins > 10)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()} you can only do between 1 and 10 spins.", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -82,6 +84,7 @@ public class SlotsCommand : ICommand
         var wager = Convert.ToDecimal(amount.Value);
         if (wager < (decimal)0.01){
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()} you must bet a minimum of $0.01 KKK", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -92,6 +95,7 @@ public class SlotsCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 

@@ -45,6 +45,7 @@ public class GuessWhatNumberCommand : ICommand
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !guess <wager> <number between 1 and 10>", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -53,6 +54,7 @@ public class GuessWhatNumberCommand : ICommand
         if (guess is < 1 or > 10)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your guess must be between 1 and 10", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -71,6 +73,7 @@ public class GuessWhatNumberCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 

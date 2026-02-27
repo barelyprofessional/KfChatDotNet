@@ -66,6 +66,7 @@ public class KenoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, not enough arguments. !keno <wager> <number between 1 and 10>, or !keno <wager> and 10 will be selected automatically",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -90,6 +91,7 @@ public class KenoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -98,6 +100,7 @@ public class KenoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -105,6 +108,7 @@ public class KenoCommand : ICommand
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can only pick numbers from 1 - 10",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 

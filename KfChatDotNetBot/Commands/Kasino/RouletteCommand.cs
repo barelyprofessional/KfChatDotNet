@@ -120,6 +120,7 @@ public class RouletteCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, invalid syntax. Use: !roulette <amount> <bet>",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -144,6 +145,7 @@ public class RouletteCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -152,6 +154,7 @@ public class RouletteCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: TimeSpan.FromSeconds(10));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -162,6 +165,7 @@ public class RouletteCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, invalid bet. Valid bets: 0-36, red/black, odd/even, low/high, 1st12/2nd12/3rd12, col1/col2/col3",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 

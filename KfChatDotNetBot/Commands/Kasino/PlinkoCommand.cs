@@ -143,6 +143,7 @@ public class PlinkoCommand : ICommand
         {
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you can only play with 1 - 10 balls at a time", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         if (gambler.Balance < wager * numberOfBalls)
@@ -150,6 +151,7 @@ public class PlinkoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -158,6 +160,7 @@ public class PlinkoCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         

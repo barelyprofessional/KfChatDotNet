@@ -84,6 +84,7 @@ public class WheelCommand : ICommand
         if (!arguments.TryGetValue("amount", out var amount))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !wheel <wager> <difficulty: low, medium, high>", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -93,6 +94,7 @@ public class WheelCommand : ICommand
         if (difficulty.ToLower() is not ("l" or "low" or "m" or "medium" or "h" or "high"))
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, unrecognized difficulty selection, please choose between: low, medium, high", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -102,6 +104,7 @@ public class WheelCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -110,6 +113,7 @@ public class WheelCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         

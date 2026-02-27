@@ -57,6 +57,7 @@ public class CoinflipCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, not enough arguments. !coinflip <wager> <heads|tails>",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -65,6 +66,7 @@ public class CoinflipCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, not enough arguments. !coinflip <wager> <heads|tails>",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -75,6 +77,7 @@ public class CoinflipCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your wager must be greater than zero.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -87,6 +90,7 @@ public class CoinflipCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         var rolled = Money.GetRandomDouble(gambler);
@@ -111,22 +115,21 @@ public class CoinflipCommand : ICommand
                 $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]WON![/COLOR][/B] " +
                 $"You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
+            return;
         }
-        else
-        {
-            // lost
-            bool isJacky = rolled > 0.5; // would've won without house edge
-            var coinflipAnimationURL = GetCoinFlipAnimationUrl("heads" == choiceStr ? "tails" : "heads", isJacky);
 
-            await botInstance.SendChatMessageAsync($"[IMG]{coinflipAnimationURL}[/IMG]", true, autoDeleteAfter: cleanupDelay);
-            await Task.Delay(1500, ctx);
+        // lost
+        bool isJacky = rolled > 0.5; // would've won without house edge
+        var coinflipAnimationURL = GetCoinFlipAnimationUrl("heads" == choiceStr ? "tails" : "heads", isJacky);
 
-            newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.CoinFlip, ct: ctx);
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
-                $"Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
-                true, autoDeleteAfter: cleanupDelay);
-        }
+        await botInstance.SendChatMessageAsync($"[IMG]{coinflipAnimationURL}[/IMG]", true, autoDeleteAfter: cleanupDelay);
+        await Task.Delay(1500, ctx);
+
+        newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.CoinFlip, ct: ctx);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, you [B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]LOST![/COLOR][/B] " +
+            $"Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
+            true, autoDeleteAfter: cleanupDelay);
     }
 
     private static string GetCoinFlipAnimationUrl(string choiceStr, bool isJacky = false)

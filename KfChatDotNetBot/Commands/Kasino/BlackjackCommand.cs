@@ -94,6 +94,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -102,6 +103,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -236,6 +238,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you don't have an active blackjack game. Start one with !bj <amount>",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -245,6 +248,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your game data is corrupted. Please start a new game.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             activeWager.IsComplete = true;
             await _dbContext.SaveChangesAsync(ctx);
             return;
@@ -284,6 +288,7 @@ public class BlackjackCommand : ICommand
                 $"{user.FormatUsername()}, game error: no cards left in deck. Game forfeited.",
                 true, autoDeleteAfter: cleanupDelay);
             await ForfeitGame(botInstance, user, gambler, wager, cleanupDelay, ctx);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -418,6 +423,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you can only split with two cards of the same rank.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -427,6 +433,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you can only split once per game.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -436,6 +443,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you don't have enough balance to split.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -445,6 +453,7 @@ public class BlackjackCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, not enough cards in deck to split.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         

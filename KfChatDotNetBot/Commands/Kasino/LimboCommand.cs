@@ -59,6 +59,7 @@ public class LimboCommand : ICommand
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !limbo <wager>",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         var wager = Convert.ToDecimal(amount.Value);
@@ -70,6 +71,7 @@ public class LimboCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         
@@ -78,6 +80,7 @@ public class LimboCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
@@ -92,6 +95,7 @@ public class LimboCommand : ICommand
         {
             //cancel the game if user does not choose a correct number
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you must choose a number greater than 1", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
         decimal newBalance;

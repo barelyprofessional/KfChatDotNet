@@ -96,11 +96,10 @@ public class MinesCommand : ICommand
                 await KasinoMines.Cashout(KasinoMines.ActiveGames[gambler.Id]);
                 return;
             }
-            else
-            {
-                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have a game running to cash out.", true, autoDeleteAfter: cleanupDelay);
-                return;
-            }
+
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you don't have a game running to cash out.", true, autoDeleteAfter: cleanupDelay);
+            RateLimitService.RemoveMostRecentEntry(user, this);
+            return;
         }
         
         //check if user has an existing game already
@@ -119,6 +118,7 @@ public class MinesCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, not enough arguments(bet+). !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
             decimal wager = Convert.ToDecimal(bet.Value);
@@ -126,6 +126,7 @@ public class MinesCommand : ICommand
             {
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, your balance is too low. Balance: {gambler.Balance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
 
@@ -133,6 +134,7 @@ public class MinesCommand : ICommand
             {
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, you have to bet something to play mines.", true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
             if (!arguments.TryGetValue("size", out var size) || !arguments.TryGetValue("mines", out var mines))
@@ -140,6 +142,7 @@ public class MinesCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, not enough arguments(mines and or size+). !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
 
@@ -152,7 +155,7 @@ public class MinesCommand : ICommand
             else if (arguments.TryGetValue("betString", out var betString)) //if they are using precise picks manually or from the tool to select specific squares to reveal
             {
                 var matches = Regex.Matches(message.Message, BetPattern);
-                if (matches.Count == 0 || matches == null) //if invalid bet string
+                if (matches.Count == 0) //if invalid bet string
                 {
                     await botInstance.SendChatMessageAsync(
                         $"{user.FormatUsername()}, invalid bet string. Example: !mines 100 10 10 1,3 1,5 2,6 - or use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
@@ -168,18 +171,21 @@ public class MinesCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, not enough arguments(picks or betstring). !mines <bet> <board size> <number of mines> <picks> to play simple mines. !mines <bet> <board size> <number of mines> <betString> for advanced mines. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
             int boardSize = Convert.ToInt32(size.Value);
             if (boardSize < 2 || boardSize > 8)
             {
                 await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, board size must be between 2 and 9.",true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
             int minesCount = Convert.ToInt32(mines.Value);
             if (minesCount < 1 || minesCount > (boardSize * boardSize) - 1)
             {
                 await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, number of mines must be between 1 and {boardSize * boardSize - 1}(size^2 - 1).",true, autoDeleteAfter: cleanupDelay);
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;           
             }
             //at this point all valid values so good to continue making the game
@@ -196,6 +202,7 @@ public class MinesCommand : ICommand
                     if (game.BetsPlaced.Contains(coord) || coord.r < 0 || coord.r > game.Size || coord.c < 0 || coord.c > game.Size)
                     {
                         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you can't place duplicate or invalid bets. Use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
+                        RateLimitService.RemoveMostRecentEntry(user, this);
                         return;
                     }
                 }
@@ -232,6 +239,7 @@ public class MinesCommand : ICommand
                 {
                     await botInstance.SendChatMessageAsync(
                         $"{user.FormatUsername()}, invalid bet string. Example: !mines 100 10 10 1,3 1,5 2,6 - or use the tool: {ToolUrl}", true, autoDeleteAfter: cleanupDelay);
+                    RateLimitService.RemoveMostRecentEntry(user, this);
                     return;
                 }
                 foreach (Match match in matches)
@@ -255,7 +263,7 @@ public class MinesCommand : ICommand
                 await botInstance.SendChatMessageAsync(
                     $"{user.FormatUsername()}, you already have a game running. !mines <picks> to reveal more spaces, !mines cashout to cash out, !mines <bet string> to place precise picks. Tool: {ToolUrl}",
                     true, autoDeleteAfter: cleanupDelay);
-                
+                RateLimitService.RemoveMostRecentEntry(user, this);
                 return;
             }
 
