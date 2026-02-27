@@ -29,7 +29,7 @@ public class LambchopCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(15)
     };
-    private static double _houseEdge = 0.05; // house edge hack?
+    private static double _houseEdge = 0.015; // house edge hack?
     
     // game assets
     private const string HAIRSPACE = " ";
