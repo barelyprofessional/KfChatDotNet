@@ -143,6 +143,7 @@ public class SlotsCommand : ICommand
         {
             newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, -wager*spins, WagerGame.Slots, ct: ctx);
             var totalWager = wager * spins;
+            await Task.Delay(TimeSpan.FromSeconds(spins));
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color] {await totalWager.FormatKasinoCurrencyAsync()} with {spins} spins. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
