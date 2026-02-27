@@ -206,6 +206,12 @@ public class GetRandomImage : ICommand
         }
         else if (key == "chink" && settings[BuiltIn.Keys.BotImageChinkSelfDestruct].ToBoolean())
         {
+            var nig = 0;
+            while (nig < 5)
+            {
+                nig++;
+                RateLimitService.AddEntry(user, this, message.MessageRawHtmlDecoded);
+            }
             timeToDeletion = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>());
         }
         await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true, autoDeleteAfter: timeToDeletion);
