@@ -366,11 +366,11 @@ public class ChatClient
 
     private void WsPermissions(ResponseMessage message)
     {
-        var data = JsonSerializer.Deserialize<JsonElement>(message.Text);
+        var data = JsonSerializer.Deserialize<JsonElement>(message.Text!);
         var permissions = data.GetProperty("permissions").Deserialize<PermissionsJsonModel>();
         try
         {
-            OnPermissions?.Invoke(this, permissions);
+            OnPermissions?.Invoke(this, permissions!);
         }
         catch (Exception e)
         {
@@ -381,10 +381,10 @@ public class ChatClient
 
     private void WsSystemMessage(ResponseMessage message)
     {
-        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text).GetProperty("system").GetString();
+        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text!).GetProperty("system").GetString();
         try
         {
-            OnSystemMessage?.Invoke(this, msg);
+            OnSystemMessage?.Invoke(this, msg!);
         }
         catch (Exception e)
         {

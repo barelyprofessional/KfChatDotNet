@@ -75,7 +75,7 @@ public class MinesCommand : ICommand
                 await KasinoMines.GetSavedGames(gambler.Id);
                 foreach (var game in KasinoMines.ActiveGames.Values)
                 {
-                    await botInstance.KfClient.DeleteMessageAsync(game.LastMessageId);
+                    await botInstance.KfClient.DeleteMessageAsync(game.LastMessageId!);
                 }
                 KasinoMines.ActiveGames.Clear();
                 await KasinoMines.SaveActiveGames(gambler.Id);

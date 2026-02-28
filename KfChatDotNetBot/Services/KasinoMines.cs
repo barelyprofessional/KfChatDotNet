@@ -150,11 +150,11 @@ public class KasinoMines
                 redWave++;
                 whiteWave++;
                 await Task.Delay(100);
-                await _kfChatBot.KfClient.EditMessageAsync(LastMessageId, $"{str}[br]{Creator.User.FormatUsername()}");
+                await _kfChatBot.KfClient.EditMessageAsync(LastMessageId!, $"{str}[br]{Creator.User.FormatUsername()}");
             }
 
             await Task.Delay(TimeSpan.FromSeconds(10));
-            await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid);
+            await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
             LastMessageId = null;
 
             (int vertical, int horizontal) DistanceFromMine((int r, int c) coord)
@@ -330,7 +330,7 @@ public class KasinoMines
                 
             }
         }
-        await _kfChatBot.KfClient.EditMessageAsync(game.LastMessageId, str);
+        await _kfChatBot.KfClient.EditMessageAsync(game.LastMessageId!, str);
         var net = payout - game.Wager;
         var newBalance = await Money.NewWagerAsync(game.Creator.Id, game.Wager, net, WagerGame.Mines);
         
