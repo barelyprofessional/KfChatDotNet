@@ -23,7 +23,8 @@ public class LegitCheckCommand : ICommand
     [
         new Regex(@"^legitcheck (?<user_id>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^legitcheck (?<user_id>\d+) all$", RegexOptions.IgnoreCase),
-
+        new Regex(@"^legitcheck$", RegexOptions.IgnoreCase),
+        new Regex(@"^legitcheck all$", RegexOptions.IgnoreCase),
     ];
 
     public string? HelpText => "Check a user's kasino RTP statistics";
@@ -45,7 +46,9 @@ public class LegitCheckCommand : ICommand
     {
         await using var db = new ApplicationDbContext();
 
-        var targetUserId = int.Parse(arguments["user_id"].Value);
+        var targetUserId = arguments["user_id"].Success 
+            ? int.Parse(arguments["user_id"].Value)
+            : user.KfId;
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == targetUserId, ctx);
         var isAll = message.MessageRaw.EndsWith(" all");
 
