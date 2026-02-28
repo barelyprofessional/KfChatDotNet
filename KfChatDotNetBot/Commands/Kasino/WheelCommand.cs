@@ -156,7 +156,7 @@ public class WheelCommand : ICommand
             int delay = (int)(MIN_WHEELSPIN_DELAY + easeOut * (MAX_WHEELSPIN_DELAY - MIN_WHEELSPIN_DELAY));
             await Task.Delay(delay, ctx);
             wheel.RotateWheelOnce();
-            await botInstance.KfClient.EditMessageAsync(wheelDisplayMessage.ChatMessageId!.Value,
+            await botInstance.KfClient.EditMessageAsync(wheelDisplayMessage.ChatMessageUuid!,
                 wheel.ConvertWheelToOvalString());
         }
         

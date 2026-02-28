@@ -145,7 +145,7 @@ public class LambchopCommand : ICommand
         var lambChopDisplayMessage =
             await botInstance.SendChatMessageAsync(ConvertLambchopFieldToString(tiles, hazards, true), true,
                 autoDeleteAfter: cleanupDelay);
-        while (lambChopDisplayMessage.ChatMessageId == null)
+        while (lambChopDisplayMessage.ChatMessageUuid == null)
         {
             await Task.Delay(50, ctx); // wait until first message is fully sent
             if (lambChopDisplayMessage.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending)
@@ -307,7 +307,7 @@ public class LambchopCommand : ICommand
         async Task UpdateGameAsync(string? updateText = null)
         {
             updateText ??= ConvertLambchopFieldToString(tiles, hazards, false);
-            await botInstance.KfClient.EditMessageAsync(lambChopDisplayMessage.ChatMessageId!.Value, updateText);
+            await botInstance.KfClient.EditMessageAsync(lambChopDisplayMessage.ChatMessageUuid, updateText);
             await Task.Delay(TimeSpan.FromMilliseconds(FRAME_DELAY), ctx);
         }
     }

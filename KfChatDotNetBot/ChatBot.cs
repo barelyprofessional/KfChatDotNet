@@ -193,7 +193,7 @@ public class ChatBot
             foreach (var deletion in _scheduledDeletions)
             {
                 if (deletion.DeleteAt > now) continue;
-                if (deletion.Message.ChatMessageId == null)
+                if (deletion.Message.ChatMessageUuid == null)
                 {
                     _logger.Error($"Can't clean up {deletion.Message.Reference} as it doesn't have a chat message ID");
                     if (failures.TryGetValue(deletion.Message.Reference, out var failure))
@@ -213,7 +213,7 @@ public class ChatBot
                     }
                     continue;
                 }
-                await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageId.Value);
+                await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageUuid);
                 removals.Add(deletion);
             }
             foreach (var removal in removals)
@@ -295,7 +295,7 @@ public class ChatBot
             // Update last edit timestamp
             if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate != null)
             {
-                var sentMessage = SentMessages.FirstOrDefault(x => x.ChatMessageId == message.MessageId);
+                var sentMessage = SentMessages.FirstOrDefault(x => x.ChatMessageUuid == message.MessageUuid);
                 if (sentMessage != null)
                 {
                     sentMessage.LastEdited = message.MessageEditDate.Value;
@@ -321,14 +321,14 @@ public class ChatBot
                         // back to you. So this fallback should be generally correct and will account for the occasional
                         // mismatch due to messages not being 1:1 with what we thought we sent
                         _logger.Info("Just going to lazily associate it with the latest message");
-                        latest.ChatMessageId = message.MessageId;
+                        latest.ChatMessageUuid = message.MessageUuid;
                         latest.Delay = DateTimeOffset.UtcNow - latest.SentAt;
                         latest.Status = SentMessageTrackerStatus.ResponseReceived;
                     }
                 }
                 else
                 {
-                    sentMessage.ChatMessageId = message.MessageId;
+                    sentMessage.ChatMessageUuid = message.MessageUuid;
                     sentMessage.Delay = DateTimeOffset.UtcNow - sentMessage.SentAt;
                     sentMessage.Status = SentMessageTrackerStatus.ResponseReceived;
                 }
@@ -350,7 +350,7 @@ public class ChatBot
             // So this avoids reprocessing messages on reconnect while being able to handle edits, even if the edit came
             // during a disconnect / reconnect event
             if (!_seenMessages.Any(msg =>
-                    msg.MessageId == message.MessageId && msg.LastEdited == message.MessageEditDate) &&
+                    msg.MessageUuid == message.MessageUuid && msg.LastEdited == message.MessageEditDate) &&
                 !InitialStartCooldown)
             {
                 _logger.Debug("Passing message to command interface");
@@ -366,14 +366,14 @@ public class ChatBot
             }
 
             // Update or add the element to keep it in sync
-            var existingMsg = _seenMessages.FirstOrDefault(msg => msg.MessageId == message.MessageId);
+            var existingMsg = _seenMessages.FirstOrDefault(msg => msg.MessageUuid == message.MessageUuid);
             if (existingMsg != null)
             {
                 existingMsg.LastEdited = message.MessageEditDate;
             }
             else
             {
-                _seenMessages.Add(new SeenMessageMetadataModel {MessageId = message.MessageId, LastEdited = message.MessageEditDate});
+                _seenMessages.Add(new SeenMessageMetadataModel {MessageUuid = message.MessageUuid, LastEdited = message.MessageEditDate});
             }
             UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
             // Strip weird control characters and just allow basic punctuation + whitespace
@@ -546,7 +546,7 @@ public class ChatBot
         }
 
         var patienceEnds = DateTimeOffset.UtcNow.Add(patience.Value);
-        while (message.ChatMessageId == null)
+        while (message.ChatMessageUuid == null)
         {
             if (DateTimeOffset.UtcNow > patienceEnds) return false;
             if (message.Status is SentMessageTrackerStatus.Lost or SentMessageTrackerStatus.NotSending) return false;

@@ -227,7 +227,7 @@ public class KenoCommand : ICommand
 
         _kenoTable = await botInstance.SendChatMessageAsync(displayMessage, true);
         var i = 0;
-        while (_kenoTable.ChatMessageId == null)
+        while (_kenoTable.ChatMessageUuid == null)
         {
             i++;
             if (_kenoTable.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
@@ -235,7 +235,7 @@ public class KenoCommand : ICommand
             await Task.Delay(100);
         }
 
-        if (_kenoTable.ChatMessageId == null)
+        if (_kenoTable.ChatMessageUuid == null)
         {
             throw new Exception($"_kenoTable chat message ID never got populated. Tracker status is: {_kenoTable?.Status}");
         }
@@ -269,7 +269,7 @@ public class KenoCommand : ICommand
                 }
                 displayMessage += "[br]";
             }
-            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageId!.Value, displayMessage);
+            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageUuid, displayMessage);
             await Task.Delay(frameDelay);
             if (displayMessage.Length <= 79 && displayMessage.Contains(BlankSpaceDisplay) &&
                 (displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay) ||

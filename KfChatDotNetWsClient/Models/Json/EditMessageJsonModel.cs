@@ -4,8 +4,8 @@ namespace KfChatDotNetWsClient.Models.Json;
 
 public class EditMessageJsonModel
 {
-    [JsonPropertyName("id")]
-    public required int Id { get; set; }
+    [JsonPropertyName("uuid")]
+    public required string Uuid { get; set; }
     
     [JsonPropertyName("message")]
     public required string Message { get; set; }

@@ -337,12 +337,12 @@ public class DeleteMessagesCommand : ICommand
             .TakeLast(amount);
         foreach (var msg in messages)
         {
-            if (msg.ChatMessageId == null)
+            if (msg.ChatMessageUuid == null)
             {
                 continue;
             }
 
-            await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId.Value);
+            await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageUuid);
         }
     }
 }

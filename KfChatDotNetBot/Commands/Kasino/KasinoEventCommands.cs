@@ -153,7 +153,7 @@ public class KasinoEventStart : ICommand
         var msg = $":!: :!: A Keno Kasino event has started! :!: :!:[br]{targetEvent.EventText}[br]{guide}";
         var msgIds = await botInstance.SendChatMessagesAsync(msg.FancySplitMessage(partSeparator: "[br]"), true);
         var i = 0;
-        while (msgIds[0].ChatMessageId != null)
+        while (msgIds[0].ChatMessageUuid != null)
         {
             i++;
             await Task.Delay(TimeSpan.FromMilliseconds(100), ctx);

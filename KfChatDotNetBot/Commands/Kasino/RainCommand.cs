@@ -128,10 +128,12 @@ public class RainCommand : ICommand
         {
             timer--;
             await Task.Delay(1000, ctx);
-            await botInstance.KfClient.EditMessageAsync(msg.ChatMessageId!.Value,
+            await botInstance.KfClient.EditMessageAsync(msg.ChatMessageUuid!,
                 $"{user.FormatUsername()} is making it rain with {await decAmount.FormatKasinoCurrencyAsync()}! Type !rain in the next {timer} seconds to join.");
         }
-        await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageId!.Value);
+
+        await Task.Delay(100, ctx);
+        await botInstance.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
         // At this point the timer should take care of things but truthfully it's a disaster and probably won't work
     }
 }

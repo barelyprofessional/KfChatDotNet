@@ -24,6 +24,8 @@ public class ChatClient
     public event EventHandlers.OnWsDisconnectionEventHandler? OnWsDisconnection;
     public event EventHandlers.OnFailedToJoinRoom? OnFailedToJoinRoom;
     public event EventHandlers.OnUnknownCommand? OnUnknownCommand;
+    public event EventHandlers.OnPermissionsEventHandler? OnPermissions;
+    public event EventHandlers.OnSystemMessage? OnSystemMessage;
     private WebsocketClient? _wsClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private ChatClientConfigModel _config;
@@ -188,6 +190,20 @@ public class ChatClient
             return;
         }
 
+        if (packetType.ContainsKey("permissions"))
+        {
+            _logger.Debug("Looks like we got permissions");
+            WsPermissions(message);
+            return;
+        }
+
+        if (packetType.ContainsKey("system"))
+        {
+            _logger.Debug("Looks like a system message");
+            WsSystemMessage(message);
+            return;
+        }
+
         if (packetType.ContainsKey("delete"))
         {
             _logger.Debug($"Looks like this is a message deletion packet");
@@ -226,22 +242,22 @@ public class ChatClient
         _wsClient.Send($"/delete {messageId}");
     }
 
-    public async Task DeleteMessageAsync(int messageId)
+    public async Task DeleteMessageAsync(string messageUuid)
     {
-        _logger.Debug($"Deleting {messageId}");
+        _logger.Debug($"Deleting {messageUuid}");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
-        await _wsClient.SendInstant($"/delete {messageId}");
+        await _wsClient.SendInstant($"/delete {messageUuid}");
     }
     
-    public void EditMessage(int messageId, string newMessage)
+    public void EditMessage(string messageUuid, string newMessage)
     {
-        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage});
-        _logger.Debug($"Editing {messageId} with '{newMessage}'");
+        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Uuid = messageUuid, Message = newMessage});
+        _logger.Debug($"Editing {messageUuid} with '{newMessage}'");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         _wsClient.Send($"/edit {payload}");
     }
 
-    public async Task EditMessageAsync(int messageId, string newMessage)
+    public async Task EditMessageAsync(string messageUuid, string newMessage)
     {
         var settings = new TextEncoderSettings();
         settings.AllowRange(UnicodeRanges.All);
@@ -249,8 +265,8 @@ public class ChatClient
         {
             Encoder = JavaScriptEncoder.Create(settings)
         };
-        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Id = messageId, Message = newMessage}, options);
-        _logger.Debug($"Editing {messageId} with '{newMessage}'");
+        var payload = JsonSerializer.Serialize(new EditMessageJsonModel {Uuid = messageUuid, Message = newMessage}, options);
+        _logger.Debug($"Editing {messageUuid} with '{newMessage}'");
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         var msg = $"/edit {payload}";
         var length = Encoding.UTF8.GetByteCount(msg);
@@ -285,7 +301,7 @@ public class ChatClient
                     LastActivity = null
                 },
                 Message = chatMessage.Message,
-                MessageId = chatMessage.MessageId,
+                MessageUuid = chatMessage.MessageUuid,
                 MessageRaw = chatMessage.MessageRaw,
                 RoomId = chatMessage.RoomId,
                 MessageRawHtmlDecoded = WebUtility.HtmlDecode(chatMessage.MessageRaw),
@@ -346,6 +362,35 @@ public class ChatClient
         var usersParted = data!["user"].Select(user => int.Parse(user.Key)).ToList();
         _logger.Debug($"Following users have parted: {string.Join(',', usersParted)}");
         OnUsersParted?.Invoke(this, usersParted);
+    }
+
+    private void WsPermissions(ResponseMessage message)
+    {
+        var data = JsonSerializer.Deserialize<JsonElement>(message.Text);
+        var permissions = data.GetProperty("permissions").Deserialize<PermissionsJsonModel>();
+        try
+        {
+            OnPermissions?.Invoke(this, permissions);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught error when invoking OnPermissions");
+            _logger.Error(e);
+        }
+    }
+
+    private void WsSystemMessage(ResponseMessage message)
+    {
+        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text).GetProperty("system").GetString();
+        try
+        {
+            OnSystemMessage?.Invoke(this, msg);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught error when invoking OnSystemMessage");
+            _logger.Error(e);
+        }
     }
 }
 

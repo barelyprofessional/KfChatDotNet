@@ -35,7 +35,7 @@ public class EditTestCommand : ICommand
             reference.Status == SentMessageTrackerStatus.Unknown ||
             reference.Status == SentMessageTrackerStatus.ChatDisconnected ||
             reference.Status == SentMessageTrackerStatus.Lost ||
-            reference.ChatMessageId == null)
+            reference.ChatMessageUuid == null)
         {
             logger.Error("Either message refused to send due to bot settings or something fucked up getting the message ID");
             return;
@@ -44,13 +44,13 @@ public class EditTestCommand : ICommand
         {
             i++;
             await Task.Delay(delay, ctx);
-            await botInstance.KfClient.EditMessageAsync(reference.ChatMessageId!.Value, $"{msg} {i}");
+            await botInstance.KfClient.EditMessageAsync(reference.ChatMessageUuid, $"{msg} {i}");
         }
 
         await Task.Delay(delay, ctx);
-        await botInstance.KfClient.EditMessageAsync(reference.ChatMessageId!.Value, "This message will self destruct in 1 second");
+        await botInstance.KfClient.EditMessageAsync(reference.ChatMessageUuid, "This message will self destruct in 1 second");
         await Task.Delay(delay, ctx);
-        await botInstance.KfClient.DeleteMessageAsync(reference.ChatMessageId!.Value);
+        await botInstance.KfClient.DeleteMessageAsync(reference.ChatMessageUuid);
     }
 }
 
@@ -113,15 +113,15 @@ public class LengthLimitTestCommand : ICommand
             true, ChatBot.LengthLimitBehavior.RefuseToSend, 20);
         await Task.Delay(TimeSpan.FromSeconds(5), ctx);
         logger.Info($"niceTruncation => {niceTruncation.Status}; exactTruncation => {exactTruncation.Status}; doNothing => {doNothing.Status}; refuseToSend => {refuseToSend.Status}");
-        if (niceTruncation.ChatMessageId != null)
-            await botInstance.KfClient.DeleteMessageAsync(niceTruncation.ChatMessageId.Value);
-        if (exactTruncation.ChatMessageId != null)
-            await botInstance.KfClient.DeleteMessageAsync(exactTruncation.ChatMessageId.Value);
-        if (doNothing.ChatMessageId != null)
-            await botInstance.KfClient.DeleteMessageAsync(doNothing.ChatMessageId.Value);
+        if (niceTruncation.ChatMessageUuid != null)
+            await botInstance.KfClient.DeleteMessageAsync(niceTruncation.ChatMessageUuid);
+        if (exactTruncation.ChatMessageUuid != null)
+            await botInstance.KfClient.DeleteMessageAsync(exactTruncation.ChatMessageUuid);
+        if (doNothing.ChatMessageUuid != null)
+            await botInstance.KfClient.DeleteMessageAsync(doNothing.ChatMessageUuid);
         // Should never happen
-        if (refuseToSend.ChatMessageId != null)
-            await botInstance.KfClient.DeleteMessageAsync(refuseToSend.ChatMessageId.Value);
+        if (refuseToSend.ChatMessageUuid != null)
+            await botInstance.KfClient.DeleteMessageAsync(refuseToSend.ChatMessageUuid);
     }
 }
 

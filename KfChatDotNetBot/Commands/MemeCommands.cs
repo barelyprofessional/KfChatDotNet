@@ -156,16 +156,14 @@ public class NextPoVisitCommand : ICommand
             return;
         }
         var sent = await botInstance.SendChatMessageAsync($"Austin's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}", true);
-        while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
-        {
-            await Task.Delay(250, ctx);
-        }
+        var success = await botInstance.WaitForChatMessageAsync(sent, TimeSpan.FromSeconds(30), ctx);
+        if (!success) throw new InvalidOperationException();
         var i = 0;
         while (i < 60)
         {
             await Task.Delay(1000, ctx);
             timespan = DateTimeOffset.Parse(time.Value) - DateTimeOffset.UtcNow;
-            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value,
+            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageUuid!,
                 $"Austin's next PO visit will be in roughly {timespan.Humanize(precision: 10, minUnit: TimeUnit.Millisecond)}");
             i++;
         }
@@ -197,15 +195,13 @@ public class NextCourtHearingCommand : ICommand
         }
 
         var sent = await botInstance.SendChatMessageAsync(RenderHearings(hearings),true);
-        while (sent.Status != SentMessageTrackerStatus.ResponseReceived)
-        {
-            await Task.Delay(250, ctx);
-        }
+        var success = await botInstance.WaitForChatMessageAsync(sent, TimeSpan.FromSeconds(15), ctx);
+        if (!success) throw new InvalidOperationException();
         var i = 0;
         while (i < 60)
         {
             await Task.Delay(1000, ctx);
-            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageId!.Value, RenderHearings(hearings));
+            await botInstance.KfClient.EditMessageAsync(sent.ChatMessageUuid!, RenderHearings(hearings));
             i++;
         }
     }

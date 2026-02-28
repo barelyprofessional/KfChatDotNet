@@ -41,8 +41,8 @@ public class MessagesJsonModel
         public required AuthorModel Author { get; set; }
         [JsonPropertyName("message")]
         public required string Message { get; set; }
-        [JsonPropertyName("message_id")]
-        public int MessageId { get; set; }
+        [JsonPropertyName("message_uuid")]
+        public required string MessageUuid { get; set; }
         [JsonPropertyName("message_edit_date")]
         public int MessageEditDate { get; set; }
         [JsonPropertyName("message_date")]

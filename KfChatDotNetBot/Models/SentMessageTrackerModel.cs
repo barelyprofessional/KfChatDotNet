@@ -6,7 +6,7 @@ public class SentMessageTrackerModel
     public required string Reference { get; set; }
     public required string Message { get; set; }
     public required SentMessageTrackerStatus Status { get; set; }
-    public int? ChatMessageId { get; set; }
+    public string? ChatMessageUuid { get; set; }
     // Timespan from when the message was sent until we saw it come back
     public TimeSpan? Delay { get; set; }
     public DateTimeOffset? SentAt { get; set; }

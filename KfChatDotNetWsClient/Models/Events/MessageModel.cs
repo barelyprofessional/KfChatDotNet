@@ -7,7 +7,7 @@ public class MessageModel
     /// HTML formatted message
     /// </summary>
     public required string Message { get; set; }
-    public required int MessageId { get; set; }
+    public required string MessageUuid { get; set; }
     public DateTimeOffset? MessageEditDate { get; set; }
     public required DateTimeOffset MessageDate { get; set; }
     /// <summary>

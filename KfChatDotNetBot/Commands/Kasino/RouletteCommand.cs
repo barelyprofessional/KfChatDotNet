@@ -262,7 +262,7 @@ public class RouletteCommand : ICommand
             
             if (activeRound != null)
             {
-                activeRound.CountdownMessageId = countdownMessage.ChatMessageId;
+                activeRound.CountdownMessageId = countdownMessage.ChatMessageUuid;
                 await SaveRound(activeRound);
             }
 
@@ -291,7 +291,7 @@ public class RouletteCommand : ICommand
                 try
                 {
                     var updatedMessage = await FormatCountdownMessage(endTime);
-                    await botInstance.KfClient.EditMessageAsync(countdownMessage.ChatMessageId!.Value, updatedMessage);
+                    await botInstance.KfClient.EditMessageAsync(countdownMessage.ChatMessageUuid!, updatedMessage);
                     
                     var timeSinceLastUpdate = DateTimeOffset.UtcNow - lastUpdate;
                     logger.Debug($"Countdown updated (elapsed: {timeSinceLastUpdate.TotalSeconds:F1}s, remaining: {remaining.TotalSeconds:F0}s)");
@@ -414,12 +414,12 @@ public class RouletteCommand : ICommand
             logger.Info($"Animation uploaded: {animationUrl}");
 
             // Update countdown message to show it's spinning
-            if (round.CountdownMessageId.HasValue)
+            if (round.CountdownMessageId != null)
             {
                 var spinningMessage = $"🎰 [B]SPINNING THE WHEEL...[/B] 🎰[br][br]" +
                                      "Watch the animation below!";
                 await botInstance.KfClient.EditMessageAsync(
-                    round.CountdownMessageId.Value, 
+                    round.CountdownMessageId, 
                     spinningMessage);
             }
 
@@ -486,10 +486,10 @@ public class RouletteCommand : ICommand
                            $"All {round.Bets.Count} bet(s) have been refunded (total: {await totalRefunded.FormatKasinoCurrencyAsync()}).[br]" +
                            $"Please try again.";
 
-        if (round.CountdownMessageId.HasValue)
+        if (round.CountdownMessageId != null)
         {
             await botInstance.KfClient.EditMessageAsync(
-                round.CountdownMessageId.Value,
+                round.CountdownMessageId,
                 cancelMessage);
         }
         else
@@ -707,10 +707,10 @@ public class RouletteCommand : ICommand
                            $"Cancelled by {user.FormatUsername()}[br]" +
                            $"Refunded {round.Bets.Count} bet(s) totaling {await totalRefunded.FormatKasinoCurrencyAsync()}";
 
-        if (round.CountdownMessageId.HasValue)
+        if (round.CountdownMessageId != null)
         {
             await botInstance.KfClient.EditMessageAsync(
-                round.CountdownMessageId.Value,
+                round.CountdownMessageId,
                 cancelMessage);
         }
         else
@@ -884,7 +884,7 @@ public class RouletteCommand : ICommand
     {
         public required int RoundId { get; init; }
         public required DateTimeOffset StartTime { get; init; }
-        public int? CountdownMessageId { get; set; }
+        public string? CountdownMessageId { get; set; }
         public required List<RouletteBetInfo> Bets { get; init; }
     }
 
