@@ -53,7 +53,8 @@ public class XeetEmbedCommand : ICommand
 
         var loadingMessage = await botInstance.SendChatMessageAsync($"{LoadingGif} Fetching tweet...", true);
 
-        await botInstance.WaitForChatMessageAsync(loadingMessage, TimeSpan.FromSeconds(5), ctx);
+        var success = await botInstance.WaitForChatMessageAsync(loadingMessage, TimeSpan.FromSeconds(10), ctx);
+        if (!success) throw new InvalidOperationException();
 
         try
         {
@@ -75,9 +76,9 @@ public class XeetEmbedCommand : ICommand
 
             var messages = await BuildTweetMessagesAsync(tweet, xeetId, mediaUrls, ctx);
 
-            if (loadingMessage.ChatMessageId.HasValue)
+            if (loadingMessage.ChatMessageUuid != null)
             {
-                await botInstance.KfClient.DeleteMessageAsync(loadingMessage.ChatMessageId.Value);
+                await botInstance.KfClient.DeleteMessageAsync(loadingMessage.ChatMessageUuid);
             }
 
             if (messages.Count == 0)
@@ -104,9 +105,9 @@ public class XeetEmbedCommand : ICommand
         catch
         {
             // Delete loading message on error
-            if (loadingMessage.ChatMessageId.HasValue)
+            if (loadingMessage.ChatMessageUuid != null)
             {
-                await botInstance.KfClient.DeleteMessageAsync(loadingMessage.ChatMessageId.Value);
+                await botInstance.KfClient.DeleteMessageAsync(loadingMessage.ChatMessageUuid);
             }
             throw;
         }
@@ -296,13 +297,12 @@ public class XeetEmbedCommand : ICommand
 
     private async Task<List<string>> BuildTweetMessagesAsync(FxTweet tweet, string xeetId, List<string> mediaUrls, CancellationToken ctx)
     {
-        var headerBuilder = new StringBuilder();
         var bodyBuilder = new StringBuilder();
         var footerBuilder = new StringBuilder();
 
         // Build header - main tweet author and timestamp (always goes first)
         var created = DateTimeOffset.FromUnixTimeSeconds(tweet.CreatedTimestamp);
-        headerBuilder.Append($"[b]{tweet.Author.Name}[/b] (@{tweet.Author.ScreenName}) - {created.Humanize(DateTimeOffset.UtcNow)}[br]");
+        var header = $"[b]{tweet.Author.Name}[/b] (@{tweet.Author.ScreenName}) - {created.Humanize(DateTimeOffset.UtcNow)}[br]";
 
         // Handle reply chain (if this tweet is a reply)
         if (!string.IsNullOrEmpty(tweet.ReplyingToStatus))
@@ -367,139 +367,7 @@ public class XeetEmbedCommand : ICommand
         footerBuilder.Append($"[url={tweet.Url}]X.com[/url] | [url=https://xcancel.com/{tweet.Author.ScreenName}/status/{xeetId}]Xcancel[/url]");
 
         // Split message if needed, with header always first and footer always last
-        var messages = SplitMessageByBytes(headerBuilder.ToString(), bodyBuilder.ToString(), footerBuilder.ToString(), 1024);
-
-        return messages;
-    }
-
-    private List<string> SplitMessageByBytes(string header, string bodyContent, string footer, int maxBytes)
-    {
-        var messages = new List<string>();
-        var headerBytes = Encoding.UTF8.GetByteCount(header);
-        var footerBytes = Encoding.UTF8.GetByteCount(footer);
-
-        // Check if entire message (header + body + footer) fits in one message
-        var fullMessage = header + bodyContent + footer;
-        if (Encoding.UTF8.GetByteCount(fullMessage) <= maxBytes)
-        {
-            messages.Add(fullMessage);
-            return messages;
-        }
-
-        // Need to split - calculate available space for body content
-        // First message needs room for header, last message needs room for footer
-        var availableForFirstMessage = maxBytes - headerBytes - 5; // 5 bytes safety margin
-        var availableForLastMessage = maxBytes - footerBytes - 5;
-        var availableForMiddleMessages = maxBytes - 10; // safety margin
-
-        // Split body by [br] tags
-        var parts = bodyContent.Split(new[] { "[br]" }, StringSplitOptions.None);
-        var bodyMessages = new List<string>();
-        var currentMessage = new StringBuilder();
-        var currentBytes = 0;
-        var isFirstBodyMessage = true;
-
-        for (int i = 0; i < parts.Length; i++)
-        {
-            var part = parts[i];
-            var isLastPart = i == parts.Length - 1;
-            var partWithBreak = isLastPart ? part : part + "[br]";
-            var partBytes = Encoding.UTF8.GetByteCount(partWithBreak);
-
-            // Determine available space based on whether this is first or middle message
-            var availableSpace = isFirstBodyMessage ? availableForFirstMessage : availableForMiddleMessages;
-
-            // If this single part is too large, split it by words
-            if (partBytes > availableSpace)
-            {
-                // Flush current message if it has content
-                if (currentBytes > 0)
-                {
-                    bodyMessages.Add(currentMessage.ToString());
-                    currentMessage.Clear();
-                    currentBytes = 0;
-                    isFirstBodyMessage = false;
-                }
-
-                // Split the large part by words
-                var words = part.Split(' ');
-                var lineSb = new StringBuilder();
-                var lineBytes = 0;
-
-                foreach (var word in words)
-                {
-                    var wordWithSpace = word + " ";
-                    var wordBytes = Encoding.UTF8.GetByteCount(wordWithSpace);
-
-                    availableSpace = isFirstBodyMessage ? availableForFirstMessage : availableForMiddleMessages;
-
-                    if (lineBytes + wordBytes > availableSpace)
-                    {
-                        if (lineSb.Length > 0)
-                        {
-                            bodyMessages.Add(lineSb.ToString().TrimEnd());
-                            lineSb.Clear();
-                            lineBytes = 0;
-                            isFirstBodyMessage = false;
-                        }
-                    }
-
-                    lineSb.Append(wordWithSpace);
-                    lineBytes += wordBytes;
-                }
-
-                if (lineSb.Length > 0)
-                {
-                    currentMessage.Append(lineSb.ToString().TrimEnd());
-                    if (!isLastPart)
-                    {
-                        currentMessage.Append("[br]");
-                    }
-                    currentBytes = Encoding.UTF8.GetByteCount(currentMessage.ToString());
-                }
-                continue;
-            }
-
-            // Check if adding this part would exceed the limit
-            if (currentBytes + partBytes > availableSpace && currentBytes > 0)
-            {
-                // Save current message and start new one
-                bodyMessages.Add(currentMessage.ToString());
-                currentMessage.Clear();
-                currentBytes = 0;
-                isFirstBodyMessage = false;
-            }
-
-            currentMessage.Append(partWithBreak);
-            currentBytes += partBytes;
-        }
-
-        // Add remaining body content
-        if (currentMessage.Length > 0)
-        {
-            bodyMessages.Add(currentMessage.ToString());
-        }
-
-        // Assemble final messages with header first and footer last
-        if (bodyMessages.Count > 0)
-        {
-            // First message: header + first body part
-            messages.Add(header + bodyMessages[0]);
-
-            // Middle messages (if any)
-            for (int i = 1; i < bodyMessages.Count; i++)
-            {
-                messages.Add(bodyMessages[i]);
-            }
-
-            // Add footer to the last message
-            messages[messages.Count - 1] = messages[messages.Count - 1] + footer;
-        }
-        else
-        {
-            // Only header and footer
-            messages.Add(header + footer);
-        }
+        var messages = (header + bodyBuilder + footerBuilder).FancySplitMessage();
 
         return messages;
     }
