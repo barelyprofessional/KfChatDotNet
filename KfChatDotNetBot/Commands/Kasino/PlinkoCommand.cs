@@ -132,6 +132,15 @@ public class PlinkoCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         if (gambler == null)
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        
+        //KasinoShop stuff -------------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            HOUSE_EDGE += botInstance.BotServices.KasinoShop.Gambler_Profiles[user.KfId].HouseEdgeModifier;
+        }
+        //------------------------------------------------------------------------------------------
+        
         int numberOfBalls = 0;
         if (!arguments.TryGetValue("number", out var number))
         {
@@ -225,7 +234,13 @@ public class PlinkoCommand : ICommand
         }
         var newBalance = await Money.NewWagerAsync(gambler.Id, wager*numberOfBalls, payout-(wager*numberOfBalls), WagerGame.Plinko, ct: ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, [u]you won {await payout.FormatKasinoCurrencyAsync()} from {numberOfBalls} plinko balls worth ${wager} KKK. Balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: cleanupDelay);
-        
+        //Kasino Shop stuff----------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            await botInstance.BotServices.KasinoShop.ProcessWagerTracking(gambler, WagerGame.Plinko, wager*numberOfBalls, payout-(wager*numberOfBalls), newBalance);
+        }
+        //---------------------------------------------------------------------------------------
     }
 
     public string PlinkoBoardDisplay(List<PlinkoBall> balls)
