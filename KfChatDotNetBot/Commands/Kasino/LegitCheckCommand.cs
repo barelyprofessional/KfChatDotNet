@@ -23,6 +23,8 @@ public class LegitCheckCommand : ICommand
     [
         new Regex(@"^legitcheck (?<user_id>\d+)$", RegexOptions.IgnoreCase),
         new Regex(@"^legitcheck (?<user_id>\d+) all$", RegexOptions.IgnoreCase),
+        new Regex(@"^legitcheck @(?<username>.+) all$", RegexOptions.IgnoreCase),
+        new Regex(@"^legitcheck @(?<username>.+)$", RegexOptions.IgnoreCase),
         new Regex(@"^legitcheck$", RegexOptions.IgnoreCase),
         new Regex(@"^legitcheck all$", RegexOptions.IgnoreCase),
     ];
@@ -46,15 +48,34 @@ public class LegitCheckCommand : ICommand
     {
         await using var db = new ApplicationDbContext();
 
-        var targetUserId = arguments["user_id"].Success 
-            ? int.Parse(arguments["user_id"].Value)
-            : user.KfId;
-        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == targetUserId, ctx);
         var isAll = message.MessageRaw.EndsWith(" all");
+
+        UserDbModel? targetUser;
+        if (arguments["username"].Success)
+        {
+            var chatUser = botInstance.FindUserByName(arguments["username"].Value);
+            if (chatUser == null)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, couldn't find that user in chat. They must be present in chat to look up by username.",
+                    true);
+                return;
+            }
+            targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == chatUser.Id, ctx);
+        }
+        else if (arguments["user_id"].Success)
+        {
+            var targetUserId = int.Parse(arguments["user_id"].Value);
+            targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == targetUserId, ctx);
+        }
+        else
+        {
+            targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == user.KfId, ctx);
+        }
 
         if (targetUser == null)
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the user ID you gave doesn't exist.",
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, that user doesn't exist.",
                 true);
             return;
         }
