@@ -1003,8 +1003,20 @@ public class BotServices
             if (settings[BuiltIn.Keys.CaptureEnabled].ToBoolean())
             {
                 _logger.Info("Capturing Bossman's stream");
-                _ = new StreamCapture($"https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}",
-                    StreamCaptureMethods.Streamlink,
+                var url = $"https://www.twitch.tv/{settings[BuiltIn.Keys.TwitchBossmanJackUsername].Value}";
+                var lockTable = SettingsProvider.GetValueAsync(BuiltIn.Keys.CaptureLockTable).Result
+                    .JsonDeserialize<Dictionary<string, string>>();
+                if (lockTable != null && lockTable.TryGetValue(url, out var value))
+                {
+                    if (File.Exists(value))
+                    {
+                        _logger.Warn($"Lock file ({value}) for {url} already exists, ignoring stream");
+                        UpdateBossmanLastSighting("maybe going live on Twitch, but was probably a Twitch error")
+                            .Wait(_cancellationToken);
+                        return;
+                    }
+                }
+                _ = new StreamCapture(url, StreamCaptureMethods.Streamlink,
                     new CaptureOverridesModel
                     {
                         CaptureYtDlpWorkingDirectory = settings[BuiltIn.Keys.CaptureStreamlinkBmjWorkingDirectory].Value
