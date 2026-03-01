@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KfChatDotNetBot.Commands.Kasino;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
@@ -119,6 +120,16 @@ public class KasinoRain : IDisposable
                 participantNames.Add(gambler.User.FormatUsername());
                 await Money.ModifyBalanceAsync(gambler.Id, payout, TransactionSourceEventType.Rain,
                     "Payout from rain event", creator.Id, _ct);
+                //KasinoShop stuff -------------------------------------------------------------------------
+                if (_kfChatBot.BotServices.KasinoShop != null)
+                {
+                    await GlobalShopFunctions.CheckProfile(_kfChatBot, gambler.User, gambler);
+                    await using var db = new ApplicationDbContext();
+                    var creatorGambler = await db.Gamblers.FirstOrDefaultAsync(x => x.Id == creator.Id, _ct);
+                    await _kfChatBot.BotServices.KasinoShop.ProcessJuicerOrRainTracking(creatorGambler!, gambler,
+                        payout);
+                }
+                //-----------------------------------------------------------------------------------------
             }
 
             await Money.ModifyBalanceAsync(creator.Id, -rain.RainAmount + failedPayoutAmount, TransactionSourceEventType.Rain,
