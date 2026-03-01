@@ -111,7 +111,13 @@ public class KenoCommand : ICommand
             RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
-
+        //KasinoShop stuff -------------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            HOUSE_EDGE += botInstance.BotServices.KasinoShop.Gambler_Profiles[user.KfId].HouseEdgeModifier;
+        }
+        //------------------------------------------------------------------------------------------
         var payoutMultipliersHigh =
             new[,] //stole the payout multis from stake keno and re added the RTP, except for the 1000x
             {
@@ -193,6 +199,13 @@ public class KenoCommand : ICommand
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost {await wager.FormatKasinoCurrencyAsync()}[/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
                 true, autoDeleteAfter: cleanupDelay);
             botInstance.ScheduleMessageAutoDelete(_kenoTable ?? throw new Exception("Cannot clean up _kenoTable as it's null"), cleanupDelay);
+            //Kasino Shop stuff----------------------------------------------------------------------
+            if (botInstance.BotServices.KasinoShop != null)
+            {
+                await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+                await botInstance.BotServices.KasinoShop.ProcessWagerTracking(gambler, WagerGame.Keno, wager, -wager, newBalance);
+            }
+            //---------------------------------------------------------------------------------------
             return;
         }
 
@@ -204,6 +217,13 @@ public class KenoCommand : ICommand
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won {await win.FormatKasinoCurrencyAsync()} with a {payoutMulti}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}.",
             true, autoDeleteAfter: cleanupDelay);
         botInstance.ScheduleMessageAutoDelete(_kenoTable ?? throw new Exception("Cannot clean up _kenotable as it's null"), cleanupDelay);
+        //Kasino Shop stuff----------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            await botInstance.BotServices.KasinoShop.ProcessWagerTracking(gambler, WagerGame.Keno, wager, win, newBalance);
+        }
+        //---------------------------------------------------------------------------------------
     }
     
     private async Task AnimatedDisplayTable(List<int> playerNumbers, List<int> casinoNumbers, List<int> matches, ChatBot botInstance)

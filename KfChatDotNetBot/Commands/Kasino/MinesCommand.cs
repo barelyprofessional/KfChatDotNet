@@ -206,11 +206,11 @@ public class MinesCommand : ICommand
                         return;
                     }
                 }
-                await KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
+                await KasinoMines.Bet(gambler, precisePicks, msg, cashout);
             }
             else //if using picks
             {
-                await KasinoMines.Bet(gambler.Id, pick, msg, cashout);
+                await KasinoMines.Bet(gambler, pick, msg, cashout);
             }
         }
         else
@@ -291,12 +291,12 @@ public class MinesCommand : ICommand
                         return;
                     }
                 }
-                await KasinoMines.Bet(gambler.Id, precisePicks, msg, cashout);
+                await KasinoMines.Bet(gambler, precisePicks, msg, cashout);
                 
             }
             else //if using picks
             {
-                await KasinoMines.Bet(gambler.Id, pick, msg, cashout);
+                await KasinoMines.Bet(gambler, pick, msg, cashout);
             }
             
         }

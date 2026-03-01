@@ -92,6 +92,14 @@ public class Planes : ICommand
             RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
+        
+        //KasinoShop stuff -------------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            HOUSE_EDGE += botInstance.BotServices.KasinoShop.Gambler_Profiles[user.KfId].HouseEdgeModifier;
+        }
+        //------------------------------------------------------------------------------------------
 
         if (HOUSE_EDGE < 1)
         {
@@ -269,6 +277,13 @@ public class Planes : ICommand
                 $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]successfully landed with {await win.FormatKasinoCurrencyAsync()} from a total {plane.MultiTracker:N2}x multi![/color]. Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
             botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
+            //Kasino Shop stuff----------------------------------------------------------------------
+            if (botInstance.BotServices.KasinoShop != null)
+            {
+                await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+                await botInstance.BotServices.KasinoShop.ProcessWagerTracking(gambler, WagerGame.Planes, wager, win, newBalance);
+            }
+            //---------------------------------------------------------------------------------------
             return;
         }
         plane.Crash();
@@ -280,6 +295,13 @@ public class Planes : ICommand
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]crashed![/color] Your balance is now: {await newBalance.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
         botInstance.ScheduleMessageAutoDelete(msgId, cleanupDelay);
+        //Kasino Shop stuff----------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            await botInstance.BotServices.KasinoShop.ProcessWagerTracking(gambler, WagerGame.Planes, wager, -wager, newBalance);
+        }
+        //---------------------------------------------------------------------------------------
     }
 
     private string GetPreGameBoard(int fullCounter, int[,] planesBoard, Plane plane, int carrierCount, bool noseUp)
