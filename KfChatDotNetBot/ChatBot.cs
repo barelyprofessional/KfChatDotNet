@@ -36,7 +36,8 @@ public class ChatBot
     private DateTime _lastReconnectAttempt = DateTime.UtcNow;
     private List<ScheduledAutoDeleteModel> _scheduledDeletions = [];
     private Task _scheduledAutoDeleteTask;
-    
+    private List<UserModel> _currentUsersInChat = [];
+
     public ChatBot()
     {
         _logger.Info("Bot starting!");
@@ -557,12 +558,13 @@ public class ChatBot
     }
 
     public class SentMessageNotFoundException : Exception;
-    
+
     private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
     {
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.BotKeesSeen])
             .Result;
         _logger.Debug($"Received {users.Count} user join events");
+        _currentUsersInChat.AddRange(users);
         using var db = new ApplicationDbContext();
         foreach (var user in users)
         {
@@ -605,6 +607,7 @@ public class ChatBot
 
     private void OnUsersParted(object sender, List<int> userIds)
     {
+        _currentUsersInChat.RemoveAll(u => userIds.Contains(u.Id));
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
         if (userIds.Contains(settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>()) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
@@ -652,6 +655,7 @@ public class ChatBot
         _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
         _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
         _logger.Error(disconnectionInfo.Exception);
+        _currentUsersInChat.Clear();
         if (disconnectionInfo.Exception != null && disconnectionInfo.Exception.Message.Contains("status code '203'"))
         {
             _logger.Info("Chat 203'd, getting a new token");
@@ -670,6 +674,11 @@ public class ChatBot
         GambaSeshPresent = false;
         _logger.Info($"Rejoining {roomId}");
         KfClient.JoinRoom(roomId);
+    }
+
+    public UserModel? FindUserByName(string username)
+    {
+        return _currentUsersInChat.FirstOrDefault(u => u.Username.Equals(username, StringComparison.CurrentCulture));
     }
 
     public enum LengthLimitBehavior
