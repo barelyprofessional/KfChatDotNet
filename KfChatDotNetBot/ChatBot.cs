@@ -383,7 +383,8 @@ public class ChatBot
                 message.Author.Username != settings[BuiltIn.Keys.KiwiFarmsUsername].Value &&
                 settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() &&
                 (kindaSanitized.Contains("discord16.png") ||
-                 kindaSanitized.Contains("mBossmanJack:", StringComparison.CurrentCultureIgnoreCase) || 
+                 (kindaSanitized.Contains("mBossmanJack:", StringComparison.CurrentCultureIgnoreCase) && 
+                  kindaSanitized.Contains("[img]", StringComparison.CurrentCultureIgnoreCase)) || 
                  kindaSanitized.Contains("by @KenoGPT at", StringComparison.CurrentCultureIgnoreCase)))
             {
                 SendChatMessage($"☝️ {message.Author.Username} is a nigger faggot", true);
