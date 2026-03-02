@@ -67,7 +67,7 @@ public class RainCommand : ICommand
             var pluralSuffix = string.Empty;
             if (rain.Participants.Count > 0) pluralSuffix = "s";
             await botInstance.SendChatMessageAsync(
-                $"LFG {user.FormatUsername()} is now a participant! There's now {rain.Participants.Count + 1} participant{pluralSuffix}[br]Type [ditto]!rain[/ditto] to participate",
+                $"LFG {user.FormatUsername()} is now a participant! There's now {rain.Participants.Count + 1} participant{pluralSuffix}! Type [ditto]!rain[/ditto] to participate",
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
@@ -129,7 +129,7 @@ public class RainCommand : ICommand
             timer--;
             await Task.Delay(1000, ctx);
             await botInstance.KfClient.EditMessageAsync(msg.ChatMessageUuid!,
-                $"{user.FormatUsername()} is making it rain with {await decAmount.FormatKasinoCurrencyAsync()}! Type !rain in the next {timer} seconds to join.");
+                $"🌧️🌧️ {user.FormatUsername()} is making it rain with {await decAmount.FormatKasinoCurrencyAsync()}! Type [ditto]!rain[/ditto] in the next {timer} seconds to join.");
         }
 
         await Task.Delay(100, ctx);
