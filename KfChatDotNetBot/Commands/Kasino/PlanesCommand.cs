@@ -113,7 +113,7 @@ public class Planes : ICommand
         var planesBoard3 = CreatePlanesBoard(gambler);
         List<int[,]> planesBoards = [planesBoard, planesBoard2, planesBoard3];
         var plane = new Plane(gambler);
-        const double frameLength = 250.0;
+        const double frameLength = 300.0;
         var fullCounter = 0;
         var noseUp = true;
         var planesDisplay = GetPreGameBoard(-3, planesBoard2, plane, CarrierCount, noseUp);
