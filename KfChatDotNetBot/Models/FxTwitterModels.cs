@@ -23,7 +23,7 @@ internal class FxTweet
     [JsonPropertyName("created_timestamp")]
     public long CreatedTimestamp { get; set; }
 
-    [JsonPropertyName("views")] public int Views { get; set; }
+    [JsonPropertyName("views")] public int? Views { get; set; }
     [JsonPropertyName("is_note_tweet")] public bool IsNoteTweet { get; set; }
     [JsonPropertyName("community_note")] public object? CommunityNote { get; set; }
     [JsonPropertyName("lang")] public string Lang { get; set; } = string.Empty;

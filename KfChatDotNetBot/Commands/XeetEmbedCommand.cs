@@ -363,7 +363,7 @@ public class XeetEmbedCommand : ICommand
         }
 
         // Build footer (stats + links) - this will always be on the last message
-        footerBuilder.Append($"💬 {tweet.Replies:N0} 🔁 {tweet.Retweets:N0} ❤️ {tweet.Likes:N0} 👁️ {tweet.Views:N0}[br]");
+        footerBuilder.Append($"💬 {tweet.Replies:N0} 🔁 {tweet.Retweets:N0} ❤️ {tweet.Likes:N0} 👁️ {tweet.Views:N0 ?? 0}[br]");
         footerBuilder.Append($"[url={tweet.Url}]X.com[/url] | [url=https://xcancel.com/{tweet.Author.ScreenName}/status/{xeetId}]Xcancel[/url]");
 
         // Split message if needed, with header always first and footer always last
