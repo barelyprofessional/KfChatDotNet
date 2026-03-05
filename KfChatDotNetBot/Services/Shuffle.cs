@@ -187,6 +187,13 @@ public class Shuffle : IDisposable
         using var client = new HttpClient(handler);
         client.DefaultRequestHeaders.Referrer = new Uri($"https://shuffle.com/?md-id={betId}&modal=bet");
         client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://shuffle.com");
+        client.DefaultRequestHeaders.UserAgent.Clear();
+        client.DefaultRequestHeaders.UserAgent.TryParseAdd("Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0");
+        client.DefaultRequestHeaders.AcceptLanguage.Clear();
+        client.DefaultRequestHeaders.AcceptLanguage.TryParseAdd("en-US");
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/graphql-response+json"));
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         var postBody = JsonContent.Create(jsonBody);
         var response = await client.PostAsync("https://shuffle.com/main-api/graphql/api/graphql", postBody, _cancellationToken);
         var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
