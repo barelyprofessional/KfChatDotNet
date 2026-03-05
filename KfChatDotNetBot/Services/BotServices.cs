@@ -969,6 +969,7 @@ public class BotServices
         bool offlineBet = false;
         if (bet.Username == null && !CheckBmjIsLive().Result && !isDotUs)
         {
+            _logger.Info($"Checking for potential offline bet {bet.Id}");
             string? betOwner;
             try
             {
@@ -985,6 +986,7 @@ public class BotServices
                 _logger.Error($"Failed to get the bet owner for {bet.Id}");
                 return;
             }
+            _logger.Info($"Got user ID {betOwner}");
 
             if (betOwner != settings[BuiltIn.Keys.ShuffleBmjUserId].Value) return;
             offlineBet = true;
