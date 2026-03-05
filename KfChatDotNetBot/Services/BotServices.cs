@@ -967,7 +967,7 @@ public class BotServices
             ]).Result;
         _logger.Trace("Shuffle bet has arrived");
         bool offlineBet = false;
-        if (bet.Username == null && !CheckBmjIsLive().Result && !isDotUs)
+        if (bet.Username == null && bet.VipLevel == settings[BuiltIn.Keys.ShuffleBmjVipLevel].Value && !CheckBmjIsLive().Result && !isDotUs)
         {
             _logger.Info($"Checking for potential offline bet {bet.Id}");
             string? betOwner;
