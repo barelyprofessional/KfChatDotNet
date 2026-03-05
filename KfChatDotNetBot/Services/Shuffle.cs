@@ -185,7 +185,6 @@ public class Shuffle : IDisposable
         }
         
         using var client = new HttpClient(handler);
-        client.DefaultRequestHeaders.Add("content-type", "application/json");
         var postBody = JsonContent.Create(jsonBody);
         var response = await client.PostAsync("https://shuffle.com/main-api/graphql/api/graphql", postBody, _cancellationToken);
         var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
