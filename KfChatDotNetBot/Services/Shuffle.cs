@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Net.WebSockets;
 using System.Text.Json;
@@ -183,8 +184,9 @@ public class Shuffle : IDisposable
             handler.Proxy = new WebProxy(_proxy);
             _logger.Debug($"Configured to use proxy {_proxy}");
         }
-        
         using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Accept.Clear();
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/graphql-response+json,application/json;q=0.9"));
         var postBody = JsonContent.Create(jsonBody);
         var response = await client.PostAsync("https://shuffle.com/main-api/graphql/api/graphql", postBody, _cancellationToken);
         var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
