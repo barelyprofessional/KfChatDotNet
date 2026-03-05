@@ -202,7 +202,7 @@ public class Shuffle : IDisposable
         client.DefaultRequestHeaders.Accept.Clear();
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/graphql-response+json"));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        var postBody = JsonContent.Create(jsonBody);
+        var postBody = JsonContent.Create(jsonBody, new MediaTypeWithQualityHeaderValue("application/json"));
         var response = await client.PostAsync("https://shuffle.com/main-api/graphql/api/graphql", postBody, _cancellationToken);
         var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
         _logger.Debug("Shuffle returned following JSON");
