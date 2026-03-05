@@ -171,9 +171,17 @@ public class Shuffle : IDisposable
         _logger.Debug($"Grabbing details for Shuffle bet {betId}");
         var jsonBody = new Dictionary<string, object>
         {
-            { "operationName", "GetUserProfile" },
+            { "operationName", "GetBetInfo" },
             { "query", gql },
-            { "variables", new Dictionary<string, string> { { "betId", betId } } }
+            { "variables", new Dictionary<string, string> { { "betId", betId } } },
+            { "extensions", new Dictionary<string, Dictionary<string, string>> {
+            {
+                "clientLibrary", new Dictionary<string, string>()
+                {
+                    {"name", "@apollo/client"},
+                    {"version", "4.1.4"}
+                }
+            } } },
         };
         _logger.Debug("Created dictionary object for the JSON payload, should serialize to following value:");
         _logger.Debug(JsonSerializer.Serialize(jsonBody));
