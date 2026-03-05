@@ -15,7 +15,7 @@ public class ShuffleDotUs : IDisposable
     private Uri _wsUri = new("wss://shuffle.us/main-api/bp-subscription/subscription/graphql");
     private int _reconnectTimeout = 60;
     private string? _proxy;
-    public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet);
+    public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet, bool isDotUs);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
     public event OnLatestBetUpdatedEventHandler? OnLatestBetUpdated;
     public event OnWsDisconnectionEventHandler? OnWsDisconnection;
@@ -148,7 +148,7 @@ public class ShuffleDotUs : IDisposable
                     _logger.Error("Caught a null before invoking bet event");
                     throw new NullReferenceException("Caught a null before invoking bet event");
                 }
-                OnLatestBetUpdated?.Invoke(this, bet);
+                OnLatestBetUpdated?.Invoke(this, bet, true);
                 return;
             }
             _logger.Info("Message from Shuffle was unhandled");

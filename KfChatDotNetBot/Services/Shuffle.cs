@@ -15,7 +15,7 @@ public class Shuffle : IDisposable
     private Uri _wsUri = new("wss://shuffle.com/main-api/bp-subscription/subscription/graphql");
     private int _reconnectTimeout = 60;
     private string? _proxy;
-    public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet);
+    public delegate void OnLatestBetUpdatedEventHandler(object sender, ShuffleLatestBetModel bet, bool isDotUs);
     public delegate void OnWsDisconnectionEventHandler(object sender, DisconnectionInfo e);
     public event OnLatestBetUpdatedEventHandler? OnLatestBetUpdated;
     public event OnWsDisconnectionEventHandler? OnWsDisconnection;
@@ -148,7 +148,7 @@ public class Shuffle : IDisposable
                     _logger.Error("Caught a null before invoking bet event");
                     throw new NullReferenceException("Caught a null before invoking bet event");
                 }
-                OnLatestBetUpdated?.Invoke(this, bet);
+                OnLatestBetUpdated?.Invoke(this, bet, false);
                 return;
             }
             _logger.Info("Message from Shuffle was unhandled");
@@ -162,6 +162,137 @@ public class Shuffle : IDisposable
             _logger.Error(message.Text);
             _logger.Error("--- End of JSON Payload ---");
         }
+    }
+
+    public async Task<string> GetBetUser(string betId)
+    {
+        var gql = "query GetBetInfo($betId: String!) {\n  bet(id: $betId) {\n    id\n    completedAt\n    account {\n      id\n      user {\n        username\n        vipLevel\n        __typename\n      }\n      __typename\n    }\n    game {\n      id\n      name\n      slug\n      edge\n      accentColor\n      image {\n        key\n        __typename\n      }\n      gameAndGameCategories {\n        gameCategoryName\n        gameId\n        main\n        __typename\n      }\n      provider {\n        id\n        name\n        __typename\n      }\n      originalGame\n      __typename\n    }\n    gameSeed {\n      ...GameSeedFields\n      __typename\n    }\n    gameSeedNonce\n    shuffleOriginalActions {\n      id\n      updatedAt\n      createdAt\n      action {\n        dice {\n          ...DiceFields\n          __typename\n        }\n        plinko {\n          multiplier\n          results\n          risk\n          rows\n          __typename\n        }\n        mines {\n          minesResult\n          minesCount\n          winMultiplier\n          selected\n          __typename\n        }\n        limbo {\n          resultRaw\n          resultValue\n          userValue\n          __typename\n        }\n        keno {\n          results\n          risk\n          multiplier\n          selected\n          __typename\n        }\n        hilo {\n          card\n          guess\n          winMultiplier\n          actionType\n          __typename\n        }\n        blackjack {\n          mainPlayerHand\n          mainPlayerActions\n          splitPlayerHand\n          splitPlayerActions\n          dealerHand\n          perfectPairWin\n          twentyOnePlusThreeWin\n          twentyOnePlusThreeAmount\n          perfectPairAmount\n          insuranceStatus\n          originalMainBetAmount\n          mainHandOutcome\n          splitHandOutcome\n          __typename\n        }\n        roulette {\n          resultRaw\n          resultValue\n          userInput {\n            parityValues {\n              amount\n              parity\n              __typename\n            }\n            colorValues {\n              amount\n              color\n              __typename\n            }\n            halfValues {\n              amount\n              half\n              __typename\n            }\n            columnValues {\n              amount\n              column\n              __typename\n            }\n            dozenValues {\n              amount\n              dozen\n              __typename\n            }\n            straightValues {\n              amount\n              straightNumber\n              __typename\n            }\n            splitValues {\n              amount\n              firstNumber\n              secondNumber\n              __typename\n            }\n            streetValues {\n              amount\n              street\n              __typename\n            }\n            cornerValues {\n              amount\n              firstNumber\n              secondNumber\n              thirdNumber\n              fourthNumber\n              __typename\n            }\n            doubleStreetValues {\n              amount\n              firstStreet\n              secondStreet\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        wheel {\n          resultRaw\n          resultSegment\n          risk\n          segments\n          __typename\n        }\n        tower {\n          towerResult\n          towerDifficulty\n          winMultiplier\n          selected\n          __typename\n        }\n        chicken {\n          chickenResult\n          chickenDifficulty\n          winMultiplier\n          selectedLane\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    amount\n    originalAmount\n    payout\n    currency\n    usdRate\n    createdAt\n    afterBalance\n    multiplier\n    replayUrl\n    __typename\n  }\n}\n\nfragment GameSeedFields on GameSeed {\n  id\n  clientSeed\n  seed\n  hashedSeed\n  status\n  currentNonce\n  createdAt\n  __typename\n}\n\nfragment DiceFields on DiceActionModel {\n  userDiceDirection\n  userValue\n  resultValue\n  resultRaw\n  __typename\n}";
+        _logger.Debug($"Grabbing details for Shuffle bet {betId}");
+        var jsonBody = new Dictionary<string, object>
+        {
+            { "operationName", "GetUserProfile" },
+            { "query", gql },
+            { "variables", new Dictionary<string, string> { { "betId", betId } } }
+        };
+        _logger.Debug("Created dictionary object for the JSON payload, should serialize to following value:");
+        _logger.Debug(JsonSerializer.Serialize(jsonBody));
+        var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
+        if (_proxy != null)
+        {
+            handler.UseProxy = false;
+            handler.Proxy = new WebProxy(_proxy);
+            _logger.Debug($"Configured to use proxy {_proxy}");
+        }
+        
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Add("content-type", "application/json");
+        var postBody = JsonContent.Create(jsonBody);
+        var response = await client.PostAsync("https://shuffle.com/main-api/graphql/api/graphql", postBody, _cancellationToken);
+        var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
+        _logger.Debug("Shuffle returned following JSON");
+        _logger.Debug(responseContent.GetRawText);
+        /*
+         * {
+               "data": {
+                   "bet": {
+                       "id": "CYjG9Hdq9fi8wwWUkXC8c",
+                       "completedAt": "2026-03-05T03:57:43.907Z",
+                       "account": {
+                           "id": "c09e7697-a9b6-409e-be6a-bc5a17321c2f",
+                           "user": {
+                               "username": null,
+                               "vipLevel": "PLATINUM_1",
+                               "__typename": "User"
+                           },
+                           "__typename": "Account"
+                       },
+                       "game": {
+                           "id": "36f0d698-178d-4745-b2bf-d8c99e156683",
+                           "name": "Dice",
+                           "slug": "originals/dice",
+                           "edge": "1",
+                           "accentColor": "#05D550",
+                           "image": {
+                               "key": "437b7bc5-ded9-4555-ae0d-5e21cd272291",
+                               "__typename": "Image"
+                           },
+                           "gameAndGameCategories": [
+                               {
+                                   "gameCategoryName": "ORIGINALS",
+                                   "gameId": "36f0d698-178d-4745-b2bf-d8c99e156683",
+                                   "main": true,
+                                   "__typename": "GameAndGameCategory"
+                               }
+                           ],
+                           "provider": {
+                               "id": "original",
+                               "name": "Shuffle Games",
+                               "__typename": "GameProvider"
+                           },
+                           "originalGame": "DICE",
+                           "__typename": "Game"
+                       },
+                       "gameSeed": {
+                           "id": "b817d7d1-8aa0-444a-84f7-bcfba1e75782",
+                           "clientSeed": "jvq0tmv0rb",
+                           "seed": null,
+                           "hashedSeed": "4d9de6aff5329de97adeaee907552ab8bfc4a99bb59520840eefe66ffa88e919",
+                           "status": "ACTIVE",
+                           "currentNonce": "97",
+                           "createdAt": "2026-02-27T05:46:25.297Z",
+                           "__typename": "GameSeed"
+                       },
+                       "gameSeedNonce": 97,
+                       "shuffleOriginalActions": [
+                           {
+                               "id": "019cbc24-f263-74df-9b53-50d5b39be8c5",
+                               "updatedAt": "2026-03-05T03:57:43.903Z",
+                               "createdAt": "2026-03-05T03:57:43.903Z",
+                               "action": {
+                                   "dice": {
+                                       "userDiceDirection": "ABOVE",
+                                       "userValue": "50.5",
+                                       "resultValue": "76.97",
+                                       "resultRaw": "c508741181297b0f2282d16477fc833a8dcf6415724e1b24b8bec00b83a98539",
+                                       "__typename": "DiceActionModel"
+                                   },
+                                   "plinko": null,
+                                   "mines": null,
+                                   "limbo": null,
+                                   "keno": null,
+                                   "hilo": null,
+                                   "blackjack": null,
+                                   "roulette": null,
+                                   "wheel": null,
+                                   "tower": null,
+                                   "chicken": null,
+                                   "__typename": "ShuffleOriginalActionModel"
+                               },
+                               "__typename": "ShuffleOriginalAction"
+                           }
+                       ],
+                       "amount": "40",
+                       "originalAmount": "40",
+                       "payout": "80",
+                       "currency": "USDC",
+                       "usdRate": "1",
+                       "createdAt": "2026-03-05T03:57:43.903Z",
+                       "afterBalance": null,
+                       "multiplier": 2,
+                       "replayUrl": null,
+                       "__typename": "Bet"
+                   }
+               }
+           }
+         */
+        var user = responseContent.GetProperty("data").GetProperty("bet").GetProperty("account").GetProperty("id");
+        if (user.ValueKind == JsonValueKind.Null)
+        {
+            _logger.Debug("user was null");
+            throw new ShuffleUserNotFoundException();
+        }
+
+        return user.GetString() ?? throw new InvalidOperationException();
     }
 
     public async Task<ShuffleUserModel> GetShuffleUser(string username)

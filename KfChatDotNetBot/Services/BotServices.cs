@@ -957,24 +957,49 @@ public class BotServices
         _logger.Error("Credentials failed to validate.");
     }
 
-    private void ShuffleOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet)
+    private void ShuffleOnLatestBetUpdated(object sender, ShuffleLatestBetModel bet, bool isDotUs)
     {
         var settings = SettingsProvider
             .GetMultipleValuesAsync([
                 BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.ShuffleDotUsBmjUsername,
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
+                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
+                BuiltIn.Keys.ShuffleBmjUserId, BuiltIn.Keys.ShuffleBmjVipLevel
             ]).Result;
         _logger.Trace("Shuffle bet has arrived");
-        bool isDotUs;
+        bool offlineBet = false;
+        if (bet.Username == null && bet.VipLevel == settings[BuiltIn.Keys.ShuffleBmjVipLevel].Value && !CheckBmjIsLive().Result && !isDotUs)
+        {
+            string? betOwner;
+            try
+            {
+                betOwner = _shuffle?.GetBetUser(bet.Id).Result;
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Caught an error when trying to get {bet.Id}");
+                _logger.Error(e);
+                return;
+            }
+            if (betOwner == null)
+            {
+                _logger.Error($"Failed to get the bet owner for {bet.Id}");
+                return;
+            }
+
+            if (betOwner != settings[BuiltIn.Keys.ShuffleBmjUserId].Value) return;
+            offlineBet = true;
+        }
         if (bet.Username == settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
         {
-            isDotUs = false;
             UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.com").Wait(_cancellationToken);
         }
         else if (bet.Username == settings[BuiltIn.Keys.ShuffleDotUsBmjUsername].Value)
         {
-            isDotUs = true;
             UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.us").Wait(_cancellationToken);
+        }
+        else if (offlineBet)
+        {
+            UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.com OFFLINE").Wait(_cancellationToken);
         }
         else
         {

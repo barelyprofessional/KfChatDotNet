@@ -553,6 +553,10 @@ public static class BuiltIn
         public static string BotImageRehostDomain = "Bot.Image.RehostDomain";
         [BuiltInSetting("Array of cookies as a shitty hack to get Rainbet going", SettingValueType.Array, "[]")]
         public static string RainbetCookies = "Rainbet.Cookies";
+        [BuiltInSetting("Bossman's super secret user ID", SettingValueType.Text, "b5d4b169-2160-4b18-8865-6fe5dffa5c49")]
+        public static string ShuffleBmjUserId = "Shuffle.BmjUserId";
+        [BuiltInSetting("Bossman's current VIP level for reducing GraphQL hits", SettingValueType.Text, "SAPPHIRE_5")]
+        public static string ShuffleBmjVipLevel = "Shuffle.BmjVipLevel";
     }
 }
 
