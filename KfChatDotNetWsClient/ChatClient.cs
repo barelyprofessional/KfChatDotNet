@@ -270,7 +270,7 @@ public class ChatClient
         if (_wsClient == null) throw new WebSocketNotInitializedException();
         var msg = $"/edit {payload}";
         var length = Encoding.UTF8.GetByteCount(msg);
-        if (length > 1023)
+        if (length > 2048)
         {
             _logger.Error($"Edit message is too long at {length} bytes");
         }

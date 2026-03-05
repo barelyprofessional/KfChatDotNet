@@ -54,7 +54,7 @@ public static class Extensions
     /// <param name="partLimit">Limit for how many parts to return (returns first n elements). Set to 0 to disable.</param>
     /// <param name="partSeparator">Separator to use when splitting up parts of the message</param>
     /// <returns>List of string values which represents the split up message</returns>
-    public static List<string> FancySplitMessage(this string s, int partLengthBytes = 1023, int partLimit = 5, string partSeparator = " ")
+    public static List<string> FancySplitMessage(this string s, int partLengthBytes = 2048, int partLimit = 5, string partSeparator = " ")
     {
         var output = new List<string>();
         var part = string.Empty;
