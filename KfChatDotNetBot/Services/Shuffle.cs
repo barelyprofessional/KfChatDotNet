@@ -185,8 +185,8 @@ public class Shuffle : IDisposable
             _logger.Debug($"Configured to use proxy {_proxy}");
         }
         using var client = new HttpClient(handler);
-        client.DefaultRequestHeaders.Accept.Clear();
-        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/graphql-response+json,application/json;q=0.9"));
+        client.DefaultRequestHeaders.Referrer = new Uri($"https://shuffle.com/?md-id={betId}&modal=bet");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://shuffle.com");
         var postBody = JsonContent.Create(jsonBody);
         var response = await client.PostAsync("https://shuffle.com/main-api/graphql/api/graphql", postBody, _cancellationToken);
         var responseContent = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: _cancellationToken);
