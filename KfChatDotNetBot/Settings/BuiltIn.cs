@@ -557,6 +557,8 @@ public static class BuiltIn
         public static string ShuffleBmjUserId = "Shuffle.BmjUserId";
         [BuiltInSetting("Bossman's current VIP level for reducing GraphQL hits", SettingValueType.Text, "SAPPHIRE_5")]
         public static string ShuffleBmjVipLevel = "Shuffle.BmjVipLevel";
+        [BuiltInSetting("Whether OpenAI moderation is enabled", SettingValueType.Boolean, "false", BooleanRegex)]
+        public static string OpenAiModerationEnabled = "OpenAI.ModerationEnabled";
     }
 }
 
