@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -30,6 +30,14 @@ public class GetBalanceCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
+
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            await botInstance.SendChatMessageAsync(
+                $"{await botInstance.BotServices.KasinoShop.Gambler_Profiles[user.KfId].FormatBalanceAsync()}", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(10));
+        }
     }
 }
 
@@ -117,6 +125,14 @@ public class SendJuiceCommand : ICommand
         await Money.ModifyBalanceAsync(targetGambler.Id, amount, TransactionSourceEventType.Juicer, $"Juice from {user.KfUsername}",
             gambler.Id, ctx);
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {await amount.FormatKasinoCurrencyAsync()} has been sent to {targetUser.FormatUsername()}", true);
+        //KasinoShop stuff --------------------------------------------------------------------------------
+        if (botInstance.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, gambler.User, gambler);
+            await GlobalShopFunctions.CheckProfile(botInstance, targetGambler.User, targetGambler);
+            await botInstance.BotServices.KasinoShop.ProcessJuicerOrRainTracking(gambler, targetGambler, amount);
+        }
+        //------------------------------------------------------------------------------------------------
     }
 }
 
