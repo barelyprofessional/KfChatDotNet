@@ -281,6 +281,7 @@ public class PocketWatchCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex(@"^pocketwatch (?<user_id>\d+)", RegexOptions.IgnoreCase),
+        new Regex(@"^pocketwatch @(?<username>.+)$", RegexOptions.IgnoreCase),
     ];
     public string? HelpText => "Check a user's balance";
     public UserRight RequiredRight => UserRight.Loser;
@@ -290,7 +291,23 @@ public class PocketWatchCommand : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
+        UserDbModel? targetUser;
+        if (arguments["username"].Success)
+        {
+            var chatUser = botInstance.FindUserByName(arguments["username"].Value);
+            if (chatUser == null)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, couldn't find that user in chat. They must be present in chat to look up by username.",
+                    true);
+                return;
+            }
+            targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == chatUser.Id, ctx);
+        }
+        else
+        {
+            targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
+        }
         if (targetUser == null)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, the user ID you gave doesn't exist.", true);
@@ -303,7 +320,7 @@ public class PocketWatchCommand : ICommand
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, this user is excluded from the kasino", true);
             return;
         }
-        
+
         await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {targetUser.KfUsername} has {await targetGambler.Balance.FormatKasinoCurrencyAsync()}", true);
     }
 }
