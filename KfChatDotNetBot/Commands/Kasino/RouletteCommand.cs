@@ -723,6 +723,8 @@ public class RouletteCommand : ICommand
     {
         betStr = betStr.ToLower().Trim();
 
+        // Hack to translate green to 0
+        if (betStr == "green") betStr = "0";
         // Try to parse as number (0-36)
         if (int.TryParse(betStr, out var number) && number >= 0 && number <= 36)
         {
