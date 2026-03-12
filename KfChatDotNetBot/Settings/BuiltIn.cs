@@ -544,6 +544,8 @@ public static class BuiltIn
         public static string KasinoRainEnabled = "Kasino.Rain.Enabled";
         [BuiltInSetting("Rain countdown duration in seconds", SettingValueType.Text, "60", WholeNumberRegex)]
         public static string KasinoRainCountdownDuration = "Kasino.Rain.CountdownDuration";
+        [BuiltInSetting("Minimum amount for rain", SettingValueType.Text, "1000", WholeNumberRegex)]
+        public static string KasinoRainMinimum = "Kasino.Rain.Minimum";
         [BuiltInSetting("Whether Xeet posting is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string XeetEnabled = "Xeet.Enabled";
         [BuiltInSetting("Maximum video duration in seconds for Xeet embeds", SettingValueType.Text, "120", WholeNumberRegex)]

@@ -80,6 +80,12 @@ public class RainCommand : ICommand
                 return;
             }
 
+            if ((DateTimeOffset.UtcNow - gambler.Created).TotalHours < 4)
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, you're too fresh for a rain", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
             await botInstance.BotServices.KasinoRain.AddParticipant(user.Id);
             var pluralSuffix = string.Empty;
             if (rain.Participants.Count > 0) pluralSuffix = "s";
@@ -111,7 +117,7 @@ public class RainCommand : ICommand
             return;
         }
 
-        decimal rainMin = 100;
+        var rainMin = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoRainMinimum)).ToType<decimal>();
         if (decAmount < rainMin)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, rain at least {await rainMin.FormatKasinoCurrencyAsync()}", true,
