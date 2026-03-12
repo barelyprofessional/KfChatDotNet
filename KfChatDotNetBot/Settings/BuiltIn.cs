@@ -540,17 +540,16 @@ public static class BuiltIn
         public static string KasinoRouletteEnabled = "Kasino.Roulette.Enabled";
         [BuiltInSetting("Roulette countdown duration in seconds", SettingValueType.Text, "120", WholeNumberRegex)]
         public static string KasinoRouletteCountdownDuration = "Kasino.Roulette.CountdownDuration";
+        [BuiltInSetting("Whether rain is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoRainEnabled = "Kasino.Rain.Enabled";
+        [BuiltInSetting("Rain countdown duration in seconds", SettingValueType.Text, "60", WholeNumberRegex)]
+        public static string KasinoRainCountdownDuration = "Kasino.Rain.CountdownDuration";
         [BuiltInSetting("Whether Xeet posting is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string XeetEnabled = "Xeet.Enabled";
         [BuiltInSetting("Maximum video duration in seconds for Xeet embeds", SettingValueType.Text, "120", WholeNumberRegex)]
         public static string XeetMaxVideoDurationSeconds = "Xeet.MaxVideoDurationSeconds";
         [BuiltInSetting("Connection string for bot's Redis", SettingValueType.Text)]
         public static string BotRedisConnectionString = "Bot.RedisConnectionString";
-        [BuiltInSetting("Whether to automatically rehost images when they're added", SettingValueType.Boolean, "true",
-            BooleanRegex)]
-        public static string BotImageRehostEnabled = "Bot.Image.RehostEnabled";
-        [BuiltInSetting("Domain to look for when determining whether to rehost", SettingValueType.Text, "i.ddos.lgbt")]
-        public static string BotImageRehostDomain = "Bot.Image.RehostDomain";
         [BuiltInSetting("Array of cookies as a shitty hack to get Rainbet going", SettingValueType.Array, "[]")]
         public static string RainbetCookies = "Rainbet.Cookies";
         [BuiltInSetting("Bossman's super secret user ID", SettingValueType.Text, "b5d4b169-2160-4b18-8865-6fe5dffa5c49")]
