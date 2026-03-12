@@ -23,7 +23,7 @@ public class BlackjackGameMetaModel
     /// <summary>
     /// Whether each hand has doubled down (can only hit once more)
     /// </summary>
-    public required List<bool> HasDoubledDown { get; set; }
+    public required bool HasDoubledDown { get; set; }
     
     /// <summary>
     /// Current hand being played (for split hands)

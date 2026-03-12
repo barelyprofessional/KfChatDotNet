@@ -157,12 +157,13 @@ public class BlackjackCommand : ICommand
         deck.RemoveRange(0, 4);
         
         // Create game state
+        // HasDoubledDown is a single bool — doubles are not permitted after a split
         var newGameState = new BlackjackGameMetaModel
         {
             PlayerHands = new List<List<Card>> { playerHand },
             DealerHand = dealerHand,
             Deck = deck,
-            HasDoubledDown = new List<bool> { false },
+            HasDoubledDown = false,
             CurrentHandIndex = 0,
             OriginalWagerAmount = wager
         };
@@ -302,58 +303,49 @@ public class BlackjackCommand : ICommand
         
         var playerValue = BlackjackHelper.CalculateHandValue(currentHand);
         
-        if (playerValue > 21)
-        {
-            // Bust - player loses
-            var colors = await SettingsProvider.GetMultipleValuesAsync([
-                BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
-            ]);
-            
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
-                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
-                $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]BUST![/COLOR][/B]",
-                true, autoDeleteAfter: cleanupDelay);
-            
-            // Move to next hand or resolve game
-            await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
-            return;
-        }
-
-        // Auto-stand on 21
-        if (playerValue == 21)
-        {
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
-                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
-                $"[B]Standing on 21[/B]",
-                true, autoDeleteAfter: cleanupDelay);
-            
-            await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
-            return;
-        }
-
-        if (gameState.HasDoubledDown[gameState.CurrentHandIndex])
-        {
-            // Auto-stand after double down hit
-            await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
-                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}",
-                true, autoDeleteAfter: cleanupDelay);
-            
-            await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
-            return;
-        }
+        // Whether this hit ends the current hand (bust, 21, or post-double auto-stand)
+        bool handEnded = playerValue > 21 || playerValue == 21 || gameState.HasDoubledDown;
         
-        // Continue game
-        wager.GameMeta = JsonSerializer.Serialize(gameState);
-        await _dbContext.SaveChangesAsync(ctx);
+        // Whether this is the last hand — if so, skip the intermediate message and let ResolveGame
+        // produce the single consolidated output, avoiding a duplicate bust/result message.
+        bool isLastHand = gameState.CurrentHandIndex >= gameState.PlayerHands.Count - 1;
+
+        if (handEnded && !isLastHand)
+        {
+            // Transitioning between split hands: show what happened on this hand before moving on
+            string transitionalResult;
+            if (playerValue > 21)
+            {
+                var colors = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KiwiFarmsRedColor]);
+                transitionalResult = $"[B][COLOR={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]BUST![/COLOR][/B]";
+            }
+            else
+            {
+                transitionalResult = $"[B]Standing on {playerValue}[/B]";
+            }
             
-        await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
-            $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
-            $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
-            true, autoDeleteAfter: cleanupDelay);
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
+                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
+                transitionalResult,
+                true, autoDeleteAfter: cleanupDelay);
+        }
+        else if (!handEnded)
+        {
+            // Hand is still in progress — show current state and prompt for next action
+            wager.GameMeta = JsonSerializer.Serialize(gameState);
+            await _dbContext.SaveChangesAsync(ctx);
+                
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}{handLabel} hit and drew {card}[br]" +
+                $"[B]Your hand:[/B] {BlackjackHelper.FormatHand(currentHand)} = {playerValue}[br]" +
+                $"Use [B]!bj hit[/B] or [B]!bj stand[/B] to continue",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        // If handEnded && isLastHand: fall through silently — ResolveGame will show everything
+        
+        await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
     private async Task HandleStand(ChatBot botInstance, UserDbModel user, GamblerDbModel gambler,
@@ -363,9 +355,15 @@ public class BlackjackCommand : ICommand
         var currentHand = gameState.PlayerHands[gameState.CurrentHandIndex];
         var playerValue = BlackjackHelper.CalculateHandValue(currentHand);
         
-        await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}{handLabel} stands with {BlackjackHelper.FormatHand(currentHand)} = {playerValue}",
-            true, autoDeleteAfter: cleanupDelay);
+        // Only send an intermediate stand message when transitioning between split hands.
+        // For the final/only hand, ResolveGame produces the sole consolidated message.
+        bool isLastHand = gameState.CurrentHandIndex >= gameState.PlayerHands.Count - 1;
+        if (!isLastHand)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}{handLabel} stands with {BlackjackHelper.FormatHand(currentHand)} = {playerValue}",
+                true, autoDeleteAfter: cleanupDelay);
+        }
         
         await MoveToNextHandOrResolve(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
@@ -384,6 +382,15 @@ public class BlackjackCommand : ICommand
             return;
         }
         
+        // Doubling after a split is not permitted
+        if (gameState.PlayerHands.Count > 1)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, you cannot double down after splitting.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        
         // Check if player has enough balance for double
         if (gambler.Balance < gameState.OriginalWagerAmount)
         {
@@ -393,22 +400,21 @@ public class BlackjackCommand : ICommand
             return;
         }
         
-        // Double the wager
-        var additionalWager = wager.WagerAmount;
+        // Double the wager: charge the additional amount and record it
+        var additionalWager = gameState.OriginalWagerAmount;
         await Money.ModifyBalanceAsync(gambler.Id, -additionalWager, TransactionSourceEventType.Gambling,
             $"Double down for {wager.Id}", ct: ctx);
-        wager.WagerAmount *= 2;
-        wager.WagerEffect -= additionalWager; // Subtract the additional wager
-        gameState.HasDoubledDown[gameState.CurrentHandIndex] = true;
+        wager.WagerAmount += additionalWager;   // Total wager is now OriginalWagerAmount * 2
+        wager.WagerEffect -= additionalWager;   // Outstanding loss reflects the extra stake
+        gameState.HasDoubledDown = true;
         
         await _dbContext.SaveChangesAsync(ctx);
         
-        var handLabel = gameState.PlayerHands.Count > 1 ? $" (Hand {gameState.CurrentHandIndex + 1})" : "";
         await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}{handLabel} doubled down! Wager is now {await wager.WagerAmount.FormatKasinoCurrencyAsync()}",
+            $"{user.FormatUsername()} doubled down! Wager is now {await wager.WagerAmount.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
         
-        // Draw one card and auto-stand
+        // Draw exactly one card then auto-stand (handled inside HandleHit via HasDoubledDown flag)
         await HandleHit(botInstance, user, gambler, wager, gameState, cleanupDelay, ctx);
     }
 
@@ -466,7 +472,7 @@ public class BlackjackCommand : ICommand
         gameState.Deck.RemoveRange(0, 2);
         
         gameState.PlayerHands = new List<List<Card>> { hand1, hand2 };
-        gameState.HasDoubledDown = new List<bool> { false, false };
+        gameState.HasDoubledDown = false;   // Single bool — doubles are blocked after splitting
         gameState.CurrentHandIndex = 0;
         
         // Charge for the split
@@ -497,7 +503,7 @@ public class BlackjackCommand : ICommand
         
         if (gameState.CurrentHandIndex < gameState.PlayerHands.Count)
         {
-            // Move to next hand
+            // Move to next split hand
             wager.GameMeta = JsonSerializer.Serialize(gameState);
             await _dbContext.SaveChangesAsync(ctx);
             
@@ -563,15 +569,23 @@ public class BlackjackCommand : ICommand
         
         var message = $"🃏 {user.FormatUsername()}'s blackjack game:[br]";
         
+        // For a split game each hand pays out at the original wager per hand.
+        // For a single hand (with optional double down) the full wager.WagerAmount is at stake,
+        // which already reflects the doubled stake when the player doubled down.
+        bool isSplitGame = gameState.PlayerHands.Count > 1;
+        
         // Process each hand
         for (int i = 0; i < gameState.PlayerHands.Count; i++)
         {
             var hand = gameState.PlayerHands[i];
             var playerValue = BlackjackHelper.CalculateHandValue(hand);
             var playerBlackjack = BlackjackHelper.IsBlackjack(hand);
-            var handWager = gameState.OriginalWagerAmount;
             
-            var handLabel = gameState.PlayerHands.Count > 1 ? $" {i + 1}" : "";
+            // Split hands each pay at the original wager amount.
+            // A single hand pays at the full (possibly doubled) wager amount.
+            var handWager = isSplitGame ? gameState.OriginalWagerAmount : wager.WagerAmount;
+            
+            var handLabel = isSplitGame ? $" {i + 1}" : "";
             message += $"[B]Your hand{handLabel}:[/B] {BlackjackHelper.FormatHand(hand)} = {playerValue}[br]";
             
             decimal handEffect;
