@@ -117,7 +117,7 @@ public class RainCommand : ICommand
             return;
         }
 
-        decimal rainMin = 100;
+        var rainMin = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoRainMinimum)).ToType<decimal>();
         if (decAmount < rainMin)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, rain at least {await rainMin.FormatKasinoCurrencyAsync()}", true,
