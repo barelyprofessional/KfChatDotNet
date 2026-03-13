@@ -162,7 +162,7 @@ public class ChatBot
             var deadTime = DateTime.UtcNow - _lastReconnectAttempt;
             // No connection and no successful reconnection attempt in the last 5 minutes
             // Either the site is completely dead or the bot got screwed by a nasty error and can't reconnect
-            if (!KfClient.IsConnected() && inactivityTime > TimeSpan.FromMinutes(10) && deadTime > TimeSpan.FromMinutes(15))
+            if (inactivityTime > TimeSpan.FromMinutes(10) && deadTime > TimeSpan.FromMinutes(15))
             {
                 var shouldExit = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotExitOnDeath)).ToBoolean();
                 _logger.Error("The bot as is dead beyond belief right now");
