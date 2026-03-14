@@ -963,7 +963,8 @@ public class BotServices
             .GetMultipleValuesAsync([
                 BuiltIn.Keys.ShuffleBmjUsername, BuiltIn.Keys.ShuffleDotUsBmjUsername,
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
-                BuiltIn.Keys.ShuffleBmjUserId, BuiltIn.Keys.ShuffleBmjVipLevel
+                BuiltIn.Keys.ShuffleBmjUserId, BuiltIn.Keys.ShuffleBmjVipLevel,
+                BuiltIn.Keys.ShuffleDotUsBmjUserId, BuiltIn.Keys.ShuffleDotUsBmjVipLevel
             ]).Result;
         _logger.Trace("Shuffle bet has arrived");
         bool offlineBet = false;
@@ -991,6 +992,30 @@ public class BotServices
             if (betOwner != settings[BuiltIn.Keys.ShuffleBmjUserId].Value) return;
             offlineBet = true;
         }
+        if (bet.Username == null && bet.VipLevel == settings[BuiltIn.Keys.ShuffleDotUsBmjVipLevel].Value && !CheckBmjIsLive().Result && isDotUs)
+        {
+            _logger.Info($"Checking for potential Shuffle.us offline bet {bet.Id}");
+            string? betOwner;
+            try
+            {
+                betOwner = _shuffleDotUs?.GetBetUser(bet.Id).Result;
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Caught an error when trying to get {bet.Id}");
+                _logger.Error(e);
+                return;
+            }
+            if (betOwner == null)
+            {
+                _logger.Error($"Failed to get the bet owner for {bet.Id}");
+                return;
+            }
+            _logger.Info($"Got user ID {betOwner}");
+
+            if (betOwner != settings[BuiltIn.Keys.ShuffleDotUsBmjUserId].Value) return;
+            offlineBet = true;
+        }
         if (bet.Username == settings[BuiltIn.Keys.ShuffleBmjUsername].Value)
         {
             UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.com").Wait(_cancellationToken);
@@ -999,14 +1024,20 @@ public class BotServices
         {
             UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.us").Wait(_cancellationToken);
         }
-        else if (offlineBet)
+        else if (offlineBet && !isDotUs)
         {
             UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.com OFFLINE").Wait(_cancellationToken);
+        }
+        else if (offlineBet && isDotUs)
+        {
+            UpdateBossmanLastSighting($"betting {bet.Amount} {bet.Currency} on {bet.GameName} at Shuffle.us OFFLINE").Wait(_cancellationToken);
         }
         else
         {
             return;
         }
+
+        if (offlineBet) bet.Username = "OFFLINE GAMBLING NIGGER";
         _logger.Info($"ALERT BMJ IS BETTING: isDotUs => {isDotUs}");
         if (CheckBmjIsLive().Result) return;
 

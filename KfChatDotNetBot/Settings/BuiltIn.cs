@@ -560,6 +560,10 @@ public static class BuiltIn
         public static string ShuffleBmjVipLevel = "Shuffle.BmjVipLevel";
         [BuiltInSetting("Whether OpenAI moderation is enabled", SettingValueType.Boolean, "false", BooleanRegex)]
         public static string OpenAiModerationEnabled = "OpenAI.ModerationEnabled";
+        [BuiltInSetting("Bossman's current VIP level on .us for reducing GraphQL hits", SettingValueType.Text, "PLATINUM_1")]
+        public static string ShuffleDotUsBmjVipLevel = "ShuffleDotUs.BmjVipLevel";
+        [BuiltInSetting("Bossman's super secret user ID on .us", SettingValueType.Text, "e2faee09-8ebb-4a22-8793-59aefc8191e5")]
+        public static string ShuffleDotUsBmjUserId = "ShuffleDotUs.BmjUserId";
     }
 }
 
