@@ -6,6 +6,7 @@ using KfChatDotNetBot.Settings;
 using NLog;
 using StackExchange.Redis;
 using System.Text.Json.Serialization;
+using KfChatDotNetBot.Commands.Kasino;
 
 namespace KfChatDotNetBot.Services;
 
@@ -340,8 +341,9 @@ public class KasinoMines
         await RemoveGame(game.Creator.Id);
     }
         
-    public async Task<bool> Bet(int gamblerId, int count, SentMessageTrackerModel msg, bool cashOut) //returns false if you hit a bomb, true if you didn't
+    public async Task<bool> Bet(GamblerDbModel gambler, int count, SentMessageTrackerModel msg, bool cashOut) //returns false if you hit a bomb, true if you didn't
     {
+        int gamblerId = gambler.Id;
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
@@ -396,12 +398,19 @@ public class KasinoMines
             validBets.RemoveAt(rand);
         }
 
-        return await Bet(gamblerId, betCoords, msg, cashOut, true);
+        return await Bet(gambler, betCoords, msg, cashOut, true);
     }
 
-    public async Task<bool> Bet(int gamblerId, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut, bool calledFromBet = false)
+    public async Task<bool> Bet(GamblerDbModel gambler, List<(int r, int c)> coords, SentMessageTrackerModel msg, bool cashOut, bool calledFromBet = false)
     {
-        
+        //KasinoShop stuff -------------------------------------------------------------------------
+        if (_kfChatBot.BotServices.KasinoShop != null)
+        {
+            await GlobalShopFunctions.CheckProfile(_kfChatBot, gambler.User, gambler);
+            HOUSE_EDGE += _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[gambler.User.KfId].HouseEdgeModifier;
+        }
+        //------------------------------------------------------------------------------------------
+        int gamblerId = gambler.Id;
         await GetSavedGames(gamblerId);
         var game = ActiveGames[gamblerId];
         game.LastInteracted = DateTimeOffset.UtcNow;
