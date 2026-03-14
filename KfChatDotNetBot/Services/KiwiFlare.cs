@@ -69,23 +69,18 @@ public class KiwiFlare(string kfDomain, string? proxy = null, CancellationToken?
             IsTtrs = pow == "ttrs"
         };
     }
-
-    // A hash is considered solved if the first number of bits (as defined by difficulty) are all zero
+    
     private bool TestHash(byte[] hash, int difficulty)
     {
-        var bitArray = new BitArray(hash);
-        var i = 0;
-        // BitArrays can't be sliced so just step through it
-        while (i < difficulty)
+        for (var i = 0; i < difficulty; i++)
         {
-            // If any of the bits are set to 1, it's not a valid hash
-            if (bitArray[i])
+            var byteIndex = i / 8;
+            var bitIndex = 7 - (i % 8); // MSB first within each byte
+            if ((hash[byteIndex] & (1 << bitIndex)) != 0)
             {
                 return false;
             }
-            i++;
         }
-        // If we got this far, means they were all zero!
         return true;
     }
 
