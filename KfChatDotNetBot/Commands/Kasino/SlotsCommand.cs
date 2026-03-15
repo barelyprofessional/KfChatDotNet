@@ -131,7 +131,7 @@ public class SlotsCommand : ICommand
                 }
                 var imageUrl = await Zipline.Upload(finalImageStream, new MediaTypeHeaderValue("image/webp"), "1h", ctx);
                 await botInstance.SendChatMessageAsync($"[img]{imageUrl}[/img]", true,
-                    autoDeleteAfter: TimeSpan.FromSeconds(150));
+                    autoDeleteAfter: TimeSpan.FromSeconds(60)); // delay till slots graphic deletion.
             }
 
             winnings = (decimal)board.RunningTotalDisplay;
