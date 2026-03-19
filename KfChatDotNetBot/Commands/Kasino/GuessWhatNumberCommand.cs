@@ -21,7 +21,7 @@ public class GuessWhatNumberCommand : ICommand
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public RateLimitOptionsModel? RateLimitOptions => null;
-    public bool WhisperCanInvoke => false;
+    public bool WhisperCanInvoke => true;
 
     public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
