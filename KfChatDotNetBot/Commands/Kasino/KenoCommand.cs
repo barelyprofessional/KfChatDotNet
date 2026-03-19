@@ -28,6 +28,7 @@ public class KenoCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(10)
     };
+    public bool WhisperCanInvoke => false;
 
     private List<int> _playerNumbers = [];
     private List<int> _casinoNumbers = [];
@@ -39,7 +40,7 @@ public class KenoCommand : ICommand
     
     private SentMessageTrackerModel? _kenoTable;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

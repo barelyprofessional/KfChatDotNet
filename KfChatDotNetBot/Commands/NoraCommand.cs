@@ -53,8 +53,9 @@ public class NoraCommand : ICommand
         MaxInvocations = 3,
         Flags = RateLimitFlags.None
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user,
         GroupCollection arguments, CancellationToken ctx)
     {
         var userMessage = arguments["message"].Value.Trim();
@@ -75,7 +76,7 @@ public class NoraCommand : ICommand
                 return;
             }
 
-            var resetKey = ConversationContextManager.GetContextKeyAsync(mode, user.KfId, message.RoomId);
+            var resetKey = ConversationContextManager.GetContextKeyAsync(mode, user.KfId, message.RoomId!.Value);
             var cleared = await manager.ClearContextAsync(resetKey);
             await botInstance.SendChatMessageAsync(
                 cleared
@@ -166,7 +167,7 @@ public class NoraCommand : ICommand
         // Compute context key once (used for mood and later for context messages)
         string? contextKey = null;
         if (!contextDisabled)
-            contextKey = ConversationContextManager.GetContextKeyAsync(contextMode, user.KfId, message.RoomId);
+            contextKey = ConversationContextManager.GetContextKeyAsync(contextMode, user.KfId, message.RoomId!.Value);
 
         // Optionally inject user info into the system prompt
         var userInfoEnabled = settings[BuiltIn.Keys.GrokNoraUserInfoEnabled].Value?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;

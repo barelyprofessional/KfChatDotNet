@@ -40,7 +40,7 @@ internal class BotCommands
         _ = CleanupExpiredRateLimitEntriesTask();
     }
 
-    internal void ProcessMessage(MessageModel message)
+    internal void ProcessMessage(BotCommandMessageModel message)
     {
         if (string.IsNullOrEmpty(message.MessageRaw))
         {
@@ -57,6 +57,7 @@ internal class BotCommands
                 var match = regex.Match(messageTrimmed);
                 if (!match.Success) continue;
                 _logger.Debug($"Message matches {regex}");
+                if (!command.WhisperCanInvoke && message.IsWhisper) return;
                 using var db = new ApplicationDbContext();
                 var user = db.Users.AsNoTracking().FirstOrDefault(u => u.KfId == message.Author.Id);
                 // This should never happen as brand-new users are created upon join
@@ -73,6 +74,11 @@ internal class BotCommands
 
                 if (kasinoCommand && Money.IsPermanentlyBannedAsync(user.Id, _cancellationToken).Result)
                 {
+                    if (message.IsWhisper)
+                    {
+                        _ = _bot.SendWhisperAsync(message.Author.Id, $"@{message.Author.Username}, you've been permanently banned from the kasino. Contact support for more information.");
+                        return;
+                    }
                     _bot.SendChatMessage($"@{message.Author.Username}, you've been permanently banned from the kasino. Contact support for more information.", true);
                     return;
                 }
@@ -87,6 +93,12 @@ internal class BotCommands
                         var exclusion = Money.GetActiveExclusionAsync(gambler.Id, ct: _cancellationToken).Result;
                         if (exclusion != null)
                         {
+                            if (message.IsWhisper)
+                            {
+                                _ = _bot.SendWhisperAsync(message.Author.Id,
+                                    $"@{message.Author.Username}, you're self excluded from the kasino for another {(exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 3)}");
+                                return;
+                            }
                             _bot.SendChatMessage(
                                 $"@{message.Author.Username}, you're self excluded from the kasino for another {(exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 3)}", true);
                             return;
@@ -96,7 +108,15 @@ internal class BotCommands
                 
                 if (user.UserRight < command.RequiredRight)
                 {
-                    _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
+                    if (message.IsWhisper)
+                    {
+                        _ = _bot.SendWhisperAsync(message.Author.Id,
+                            $"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}");
+                    }
+                    else
+                    {
+                        _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
+                    }
                     if (continueAfterProcess) continue;
                     break;
                 }
@@ -116,8 +136,8 @@ internal class BotCommands
             }
         }
     }
-
-    private async Task ProcessMessageAsync(ICommand command, MessageModel message, UserDbModel user, GroupCollection arguments)
+    
+    private async Task ProcessMessageAsync(ICommand command, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments)
     {
         var cts = new CancellationTokenSource(command.Timeout);
         var task = Task.Run(() => command.RunCommand(_bot, message, user, arguments, cts.Token), cts.Token);

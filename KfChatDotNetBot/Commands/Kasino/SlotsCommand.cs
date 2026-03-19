@@ -39,9 +39,10 @@ public class SlotsCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(15)
     };
+    public bool WhisperCanInvoke => false;
 
     private decimal HOUSE_EDGE = (decimal)0.98;
-    public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user,
         GroupCollection arguments, CancellationToken ctx)
     {
         

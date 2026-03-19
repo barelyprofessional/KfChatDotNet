@@ -4,6 +4,9 @@ public class SentMessageTrackerModel
 {
     // Unique GUID for each message
     public required string Reference { get; set; }
+    /// <summary>
+    /// The raw message. If this was a whisper, it'll include the '/w id msg' payload
+    /// </summary>
     public required string Message { get; set; }
     public required SentMessageTrackerStatus Status { get; set; }
     public string? ChatMessageUuid { get; set; }
@@ -15,6 +18,11 @@ public class SentMessageTrackerModel
     /// When edited multiple times, it'll be the most recent edit
     /// </summary>
     public DateTimeOffset? LastEdited { get; set; } = null;
+    public required SentMessageType Type { get; set; }
+    /// <summary>
+    /// Contains just the whisper message
+    /// </summary>
+    public string? WhisperMessage { get; set; }
 }
 
 public enum SentMessageTrackerStatus
@@ -29,4 +37,10 @@ public enum SentMessageTrackerStatus
     ChatDisconnected,
     // Was held in the replay buffer due to a disconnect, but there were too many messages ahead of it and so was culled
     Lost
+}
+
+public enum SentMessageType
+{
+    ChatMessage,
+    Whisper
 }

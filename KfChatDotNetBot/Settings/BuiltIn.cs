@@ -564,6 +564,8 @@ public static class BuiltIn
         public static string ShuffleDotUsBmjVipLevel = "ShuffleDotUs.BmjVipLevel";
         [BuiltInSetting("Bossman's super secret user ID on .us", SettingValueType.Text, "e2faee09-8ebb-4a22-8793-59aefc8191e5")]
         public static string ShuffleDotUsBmjUserId = "ShuffleDotUs.BmjUserId";
+        [BuiltInSetting("UUID for the current MOTD message UUID", SettingValueType.Text)]
+        public static string KiwiFarmsMotdUuid = "KiwiFarms.MotdUuid";
     }
 }
 

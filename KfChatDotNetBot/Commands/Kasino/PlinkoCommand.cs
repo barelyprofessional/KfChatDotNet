@@ -27,6 +27,7 @@ public class PlinkoCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(10)
     };
+    public bool WhisperCanInvoke => false;
 
     private const string NULLSPACE =   "⚫";
     private const string EMPTYSPACE =  "⚪";
@@ -65,7 +66,7 @@ public class PlinkoCommand : ICommand
     
     private static Dictionary<int, List<int>> validColumnsForRow = new();
     
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         VACUUM += 1 - (double)HOUSE_EDGE;

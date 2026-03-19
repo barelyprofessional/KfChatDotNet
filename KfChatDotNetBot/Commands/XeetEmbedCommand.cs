@@ -39,8 +39,9 @@ public class XeetEmbedCommand : ICommand
         // Really don't want to get rate-limited by FxTwitter hence global rate-limits
         Flags = RateLimitFlags.Global
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var kiwiFarmsUsername = await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsUsername);

@@ -21,20 +21,27 @@ public class GuessWhatNumberCommand : ICommand
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(10);
     public RateLimitOptionsModel? RateLimitOptions => null;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public bool WhisperCanInvoke => false;
+
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoGuessWhatNumberCleanupDelay,
             BuiltIn.Keys.KasinoGuessWhatNumberEnabled
         ]);
+
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         
         // Check if guesswhatnumber is enabled
-        var guessWhatNumberEnabled = (settings[BuiltIn.Keys.KasinoGuessWhatNumberEnabled]).ToBoolean();
+        var guessWhatNumberEnabled = settings[BuiltIn.Keys.KasinoGuessWhatNumberEnabled].ToBoolean();
         if (!guessWhatNumberEnabled)
         {
             var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
-            await botInstance.SendChatMessageAsync(
+            await botInstance.ReplyToUser(message,
                 $"{user.FormatUsername()}, guess what number is currently disabled.", 
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
@@ -44,7 +51,7 @@ public class GuessWhatNumberCommand : ICommand
         
         if (!arguments.TryGetValue("amount", out var amount))
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, not enough arguments. !guess <wager> <number between 1 and 10>", true, autoDeleteAfter: cleanupDelay);
+            await botInstance.ReplyToUser(message, $"{user.FormatUsername()}, not enough arguments. !guess <wager> <number between 1 and 10>", true, autoDeleteAfter: cleanupDelay);
             RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
@@ -53,7 +60,7 @@ public class GuessWhatNumberCommand : ICommand
         var guess = Convert.ToInt32(arguments["number"].Value);
         if (guess is < 1 or > 10)
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, your guess must be between 1 and 10", true, autoDeleteAfter: cleanupDelay);
+            await botInstance.ReplyToUser(message, $"{user.FormatUsername()}, your guess must be between 1 and 10", true, autoDeleteAfter: cleanupDelay);
             RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
@@ -62,7 +69,7 @@ public class GuessWhatNumberCommand : ICommand
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
         if (gambler.Balance < wager)
         {
-            await botInstance.SendChatMessageAsync(
+            await botInstance.ReplyToUser(message,
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
             return;
@@ -70,7 +77,7 @@ public class GuessWhatNumberCommand : ICommand
         
         if (wager == 0)
         {
-            await botInstance.SendChatMessageAsync(
+            await botInstance.ReplyToUser(message,
                 $"{user.FormatUsername()}, you have to wager more than {await wager.FormatKasinoCurrencyAsync()}", true,
                 autoDeleteAfter: cleanupDelay);
             RateLimitService.RemoveMostRecentEntry(user, this);
@@ -87,14 +94,14 @@ public class GuessWhatNumberCommand : ICommand
         {
             var effect = wager * 9;
             newBalance = await Money.NewWagerAsync(gambler.Id, wager, effect, WagerGame.GuessWhatNumber, ct: ctx);
-            await botInstance.SendChatMessageAsync(
+            await botInstance.ReplyToUser(message,
                 $"{user.FormatUsername()}, [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]correct![/color] You won {await effect.FormatKasinoCurrencyAsync()} and your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
 
         newBalance = await Money.NewWagerAsync(gambler.Id, wager, -wager, WagerGame.GuessWhatNumber, ct: ctx);
-        await botInstance.SendChatMessageAsync(
+        await botInstance.ReplyToUser(message,
             $"{user.FormatUsername()}, [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]wrong![/color] I was thinking of {answer}. Your balance is now {await newBalance.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
     }

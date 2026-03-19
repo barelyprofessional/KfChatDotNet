@@ -21,6 +21,7 @@ public class EightBallCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(15)
     };
+    public bool WhisperCanInvoke => false;
 
     private static readonly string[] AnswersYes = [
         "Yes, definitely.",
@@ -103,7 +104,7 @@ public class EightBallCommand : ICommand
         "The outlook is bleak."
     ];
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var random = RandomShim.Create(StandardRng.Create());
 

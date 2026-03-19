@@ -29,4 +29,8 @@ public class EventHandlers
     public delegate void OnPermissionsEventHandler(object sender, PermissionsJsonModel permissions);
 
     public delegate void OnSystemMessage(object sender, string message);
+    
+    public delegate void OnMotdEventHandler(object sender, MessageModel message);
+    
+    public delegate void OnWhisperEventHandler(object sender, WhisperModel whisper);
 }

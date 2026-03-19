@@ -13,6 +13,7 @@ public interface ICommand
     UserRight RequiredRight { get; }
     TimeSpan Timeout { get; }
     RateLimitOptionsModel? RateLimitOptions { get; }
+    bool WhisperCanInvoke { get; }
 
-    Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx);
+    Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx);
 }

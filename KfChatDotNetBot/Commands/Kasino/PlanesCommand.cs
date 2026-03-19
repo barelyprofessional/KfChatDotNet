@@ -27,6 +27,7 @@ public class Planes : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(30)
     };
+    public bool WhisperCanInvoke => false;
 
     private const string Boost = "💨";
     private const string PlaneUp = "🛫";
@@ -42,7 +43,7 @@ public class Planes : ICommand
     private bool _riggedWin = false;
     private const int CarrierCount = 6;
     private decimal HOUSE_EDGE = (decimal)0.98;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

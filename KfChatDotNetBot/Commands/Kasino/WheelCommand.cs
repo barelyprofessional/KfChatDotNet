@@ -30,6 +30,7 @@ public class WheelCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(15)
     };
+    public bool WhisperCanInvoke => false;
     //private static double _houseEdge = 0.015; // house edge hack?
     
     // game assets
@@ -61,7 +62,7 @@ public class WheelCommand : ICommand
     };
 
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

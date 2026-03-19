@@ -26,6 +26,8 @@ public class ChatClient
     public event EventHandlers.OnUnknownCommand? OnUnknownCommand;
     public event EventHandlers.OnPermissionsEventHandler? OnPermissions;
     public event EventHandlers.OnSystemMessage? OnSystemMessage;
+    public event EventHandlers.OnMotdEventHandler? OnMotd;
+    public event EventHandlers.OnWhisperEventHandler? OnWhisper;
     private WebsocketClient? _wsClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     private ChatClientConfigModel _config;
@@ -210,6 +212,20 @@ public class ChatClient
             WsDeleteMessagesReceived(message);
             return;
         }
+
+        if (packetType.ContainsKey("whisper"))
+        {
+            _logger.Debug("Looks like this is a whisper packet");
+            WsWhisper(message);
+            return;
+        }
+
+        if (packetType.ContainsKey("motd"))
+        {
+            _logger.Debug("Looks like this is an MOTD packet");
+            WsMotd(message);
+            return;
+        }
         
         _logger.Info($"Received packet this was not handled: {message.Text}");
     }
@@ -275,6 +291,13 @@ public class ChatClient
             _logger.Error($"Edit message is too long at {length} bytes");
         }
         await _wsClient.SendInstant($"/edit {payload}");
+    }
+
+    public async Task SetMotd(string messageUuid)
+    {
+        _logger.Debug($"Setting {messageUuid} as the MOTD");
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
+        await _wsClient.SendInstant($"/motd {messageUuid}");
     }
 
     private void WsDeleteMessagesReceived(ResponseMessage message)
@@ -389,6 +412,83 @@ public class ChatClient
         catch (Exception e)
         {
             _logger.Error("Caught error when invoking OnSystemMessage");
+            _logger.Error(e);
+        }
+    }
+
+    private void WsWhisper(ResponseMessage message)
+    {
+        var data = JsonSerializer.Deserialize<JsonElement>(message.Text).GetProperty("whisper")
+            .Deserialize<WhisperJsonModel>();
+        var model = new WhisperModel
+        {
+            Author = new UserModel
+            {
+                Id = data.Author.Id,
+                Username = data.Author.Username,
+                AvatarUrl = data.Author.AvatarUrl
+            },
+            Recipient = new UserModel
+            {
+                Id = data.Recipient.Id,
+                Username = data.Recipient.Username,
+                AvatarUrl = data.Recipient.AvatarUrl
+            },
+            Message = data.Message,
+            MessageRaw = data.MessageRaw,
+            MessageRawHtmlDecoded = WebUtility.HtmlDecode(data.MessageRaw),
+            MessageDate = DateTimeOffset.FromUnixTimeSeconds(data.MessageDate)
+        };
+        try
+        {
+            OnWhisper?.Invoke(this, model);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("WS handler for whisper threw an exception when invoking OnWhisper");
+            _logger.Error(e);
+        }
+    }
+
+    private void WsMotd(ResponseMessage message)
+    {
+        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text).GetProperty("motd")
+            .Deserialize<MessagesJsonModel.MessageModel>();
+        
+        var model = new MessageModel
+        {
+            Author = new UserModel
+            {
+                Id = msg.Author.Id,
+                Username = msg.Author.Username,
+                AvatarUrl = msg.Author.AvatarUrl,
+                // It isn't sent on chat messages
+                LastActivity = null
+            },
+            Message = msg.Message,
+            MessageUuid = msg.MessageUuid,
+            MessageRaw = msg.MessageRaw,
+            RoomId = msg.RoomId,
+            MessageRawHtmlDecoded = WebUtility.HtmlDecode(msg.MessageRaw),
+            MessageDate = DateTimeOffset.FromUnixTimeSeconds(msg.MessageDate)
+        };
+            
+        if (msg.MessageEditDate == 0)
+        {
+            model.MessageEditDate = null;
+        }
+        else
+        {
+            model.MessageEditDate = DateTimeOffset.FromUnixTimeSeconds(msg.MessageEditDate);
+        }
+        
+        try
+        {
+            OnMotd?.Invoke(this, model);
+        }
+        catch (Exception e)
+        {
+            _logger.Error("The handler for MOTD messages threw an exception");
             _logger.Error(e);
         }
     }

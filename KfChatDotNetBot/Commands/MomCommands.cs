@@ -16,8 +16,9 @@ public class MomCommand : ICommand
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
     public RateLimitOptionsModel? RateLimitOptions => null;
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();

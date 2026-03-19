@@ -18,7 +18,8 @@ public class EditTestCommand : ICommand
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
     public RateLimitOptionsModel? RateLimitOptions => null;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
         var msg = WebUtility.HtmlDecode(arguments["msg"].Value);
@@ -65,7 +66,8 @@ public class TimeoutTestCommand : ICommand
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
     public RateLimitOptionsModel? RateLimitOptions => null;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await Task.Delay(TimeSpan.FromMinutes(1), ctx);
     }
@@ -82,7 +84,8 @@ public class ExceptionTestCommand : ICommand
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
     public RateLimitOptionsModel? RateLimitOptions => null;
-    public Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         throw new Exception("Caused by the test exception command");
     }
@@ -99,7 +102,8 @@ public class LengthLimitTestCommand : ICommand
     // Increased timeout as it has to wait for Sneedchat to echo the message and that can be slow sometimes
     public TimeSpan Timeout => TimeSpan.FromSeconds(15);
     public RateLimitOptionsModel? RateLimitOptions => null;
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var logger = LogManager.GetCurrentClassLogger();
         var niceTruncation = await botInstance.SendChatMessageAsync("The quick brown fox jumps over the lazy dog.",
@@ -140,7 +144,8 @@ public class RateLimitTestCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(60)
     };
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         await botInstance.SendChatMessageAsync("Nigger", true);
     }

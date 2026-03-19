@@ -42,10 +42,11 @@ public class MinesCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(10)
     };
+    public bool WhisperCanInvoke => false;
 
     private KasinoMines? KasinoMines;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         

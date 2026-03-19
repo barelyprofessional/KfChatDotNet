@@ -40,9 +40,11 @@ public class BlackjackCommand : ICommand
         Flags = RateLimitFlags.NoAutoDeleteCooldownResponse
     };
 
+    public bool WhisperCanInvoke => false;
+
     private ApplicationDbContext _dbContext = new();
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

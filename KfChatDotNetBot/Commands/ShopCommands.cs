@@ -22,9 +22,8 @@ public class ShopGlobalResetCommand : ICommand
         MaxInvocations = 1,
         Window = TimeSpan.FromSeconds(120)
     };
-
-
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -46,6 +45,7 @@ public class ShopGlobalLoanResetCommand : ICommand
     public string? HelpText => "!beg to beg for a loan";
     public UserRight RequiredRight => UserRight.TrueAndHonest;
     public TimeSpan Timeout => TimeSpan.FromSeconds(30);
+    public bool WhisperCanInvoke => false;
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
         MaxInvocations = 1,
@@ -53,7 +53,7 @@ public class ShopGlobalLoanResetCommand : ICommand
     };
 
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -83,9 +83,10 @@ public class ShopHelpCommand : ICommand
         MaxInvocations = 1,
         Window = TimeSpan.FromSeconds(120)
     };
+    public bool WhisperCanInvoke => false;
 
     private const string KasinoShopHelpLink = "https://i.ddos.lgbt/raw/pgTFLJ.html";
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -122,9 +123,10 @@ public class ShopListCommand : ICommand
         MaxInvocations = 1,
         Window = TimeSpan.FromSeconds(120)
     };
+    public bool WhisperCanInvoke => false;
 
     
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -179,9 +181,10 @@ public class ShopSellCommand : ICommand
         MaxInvocations = 1,
         Window = TimeSpan.FromSeconds(120)
     };
+    public bool WhisperCanInvoke => false;
 
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -219,7 +222,8 @@ public class BegCommand : ICommand
         MaxInvocations = 1,
         Window = TimeSpan.FromSeconds(120)
     };
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
@@ -252,7 +256,8 @@ public class LoanCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
         if (botInstance.BotServices.KasinoShop == null)
@@ -298,8 +303,8 @@ public class RepaymentCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
-
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -351,8 +356,9 @@ public class ShopSmashableCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -402,8 +408,9 @@ public class ShopInvestmentsCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -455,7 +462,8 @@ public class ShopUpdateGambler : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments, CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
         if (botInstance.BotServices.KasinoShop == null)
@@ -495,8 +503,9 @@ public class ShopShoeCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -547,8 +556,9 @@ public class ShopSkinCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -593,8 +603,9 @@ public class ShopStakeCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -644,8 +655,9 @@ public class ShopUnstakeCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -695,8 +707,9 @@ public class SmashCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -727,8 +740,9 @@ public class SponsorShipCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -759,8 +773,9 @@ public class SponsorShipBonusCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -791,8 +806,9 @@ public class EndSponsorShipCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -833,8 +849,9 @@ public class ShopDrugsCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -939,8 +956,9 @@ public class ShopCarCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     { //civic audi bentley bmw
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1014,8 +1032,9 @@ public class ShopDepositCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1057,8 +1076,9 @@ public class ShopCarJobCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1093,8 +1113,9 @@ public class ShopWithdrawCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1152,8 +1173,9 @@ public class FlipSwitchCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1182,8 +1204,9 @@ public class PushButtonCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1212,8 +1235,9 @@ public class PullLeverCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1241,8 +1265,9 @@ public class DialCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1272,8 +1297,9 @@ public class KeypadCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);
@@ -1305,8 +1331,9 @@ public class PanelCommand : ICommand
         MaxInvocations = 2,
         Window = TimeSpan.FromSeconds(60)
     };
+    public bool WhisperCanInvoke => false;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var cleanupDelay = TimeSpan.FromSeconds(10);

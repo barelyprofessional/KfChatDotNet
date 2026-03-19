@@ -25,9 +25,11 @@ public class DiceCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(15)
     };
+
+    public bool WhisperCanInvoke => false;
     private static double _houseEdge = 0.015; // house edge hack?
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel messagen, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

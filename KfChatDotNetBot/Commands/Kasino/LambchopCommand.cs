@@ -29,6 +29,7 @@ public class LambchopCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(15)
     };
+    public bool WhisperCanInvoke => false;
     private static double _houseEdge = 0.015; // house edge hack?
     
     // game assets
@@ -58,7 +59,7 @@ public class LambchopCommand : ICommand
     private const int FIELD_LENGTH = 16;    // indicates how many tiles the lamb can cross. default is 16
                                             // WARNING: do NOT change without first implementing dynamic payout logic in LambchopPayoutMultiplier() 
                                             // has to be an EVEN number > 1
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([

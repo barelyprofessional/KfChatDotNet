@@ -38,12 +38,13 @@ public class LegitCheckCommand : ICommand
         MaxInvocations = 3,
         Window = TimeSpan.FromSeconds(30)
     };
+    public bool WhisperCanInvoke => false;
 
     // Minimum wagers required for a game to be considered for "luckiest game"
     // This prevents small sample sizes from skewing results (e.g., 1 win on 1 bet = 200% RTP)
     private const int MinWagersForLuckiestGame = 10;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();

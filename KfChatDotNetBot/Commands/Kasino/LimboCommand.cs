@@ -27,12 +27,13 @@ public class LimboCommand : ICommand
         MaxInvocations = 10,
         Window = TimeSpan.FromSeconds(30)
     };
+    public bool WhisperCanInvoke => false;
 
     private const double Min = 1;
     private const double Max = 10000;
     private decimal HOUSE_EDGE = (decimal)0.98;
 
-    public async Task RunCommand(ChatBot botInstance, MessageModel message, UserDbModel user, GroupCollection arguments,
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
         decimal limboNumber; //user number
