@@ -418,13 +418,13 @@ public class ChatClient
 
     private void WsWhisper(ResponseMessage message)
     {
-        var data = JsonSerializer.Deserialize<JsonElement>(message.Text).GetProperty("whisper")
+        var data = JsonSerializer.Deserialize<JsonElement>(message.Text!).GetProperty("whisper")
             .Deserialize<WhisperJsonModel>();
         var model = new WhisperModel
         {
             Author = new UserModel
             {
-                Id = data.Author.Id,
+                Id = data!.Author.Id,
                 Username = data.Author.Username,
                 AvatarUrl = data.Author.AvatarUrl
             },
@@ -452,14 +452,14 @@ public class ChatClient
 
     private void WsMotd(ResponseMessage message)
     {
-        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text).GetProperty("motd")
+        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text!).GetProperty("motd")
             .Deserialize<MessagesJsonModel.MessageModel>();
         
         var model = new MessageModel
         {
             Author = new UserModel
             {
-                Id = msg.Author.Id,
+                Id = msg!.Author.Id,
                 Username = msg.Author.Username,
                 AvatarUrl = msg.Author.AvatarUrl,
                 // It isn't sent on chat messages

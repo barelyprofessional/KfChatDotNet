@@ -245,7 +245,8 @@ public class KasinoShop
     {
         int cc = Gambler_Profiles[gambler.User.KfId].CrackCounter;
         List<string> drugs = new();
-        drugs.Add($"1. Crack: {await (CrackPrice * cc).FormatKasinoCurrencyAsync()} per dose");
+        var crackPrice = CrackPrice * cc;
+        drugs.Add($"1. Crack: {await crackPrice.FormatKasinoCurrencyAsync()} per dose");
         drugs.Add($"2. Weed: {await WeedPricePerHour.FormatKasinoCurrencyAsync()} per hour");
         if (Gambler_Profiles[gambler.User.KfId].FloorNugs > 0)
         {
@@ -1140,7 +1141,8 @@ public class KasinoShop
         }
         public async Task<string> FormatBalanceAsync()
         {
-            string str = OutstandingLoanBalance > 0 ? $"| Net Balance: {await (CryptoBalance-OutstandingLoanBalance).FormatKasinoCurrencyAsync()}":"";
+            var netBalance = CryptoBalance - OutstandingLoanBalance;
+            string str = OutstandingLoanBalance > 0 ? $"| Net Balance: {await netBalance.FormatKasinoCurrencyAsync()}":"";
             return $"Balance: {await CryptoBalance.FormatKasinoCurrencyAsync()}{str}";
         }
         public decimal[] Balance()
