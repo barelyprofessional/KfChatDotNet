@@ -57,7 +57,7 @@ internal class BotCommands
                 var match = regex.Match(messageTrimmed);
                 if (!match.Success) continue;
                 _logger.Debug($"Message matches {regex}");
-                if (!command.WhisperCanInvoke && message.IsWhisper) return;
+                if (!command.WhisperCanInvoke && message.IsWhisper) continue;
                 using var db = new ApplicationDbContext();
                 var user = db.Users.AsNoTracking().FirstOrDefault(u => u.KfId == message.Author.Id);
                 // This should never happen as brand-new users are created upon join
