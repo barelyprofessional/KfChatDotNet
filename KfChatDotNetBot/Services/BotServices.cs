@@ -121,7 +121,8 @@ public class BotServices
     private async Task BuildKasinoShop()
     {
         _logger.Debug("Building the kasino shop");
-        KasinoShop = new KasinoShop(_chatBot);
+        //KasinoShop = new KasinoShop(_chatBot);
+        KasinoShop = null;
     }
     
     private async Task BuildShuffle()

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using KfChatDotNetBot.Services;
 
 namespace KfChatDotNetBot.Models.DbModels;
 
@@ -199,6 +200,113 @@ public class GamblerPerkDbModel
     /// The payout from this perk, if any. If none, set to null
     /// </summary>
     public decimal? Payout { get; set; }
+}
+
+public class KasinoShopProfileDbModel
+{
+    /// <summary>
+    /// ID for the database row
+    /// </summary>
+    public int Id { get; set; }
+    /// <summary>
+    /// Shop profiles belong to a user, not their gambler ID
+    /// they persist even if the user abandons their profile
+    /// </summary>
+    public required UserDbModel User { get; set; }
+    public required List<KasinoShopProfileAssetDbModel> Assets { get; set; }
+    public required List<KasinoShopProfileLoanDbModel> Loans { get; set; }
+}
+
+public class KasinoShopProfileLoanDbModel
+{
+    /// <summary>
+    /// ID for the database row
+    /// </summary>
+    public int Id { get; set; }
+    // Foreign key that the powers that be told me I need for the fancy navigation property
+    public int ProfileId { get; set; }
+    /// <summary>
+    /// Profile of the user who owns this loan
+    /// </summary>
+    public required KasinoShopProfileDbModel Profile { get; set; }
+    // Foreign key that the powers that be told me I need for the fancy navigation property
+    public int PayableToId { get; set; }
+    /// <summary>
+    /// Profile of the user to whom this loan is owed/payable to
+    /// </summary>
+    public required KasinoShopProfileDbModel PayableTo { get; set; }
+    /// <summary>
+    /// Amount loaned
+    /// </summary>
+    public required decimal Amount { get; set; }
+    /// <summary>
+    /// Amount to be paid out to the loaner
+    /// </summary>
+    public required decimal PayoutAmount { get; set; }
+    /// <summary>
+    /// Date and time loan entry was created
+    /// </summary>
+    public required DateTimeOffset Created { get; set; }
+}
+
+public class KasinoShopProfileAssetDbModel
+{
+    /// <summary>
+    /// ID for the database row
+    /// </summary>
+    public int Id { get; set; }
+    /// <summary>
+    /// Profile of the user who owns this asset
+    /// </summary>
+    public required KasinoShopProfileDbModel Profile { get; set; }
+    /// <summary>
+    /// Value of the item at the time of acquisition in Krypto
+    /// </summary>
+    public required decimal OriginalValue { get; set; }
+    /// <summary>
+    /// Asset name
+    /// </summary>
+    public required string Name { get; set; }
+    /// <summary>
+    /// Asset type
+    /// </summary>
+    public required AssetType AssetType { get; set; }
+    /// <summary>
+    /// Date and time the asset was acquired
+    /// </summary>
+    public required DateTimeOffset Acquired { get; set; }
+    /// <summary>
+    /// History of value changes (e.g. interest events)
+    /// </summary>
+    public required List<KasinoShopProfileAssetValueChangeDbModel> ValueChangeReports { get; set; }
+    /// <summary>
+    /// Serialized JSON for extra information useful for certain assets (e.g. car model)
+    /// </summary>
+    public string? Extra { get; set; } = null;
+}
+
+public class KasinoShopProfileAssetValueChangeDbModel
+{
+    /// <summary>
+    /// ID for the database row
+    /// </summary>
+    public int Id { get; set; }
+    /// <summary>
+    /// Related asset
+    /// </summary>
+    public required KasinoShopProfileAssetDbModel Asset { get; set; }
+    /// <summary>
+    /// Effect of the change
+    /// </summary>
+    public required decimal ValueChangeEffect { get; set; }
+    /// <summary>
+    /// Change percent as a decimal fraction?
+    /// </summary>
+    public required decimal ValueChangePercent { get; set; }
+    /// <summary>
+    /// Descriptive text for the value change (like the source of it)
+    /// </summary>
+    public required string Description { get; set; }
 }
 
 public enum GamblerPerkType

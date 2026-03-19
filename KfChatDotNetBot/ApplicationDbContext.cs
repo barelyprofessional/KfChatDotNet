@@ -9,7 +9,13 @@ public class ApplicationDbContext : DbContext
     {
         builder.UseSqlite("Data Source=db.sqlite");
     }
-    
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+        
+    }
+
     public DbSet<UserDbModel> Users { get; set; }
     public DbSet<JuicerDbModel> Juicers { get; set; }
     public DbSet<SettingDbModel> Settings { get; set; }
