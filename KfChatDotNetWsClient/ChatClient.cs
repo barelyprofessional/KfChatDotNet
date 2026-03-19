@@ -452,9 +452,12 @@ public class ChatClient
 
     private void WsMotd(ResponseMessage message)
     {
-        var msg = JsonSerializer.Deserialize<JsonElement>(message.Text!).GetProperty("motd")
-            .Deserialize<MessagesJsonModel.MessageModel>();
-        
+        var motdElement = JsonSerializer.Deserialize<JsonElement>(message.Text!).GetProperty("motd");
+            //.Deserialize<MessagesJsonModel.MessageModel>();        
+
+        if (motdElement.ValueKind == JsonValueKind.Null) return;
+        var msg = motdElement.Deserialize<MessagesJsonModel.MessageModel>();
+
         var model = new MessageModel
         {
             Author = new UserModel
