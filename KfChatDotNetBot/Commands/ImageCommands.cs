@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
+using Humanizer;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -176,6 +177,12 @@ public class GetRandomImage : ICommand
         if (!await images.AnyAsync(ctx))
         {
             RateLimitService.RemoveMostRecentEntry(user, this);
+            return;
+        }
+
+        if (key == "sloppa" && user.UserRight < UserRight.TrueAndHonest)
+        {
+            await botInstance.SendWhisperAsync(user.KfId, $"{user.FormatUsername()}, sloppa requires at least {UserRight.TrueAndHonest.Humanize()}");
             return;
         }
         var settings = await SettingsProvider.GetMultipleValuesAsync([
