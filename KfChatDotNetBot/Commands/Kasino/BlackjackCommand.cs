@@ -627,7 +627,7 @@ internal static class BlackjackDisplay
     {
         return
             $"🃏 [B]{user.FormatUsername()}[/B] · {await wager.FormatKasinoCurrencyAsync()} — " +
-            $"[B]You:[/B] {FmtHand(playerHand, redHex)} ({playerValue}) " +
+            $"[B]You:[/B] {FmtHand(playerHand, redHex)} ([plain]{playerValue}[/plain]) " +
             $"[I]vs[/I] [B]Dealer:[/B] {FmtHand(dealerHand, redHex, hideFirst: true)}[br]" +
             ActionHints(canDouble: true, canSplit: canSplit);
     }
@@ -721,8 +721,8 @@ internal static class BlackjackDisplay
             var r = results[0];
             sb.Append(
                 $"🃏 [B]{user.FormatUsername()}[/B] · " +
-                $"[B]You:[/B] {FmtHand(r.Hand, redHex)} ({r.PlayerValue}) " +
-                $"[I]vs[/I] [B]Dealer:[/B] {FmtHand(dealerHand, redHex)} ({dealerValue}) — " +
+                $"[B]You:[/B] {FmtHand(r.Hand, redHex)} ([plain]{r.PlayerValue}[/plain]) " +
+                $"[I]vs[/I] [B]Dealer:[/B] {FmtHand(dealerHand, redHex)} ([plain]{dealerValue}[/plain]) — " +
                 $"{await FormatOutcomeTag(r, greenHex, redHex)}[br]" +
                 netLine);
         }
@@ -735,12 +735,12 @@ internal static class BlackjackDisplay
             foreach (var r in results)
             {
                 handParts.Add(
-                    $"[B]H{r.HandIndex + 1}:[/B] {FmtHand(r.Hand, redHex)} ({r.PlayerValue}) — " +
+                    $"[B]H{r.HandIndex + 1}:[/B] {FmtHand(r.Hand, redHex)} ([plain]{r.PlayerValue}[/plain]) — " +
                     $"{await FormatOutcomeTag(r, greenHex, redHex)}");
             }
 
             sb.Append(string.Join(" · ", handParts) + "[br]");
-            sb.Append($"[B]Dealer:[/B] {FmtHand(dealerHand, redHex)} ({dealerValue}) · {netLine}");
+            sb.Append($"[B]Dealer:[/B] {FmtHand(dealerHand, redHex)} ([plain]{dealerValue}[/plain]) · {netLine}");
         }
 
         return sb.ToString();
