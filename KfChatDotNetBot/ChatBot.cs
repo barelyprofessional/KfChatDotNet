@@ -283,7 +283,8 @@ public class ChatBot
         }
 
         var sentMsgMaybe = SentMessages.FirstOrDefault(msg =>
-            msg.Type == SentMessageType.Whisper && msg.WhisperMessage == whisper.MessageRawHtmlDecoded);
+            msg.Type == SentMessageType.Whisper && msg.WhisperMessage == whisper.MessageRawHtmlDecoded &&
+            msg.Status == SentMessageTrackerStatus.WaitingForResponse);
         sentMsgMaybe?.Status = SentMessageTrackerStatus.ResponseReceived;
         _logger.Debug("Passing message to command interface");
         var botCommandsMsg = new BotCommandMessageModel
