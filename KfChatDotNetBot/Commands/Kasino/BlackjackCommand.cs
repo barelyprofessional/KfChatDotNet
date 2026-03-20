@@ -153,7 +153,7 @@ public class BlackjackCommand : ICommand
             }
 
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you already have an active blackjack game. Use !bj hit or !bj stand to continue.",
+                $"{user.FormatUsername()}, you already have an active blackjack game. Use [ditto]!bj hit[/ditto] or [ditto]!bj stand[/ditto] to continue.",
                 true, autoDeleteAfter: cleanupDelay);
             return;
         }
@@ -232,7 +232,7 @@ public class BlackjackCommand : ICommand
         if (activeWager == null)
         {
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, you don't have an active blackjack game. Start one with !bj <amount>",
+                $"{user.FormatUsername()}, you don't have an active blackjack game. Start one with [ditto]!bj <amount>[/ditto]",
                 true, autoDeleteAfter: cleanupDelay);
             RateLimitService.RemoveMostRecentEntry(user, this);
             return;
@@ -607,10 +607,10 @@ internal static class BlackjackDisplay
     /// ✦ marks double-down; ✂ marks split — both are hidden once unavailable.
     private static string ActionHints(bool canDouble = false, bool canSplit = false)
     {
-        var parts = new List<string> { "[B]hit[/B]", "[B]stand[/B]" };
-        if (canDouble) parts.Add("[B]double[/B] ✦");
-        if (canSplit)  parts.Add("[B]split[/B] ✂");
-        return "!bj: " + string.Join(" · ", parts);
+        var parts = new List<string> { "[ditto]!bj hit[/ditto]", "[ditto]!bj stand[/ditto]" };
+        if (canDouble) parts.Add("[ditto]!bj double[/ditto] ✦");
+        if (canSplit)  parts.Add("[ditto]!bj split[/ditto] ✂");
+        return string.Join(" · ", parts);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
