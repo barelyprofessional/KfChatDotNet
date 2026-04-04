@@ -60,6 +60,13 @@ public class KrashBetCommand : ICommand
             multi = Convert.ToDecimal(multiGroup.Value);
         }
         wager = Convert.ToDecimal(amountGroup.Value);
+        if (wager > gambler.Balance)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, your balance of {gambler.Balance} is not enough to bet {wager} on krash.",
+                true, autoDeleteAfter: TimeSpan.FromSeconds(5));
+            return;
+        }
         if (botInstance.BotServices.KasinoKrash.theGame == null)
         {
             //start a new game
