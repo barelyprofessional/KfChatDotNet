@@ -19,13 +19,9 @@ public class KasinoKrash : IDisposable
     private IDatabase? _redisDb;
     private ChatBot _kfChatBot;
     private CancellationToken _ct;
-    private CancellationTokenSource _rainCts = new();
     public decimal HOUSE_EDGE = 0.98m;
     public KasinoKrashModel? theGame;
 
-    private string BASE = "⬛";
-    private string RISE = "📈";
-    private string FALL = "📉";
     
     public KasinoKrash(ChatBot kfChatBot, CancellationToken ct = default) //the service itself
     {
@@ -159,20 +155,21 @@ public class KasinoKrash : IDisposable
         //change these to change the speed of the game
         decimal growthRate = 1.02m;
         decimal growthAcceleration = 1.00185m;
-        await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid);
+        await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
         msg = await _kfChatBot.SendChatMessageAsync($"[center][b][size=200][color=limegreen]{theGame.currentMulti}x");
         decimal defaultGrowth = 0.01m;
         interval = TimeSpan.FromSeconds(0.1);
         timer = new PeriodicTimer(interval);
         while (await timer.WaitForNextTickAsync(_ct))
         {
-            await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid, $"[center][b][size=200][color=limegreen]{theGame.currentMulti}x");
+            await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=limegreen]{theGame.currentMulti}x");
             theGame.currentMulti += defaultGrowth;
             defaultGrowth *= growthRate;
             growthRate *= growthAcceleration;
             if (theGame.currentMulti >= theGame.finalMulti) break;
         }
         //at this point the game crashes and everybody who did not cash out or pre bet on a multi will have balance subtracted, winners will be paid out.
+        await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=red]{theGame.finalMulti}x");
         foreach (var bet in theGame.bets)
         {
             if (bet.multi <= theGame.finalMulti)
