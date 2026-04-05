@@ -72,7 +72,10 @@ public class PlinkoCommand : ICommand
         VACUUM += 1 - (double)HOUSE_EDGE;
         validPositions = new List<(int row, int col)>() { (0, DIFFICULTY-1) };
         validColumnsForRow = new Dictionary<int, List<int>>(){{0, new List<int>(){DIFFICULTY-1}}};
-        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         //calculate all the valid positions for the difficulty
         for (int i = 1; i < DIFFICULTY; i++)
         {

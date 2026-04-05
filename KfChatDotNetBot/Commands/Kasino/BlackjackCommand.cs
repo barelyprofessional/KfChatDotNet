@@ -61,6 +61,11 @@ public class BlackjackCommand : ICommand
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
         }
+        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
 
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoBlackjackCleanupDelay].ToType<int>());
 

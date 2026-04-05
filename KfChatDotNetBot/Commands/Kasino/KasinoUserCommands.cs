@@ -40,6 +40,10 @@ public class GetBalanceCommand : ICommand
                 $"{await botInstance.BotServices.KasinoShop.Gambler_Profiles[user.KfId].FormatBalanceAsync()}", true,
                 autoDeleteAfter: TimeSpan.FromSeconds(10));
         }
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
     }
 }
 
@@ -100,6 +104,7 @@ public class SendJuiceCommand : ICommand
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
         var targetUser = await db.Users.FirstOrDefaultAsync(u => u.KfId == int.Parse(arguments["user_id"].Value), ctx);
         var amount = decimal.Parse(arguments["amount"].Value);
+        
         if (gambler == null)
         {
             logger.Error($"Caught a null when looking up {user.KfUsername}");
@@ -137,6 +142,7 @@ public class SendJuiceCommand : ICommand
             await botInstance.BotServices.KasinoShop.ProcessJuicerOrRainTracking(gambler, targetGambler, amount);
         }
         //------------------------------------------------------------------------------------------------
+        
     }
 }
 
@@ -168,6 +174,7 @@ public class RakebackCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.MoneyRakebackPercentage, BuiltIn.Keys.MoneyRakebackMinimumAmount
         ]);
+        
         var mostRecentRakeback = await db.Transactions.OrderBy(x => x.Id).LastOrDefaultAsync(tx =>
             tx.EventSource == TransactionSourceEventType.Rakeback && tx.Gambler.Id == gambler.Id, cancellationToken: ctx);
         long offset = 0;
