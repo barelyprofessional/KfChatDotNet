@@ -189,7 +189,7 @@ public class KasinoMines
                 value += "[br]";
             }
 
-            value += $"{Creator.User.FormatUsername()}";
+            value += $"{Creator.User.FormatUsername()} [ditto]!mines 1[/ditto] [ditto]!mines cashout[/ditto]";
             return value;
         }
         
@@ -330,6 +330,7 @@ public class KasinoMines
                 else str += "⬜";
                 
             }
+            str += "[br]";
         }
         await _kfChatBot.KfClient.EditMessageAsync(game.LastMessageId!, str);
         var net = payout - game.Wager;
