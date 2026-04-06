@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -66,7 +66,10 @@ public class LambchopCommand : ICommand
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoLambchopCleanupDelay,
             BuiltIn.Keys.KasinoLambchopEnabled
         ]);
-        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         // Check if lambchop is enabled
         var lambchopEnabled = (settings[BuiltIn.Keys.KasinoLambchopEnabled]).ToBoolean();
         if (!lambchopEnabled)
