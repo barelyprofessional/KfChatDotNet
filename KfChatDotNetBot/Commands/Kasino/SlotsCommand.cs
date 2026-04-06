@@ -49,7 +49,10 @@ public class SlotsCommand : ICommand
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoSlotsEnabled
         ]);
-        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         // Check if slots is enabled
         var slotsEnabled = (settings[BuiltIn.Keys.KasinoSlotsEnabled]).ToBoolean();
         if (!slotsEnabled)

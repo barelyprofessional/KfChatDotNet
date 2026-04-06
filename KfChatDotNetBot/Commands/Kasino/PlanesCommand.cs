@@ -51,7 +51,10 @@ public class Planes : ICommand
             BuiltIn.Keys.KasinoPlanesCleanupDelay, BuiltIn.Keys.KasinoPlanesRandomRiggeryEnabled,
             BuiltIn.Keys.KasinoPlanesTargetedRiggeryEnabled, BuiltIn.Keys.KasinoPlanesTargetedRiggeryVictims
         ]);
-        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         // Check if planes is enabled
         var planesEnabled = (settings[BuiltIn.Keys.KasinoPlanesEnabled]).ToBoolean();
         if (!planesEnabled)

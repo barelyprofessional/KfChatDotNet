@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using System.Globalization;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -69,7 +69,10 @@ public class WheelCommand : ICommand
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoWheelCleanupDelay,
             BuiltIn.Keys.KasinoWheelEnabled
         ]);
-        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         // Check if wheel is enabled
         var wheelEnabled = (settings[BuiltIn.Keys.KasinoWheelEnabled]).ToBoolean();
         if (!wheelEnabled)

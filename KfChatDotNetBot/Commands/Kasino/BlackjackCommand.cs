@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -60,6 +60,11 @@ public class BlackjackCommand : ICommand
                 $"{user.FormatUsername()}, blackjack is currently disabled.",
                 true, autoDeleteAfter: gameDisabledCleanupDelay);
             return;
+        }
+        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
         }
 
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoBlackjackCleanupDelay].ToType<int>());

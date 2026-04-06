@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
@@ -36,6 +36,11 @@ public class DiceCommand : ICommand
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoDiceCleanupDelay,
             BuiltIn.Keys.KasinoDiceEnabled
         ]);
+        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
 
         // Check if dice is enabled
         var diceEnabled = (settings[BuiltIn.Keys.KasinoDiceEnabled]).ToBoolean();

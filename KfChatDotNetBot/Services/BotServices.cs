@@ -42,6 +42,7 @@ public class BotServices
     private YouTubePubSub? _youTubePubSub;
     public KasinoRain? KasinoRain;
     public KasinoShop? KasinoShop;
+    public KasinoKrash? KasinoKrash;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -95,7 +96,8 @@ public class BotServices
             BuildShuffleDotUs(),
             BuildYouTubePubSub(),
             BuildKasinoRain(),
-            BuildKasinoShop()
+            BuildKasinoShop(),
+            BuildKasinoKrash()
         ];
         try
         {
@@ -112,6 +114,12 @@ public class BotServices
         _howlggGetUserTimer = HowlggGetUserTimer();
     }
 
+    private async Task BuildKasinoKrash()
+    {
+        _logger.Debug("Building the Kasino Krash thingy");
+        KasinoKrash = new KasinoKrash(_chatBot, _cancellationToken);
+    }
+    
     private async Task BuildKasinoRain()
     {
         _logger.Debug("Building the Kasino Rain thingy");

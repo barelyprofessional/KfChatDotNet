@@ -47,7 +47,10 @@ public class KenoCommand : ICommand
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoKenoCleanupDelay,
             BuiltIn.Keys.KasinoKenoFrameDelay, BuiltIn.Keys.KasinoKenoEnabled
         ]);
-
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         // Check if keno is enabled
         var kenoEnabled = (settings[BuiltIn.Keys.KasinoKenoEnabled]).ToBoolean();
         if (!kenoEnabled)

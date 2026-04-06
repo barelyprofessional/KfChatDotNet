@@ -42,7 +42,10 @@ public class LimboCommand : ICommand
             BuiltIn.Keys.KasinoLimboCleanupDelay, BuiltIn.Keys.KasinoLimboEnabled, 
             BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
         ]);
-        
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         // Check if limbo is enabled
         var limboEnabled = (settings[BuiltIn.Keys.KasinoLimboEnabled]).ToBoolean();
         if (!limboEnabled)

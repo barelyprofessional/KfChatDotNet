@@ -56,6 +56,10 @@ public class MinesCommand : ICommand
             BuiltIn.Keys.KasinoMinesEnabled, BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay
         ]);
         var cleanupDelay = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoMinesCleanupDelay].ToType<int>());
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
         if (!settings[BuiltIn.Keys.KasinoMinesEnabled].ToBoolean())
         {
             var gameDisabledCleanupDelay= TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay].ToType<int>());
