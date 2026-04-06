@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
@@ -126,6 +126,10 @@ public class RouletteCommand : ICommand
         }
 
         await PlaceBet(botInstance, user, amountGroup.Value, betGroup.Value.Trim(), countdownDuration, ctx);
+        if (message is { IsWhisper: false, MessageUuid: not null })
+        {
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid);
+        }
     }
 
     private async Task PlaceBet(ChatBot botInstance, UserDbModel user, string amountStr, string betStr,
