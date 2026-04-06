@@ -39,7 +39,7 @@ public class MinesCommand : ICommand
     
     public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
     {
-        MaxInvocations = 3,
+        MaxInvocations = 10,
         Window = TimeSpan.FromSeconds(10)
     };
     public bool WhisperCanInvoke => false;
