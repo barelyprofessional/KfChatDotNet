@@ -153,7 +153,7 @@ public class KasinoKrash : IDisposable
         while (await timer.WaitForNextTickAsync(_ct))
         {
             TheGame.KrashAccepted = true;
-            await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=limegreen]{TheGame.CurrentMulti}x");
+            await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=limegreen]{Math.Truncate(TheGame.CurrentMulti*100)/100}x");
             TheGame.CurrentMulti += defaultGrowth;
             defaultGrowth *= growthRate;
             growthRate *= growthAcceleration;
