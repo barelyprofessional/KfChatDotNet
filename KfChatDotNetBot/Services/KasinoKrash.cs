@@ -102,7 +102,7 @@ public class KasinoKrash : IDisposable
         TheGame.Bets.Add(bet);
         if (_kfChatBot.BotServices.KasinoShop != null)
         {
-            HOUSE_EDGE -= _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[gambler.User.KfId].HouseEdgeModifier;
+            HOUSE_EDGE = _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[gambler.User.KfId].HouseEdgeModifier;
         }
         await SaveKrashState(TheGame);
     }
@@ -114,7 +114,7 @@ public class KasinoKrash : IDisposable
         await SaveKrashState(TheGame);
         if (_kfChatBot.BotServices.KasinoShop != null)
         {
-            HOUSE_EDGE -= _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[creator.User.KfId].HouseEdgeModifier;
+            HOUSE_EDGE = (HOUSE_EDGE + _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[creator.User.KfId].HouseEdgeModifier)/2;
         }
         _ = RunGame();
         
@@ -207,7 +207,8 @@ public class KasinoKrash : IDisposable
                 }
             }
         }
-        
+
+        HOUSE_EDGE = 0.98m;
         //now close the game
         await Task.Delay(5000);
         await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
