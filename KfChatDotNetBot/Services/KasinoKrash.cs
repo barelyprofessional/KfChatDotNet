@@ -72,7 +72,7 @@ public class KasinoKrash : IDisposable
         
         //find which bet is yours
         var index = TheGame.Bets.TakeWhile(bet => bet.Gambler.User.KfId != gambler.User.KfId).Count();
-
+        
         var krashBet = TheGame.Bets[index];
         TheGame.Bets.RemoveAt(index);
         var payout = TheGame.CurrentMulti * krashBet.Wager - krashBet.Wager;
@@ -162,7 +162,7 @@ public class KasinoKrash : IDisposable
         await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color=red]{TheGame.FinalMulti}x");
         foreach (var bet in TheGame.Bets)
         {
-            if (bet.Multi <= TheGame.FinalMulti)
+            if (bet.Multi <= TheGame.FinalMulti && bet.Multi != -1)
             {
                 //you win
                 var payout = TheGame.CurrentMulti * bet.Wager - bet.Wager;
@@ -192,6 +192,7 @@ public class KasinoKrash : IDisposable
         }
         
         //now close the game
+        await Task.Delay(5000);
         await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
         await RemoveKrashState();
     }
