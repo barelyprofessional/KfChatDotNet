@@ -119,16 +119,23 @@ public class KasinoKrash : IDisposable
             return;
         }
         var msg = await _kfChatBot.SendChatMessageAsync(
-            $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have 30 seconds to place your bets.", true);
+            $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have 30 seconds to place your bets. [ditto]!krash[/ditto] <amount> <optional multi>", true);
         var preGameTimer = TimeSpan.FromSeconds(30);
         var interval = TimeSpan.FromSeconds(1);
         var timer = new PeriodicTimer(interval);
+        
         while (await timer.WaitForNextTickAsync(_ct)) //timer before starting the game
         {
             var bets = "";
-            foreach (var bet in TheGame.Bets) bets += $"{bet.Gambler.User.FormatUsername()} is betting {bet.Wager}[br]";
+            foreach (var bet in TheGame.Bets)
+            {
+                bets += $"{bet.Gambler.User.FormatUsername()} is betting {bet.Wager}";
+                if (bet.Multi != -1) bets += $" on {bet.Multi}x!";
+                else bets += " on freehand!";
+                bets += "[br]";
+            }
             await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid,
-                $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have {preGameTimer} to place your bets.[br]{bets}");
+                $"{TheGame.Creator.User.FormatUsername()} started a Krash! You have [b]{preGameTimer}[/b] to place your bets.[br]{bets}");
             preGameTimer -= interval;
             if (preGameTimer <= TimeSpan.Zero)
             {
