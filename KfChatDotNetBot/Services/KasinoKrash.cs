@@ -17,7 +17,7 @@ public class KasinoKrash : IDisposable
     private ChatBot _kfChatBot;
     private CancellationToken _ct;
     public KasinoKrashModel? TheGame;
-
+    public static decimal HOUSE_EDGE = (decimal)0.98;
     
     public KasinoKrash(ChatBot kfChatBot, CancellationToken ct = default) //the service itself
     {
@@ -100,6 +100,10 @@ public class KasinoKrash : IDisposable
         if (!TheGame.BetsAccepted) return;
         var bet = new KrashBet{Gambler = gambler, Wager = wager, Multi = multi};
         TheGame.Bets.Add(bet);
+        if (_kfChatBot.BotServices.KasinoShop != null)
+        {
+            HOUSE_EDGE -= _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[gambler.User.KfId].HouseEdgeModifier;
+        }
         await SaveKrashState(TheGame);
     }
 
@@ -108,7 +112,12 @@ public class KasinoKrash : IDisposable
         TheGame = new KasinoKrashModel(creator);
         TheGame.Bets.Add(new KrashBet{Gambler = creator, Wager = wager, Multi = multi});
         await SaveKrashState(TheGame);
+        if (_kfChatBot.BotServices.KasinoShop != null)
+        {
+            HOUSE_EDGE -= _kfChatBot.BotServices.KasinoShop.DefaultHouseEdgeModifier - _kfChatBot.BotServices.KasinoShop.Gambler_Profiles[creator.User.KfId].HouseEdgeModifier;
+        }
         _ = RunGame();
+        
     }
     public async Task RunGame() //running the actual game
     {
@@ -229,7 +238,7 @@ public class KasinoKrash : IDisposable
 
             // The core 1/x logic
             var result = 1.0 / (1.0 - r);
-
+            result *= (double)HOUSE_EDGE;
             // Clamp the result to your specific range
             if (result < minValue) result = minValue;
             if (result > maxValue) result = maxValue;
