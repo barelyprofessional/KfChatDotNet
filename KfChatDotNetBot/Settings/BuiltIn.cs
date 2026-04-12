@@ -574,6 +574,14 @@ public static class BuiltIn
         public static string KasinoKrashEnabled = "Kasino.Krash.Enabled";
         [BuiltInSetting("Delay in milliseconds before cleaning up krash", SettingValueType.Text, "10000", WholeNumberRegex)]
         public static string KasinoKrashCleanupDelay = "Kasino.Krash.CleanupDelay";
+        [BuiltInSetting("Whether Whisper transcription is enabled", SettingValueType.Boolean, "false", BooleanRegex)]
+        public static string WhisperEnabled = "Whisper.Enabled";
+        [BuiltInSetting("OpenAI Whisper API endpoint", SettingValueType.Text, "https://api.openai.com/v1/audio/transcriptions")]
+        public static string WhisperEndpoint = "Whisper.Endpoint";
+        [BuiltInSetting("Whisper model to use", SettingValueType.Text, "whisper-1")]
+        public static string WhisperModel = "Whisper.Model";
+        [BuiltInSetting("Maximum audio file size in bytes for Whisper transcription (default 25MB)", SettingValueType.Text, "26214400", WholeNumberRegex)]
+        public static string WhisperMaxFileSize = "Whisper.MaxFileSize";
     }
 }
 

@@ -926,9 +926,47 @@ public class BotServices
         var result = $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username}: {message.Content?.Replace("❤️", ":feels:")}";
         foreach (var attachment in message.Attachments ?? [])
         {
-            result += $"[br]Attachment: {attachment.GetProperty("filename").GetString()} {attachment.GetProperty("url").GetString()}";
+            var filename = attachment.GetProperty("filename").GetString() ?? "unknown";
+            var url = attachment.GetProperty("url").GetString() ?? "";
+
+            // Discord voice messages have content_type audio/ogg and the IS_VOICE_MESSAGE flag (1 << 13)
+            var isVoiceMessage = false;
+            if (attachment.TryGetProperty("content_type", out var contentTypeProp) &&
+                contentTypeProp.GetString()?.StartsWith("audio/") == true &&
+                attachment.TryGetProperty("flags", out var flagsProp) &&
+                flagsProp.TryGetInt32(out var flags) &&
+                (flags & (1 << 13)) != 0)
+            {
+                isVoiceMessage = true;
+            }
+
+            if (isVoiceMessage)
+            {
+                result += "[br]🎤 Voice message";
+                try
+                {
+                    var transcription = WhisperTranscription.TranscribeFromUrlAsync(url, filename, _cancellationToken).Result;
+                    if (transcription != null)
+                    {
+                        result += $": [i]{transcription}[/i]";
+                    }
+                    else
+                    {
+                        result += " (transcription unavailable)";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to transcribe Discord voice message");
+                    result += " (transcription failed)";
+                }
+            }
+            else
+            {
+                result += $"[br]Attachment: {filename} {url}";
+            }
         }
-        
+
         _chatBot.SendChatMessage(result, TemporarilyBypassGambaSeshForDiscord);
         UpdateBossmanLastSighting("talking in Discord").Wait(_cancellationToken);
     }
