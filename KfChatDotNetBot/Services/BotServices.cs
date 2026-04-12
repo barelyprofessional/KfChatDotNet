@@ -924,42 +924,21 @@ public class BotServices
         }
         
         var result = $"[img]{settings[BuiltIn.Keys.DiscordIcon].Value}[/img] {message.Author.GlobalName ?? message.Author.Username}: {message.Content?.Replace("❤️", ":feels:")}";
+        var voiceMessages = new List<(string Url, string Filename)>();
         foreach (var attachment in message.Attachments ?? [])
         {
             var filename = attachment.GetProperty("filename").GetString() ?? "unknown";
             var url = attachment.GetProperty("url").GetString() ?? "";
 
             // Discord voice messages have content_type audio/ogg and the IS_VOICE_MESSAGE flag (1 << 13)
-            var isVoiceMessage = false;
             if (attachment.TryGetProperty("content_type", out var contentTypeProp) &&
                 contentTypeProp.GetString()?.StartsWith("audio/") == true &&
                 attachment.TryGetProperty("flags", out var flagsProp) &&
                 flagsProp.TryGetInt32(out var flags) &&
                 (flags & (1 << 13)) != 0)
             {
-                isVoiceMessage = true;
-            }
-
-            if (isVoiceMessage)
-            {
-                result += "[br]🎤 Voice message";
-                try
-                {
-                    var transcription = WhisperTranscription.TranscribeFromUrlAsync(url, filename, _cancellationToken).Result;
-                    if (transcription != null)
-                    {
-                        result += $": [i]{transcription}[/i]";
-                    }
-                    else
-                    {
-                        result += " (transcription unavailable)";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "Failed to transcribe Discord voice message");
-                    result += " (transcription failed)";
-                }
+                result += "[br]🎤 Voice message (transcribing...)";
+                voiceMessages.Add((url, filename));
             }
             else
             {
@@ -967,8 +946,50 @@ public class BotServices
             }
         }
 
-        _chatBot.SendChatMessage(result, TemporarilyBypassGambaSeshForDiscord);
+        var sentMsg = _chatBot.SendChatMessage(result, TemporarilyBypassGambaSeshForDiscord);
         UpdateBossmanLastSighting("talking in Discord").Wait(_cancellationToken);
+
+        // Transcribe voice messages in the background, then edit the sent message
+        if (voiceMessages.Count > 0)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Wait for the message to be echoed so we have a UUID to edit
+                    if (!await _chatBot.WaitForChatMessageAsync(sentMsg, TimeSpan.FromSeconds(10), _cancellationToken))
+                    {
+                        _logger.Warn("Voice message never got echoed, can't edit with transcription");
+                        return;
+                    }
+
+                    var edited = result;
+                    foreach (var (url, filename) in voiceMessages)
+                    {
+                        var transcription = await WhisperTranscription.TranscribeFromUrlAsync(url, filename, _cancellationToken);
+                        if (transcription != null)
+                        {
+                            edited = edited.Replace("🎤 Voice message (transcribing...)",
+                                $"🎤 Voice message: [i]{transcription}[/i]");
+                        }
+                        else
+                        {
+                            edited = edited.Replace("🎤 Voice message (transcribing...)",
+                                "🎤 Voice message (transcription unavailable)");
+                        }
+                    }
+
+                    if (sentMsg.ChatMessageUuid != null)
+                    {
+                        await _chatBot.KfClient.EditMessageAsync(sentMsg.ChatMessageUuid, edited);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to transcribe Discord voice message");
+                }
+            }, _cancellationToken);
+        }
     }
 
     private async Task DiscordFlashText(SentMessageTrackerModel msg)

@@ -1,61 +1,46 @@
+using System.Diagnostics;
 using System.Net;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using KfChatDotNetBot.Settings;
 using NLog;
 
 namespace KfChatDotNetBot.Services;
 
 /// <summary>
-/// OpenAI Whisper API integration for voice message transcription.
+/// Local OpenAI Whisper integration for voice message transcription.
 ///
-/// Used to transcribe Discord voice messages from monitored users.
-/// Downloads audio from a URL and sends it to the Whisper API for speech-to-text.
+/// Downloads audio from a URL and runs it through a local Whisper binary
+/// (openai-whisper CLI) for speech-to-text transcription.
 ///
-/// API Documentation: https://platform.openai.com/docs/api-reference/audio/createTranscription
-/// API Endpoint: https://api.openai.com/v1/audio/transcriptions
-///
-/// Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg, flac
-/// Max file size: 25MB (configurable via Whisper.MaxFileSize setting)
+/// Requires: pip install openai-whisper (or faster-whisper)
 ///
 /// Configuration:
-/// - Whisper.ApiKey: OpenAI API key for Whisper (required)
 /// - Whisper.Enabled: Feature toggle (default: false)
-/// - Whisper.Endpoint: API endpoint (optional override)
-/// - Whisper.Model: Model name (default: whisper-1)
-/// - Whisper.MaxFileSize: Max download size in bytes (default: 25MB)
-/// - Proxy: Global proxy setting (optional)
+/// - Whisper.BinaryPath: Path to the whisper binary (default: whisper)
+/// - Whisper.Model: Model size - tiny, base, small, medium, large (default: base)
+/// - Proxy: Global proxy setting (optional, used for downloading)
 /// </summary>
 public static class WhisperTranscription
 {
     private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-    public class TranscriptionResponse
-    {
-        [JsonPropertyName("text")] public string Text { get; set; } = string.Empty;
-    }
-
     /// <summary>
-    /// Downloads audio from a URL and transcribes it via the OpenAI Whisper API.
+    /// Downloads audio from a URL and transcribes it using local Whisper.
     ///
     /// Flow:
-    /// 1. Validate settings (API key, feature enabled)
-    /// 2. Download audio from URL with size limit enforcement
-    /// 3. Send multipart/form-data request to Whisper endpoint
-    /// 4. Return transcribed text
+    /// 1. Check if feature is enabled
+    /// 2. Download audio from URL to a temp file
+    /// 3. Run whisper CLI on the temp file with --output_format txt
+    /// 4. Read the output text file and return the transcription
+    /// 5. Clean up temp files
     ///
-    /// Returns null on any failure (missing config, download error, API error).
-    /// All errors are logged via NLog.
+    /// Returns null on any failure. All errors are logged via NLog.
     /// </summary>
     public static async Task<string?> TranscribeFromUrlAsync(string url, string fileName, CancellationToken ct = default)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.WhisperApiKey,
             BuiltIn.Keys.WhisperEnabled,
-            BuiltIn.Keys.WhisperEndpoint,
+            BuiltIn.Keys.WhisperBinaryPath,
             BuiltIn.Keys.WhisperModel,
-            BuiltIn.Keys.WhisperMaxFileSize,
             BuiltIn.Keys.Proxy
         ]);
 
@@ -65,91 +50,95 @@ public static class WhisperTranscription
             return null;
         }
 
-        var apiKey = settings[BuiltIn.Keys.WhisperApiKey].Value;
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            Logger.Error("OpenAI API key is not set, cannot transcribe");
-            return null;
-        }
-
-        var maxFileSize = long.Parse(settings[BuiltIn.Keys.WhisperMaxFileSize].Value ?? "26214400");
-        var endpoint = settings[BuiltIn.Keys.WhisperEndpoint].Value
-                       ?? "https://api.openai.com/v1/audio/transcriptions";
-        var model = settings[BuiltIn.Keys.WhisperModel].Value ?? "whisper-1";
+        var whisperBinary = settings[BuiltIn.Keys.WhisperBinaryPath].Value ?? "whisper";
+        var model = settings[BuiltIn.Keys.WhisperModel].Value ?? "base";
 
         var handler = new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All };
         if (settings[BuiltIn.Keys.Proxy].Value != null)
         {
             handler.UseProxy = true;
             handler.Proxy = new WebProxy(settings[BuiltIn.Keys.Proxy].Value);
-            Logger.Debug($"Using proxy {settings[BuiltIn.Keys.Proxy].Value}");
         }
 
-        using var client = new HttpClient(handler);
+        var tempDir = Path.Combine(Path.GetTempPath(), $"whisper_{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
+        var ext = Path.GetExtension(fileName);
+        if (string.IsNullOrEmpty(ext)) ext = ".ogg";
+        var tempAudioPath = Path.Combine(tempDir, $"voice{ext}");
 
         try
         {
             // Download the audio file
             Logger.Info($"Downloading voice message from {url}");
-            using var downloadRequest = new HttpRequestMessage(HttpMethod.Get, url);
-            using var downloadResponse = await client.SendAsync(downloadRequest, HttpCompletionOption.ResponseHeadersRead, ct);
-            downloadResponse.EnsureSuccessStatusCode();
+            using var client = new HttpClient(handler);
+            var audioBytes = await client.GetByteArrayAsync(url, ct);
+            await File.WriteAllBytesAsync(tempAudioPath, audioBytes, ct);
+            Logger.Info($"Downloaded {audioBytes.Length} bytes to {tempAudioPath}");
 
-            if (downloadResponse.Content.Headers.ContentLength > maxFileSize)
+            // Run local whisper
+            var args = $"\"{tempAudioPath}\" --model {model} --output_format txt --output_dir \"{tempDir}\"";
+            Logger.Info($"Running: {whisperBinary} {args}");
+
+            var processInfo = new ProcessStartInfo
             {
-                Logger.Warn($"Voice message too large: {downloadResponse.Content.Headers.ContentLength} bytes (max {maxFileSize})");
+                FileName = whisperBinary,
+                Arguments = args,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(processInfo);
+            if (process == null)
+            {
+                Logger.Error("Failed to start Whisper process");
                 return null;
             }
 
-            // Read into memory with size limit
-            await using var responseStream = await downloadResponse.Content.ReadAsStreamAsync(ct);
-            using var memoryStream = new MemoryStream();
-            var buffer = new byte[81920];
-            long totalRead = 0;
-            int bytesRead;
-            while ((bytesRead = await responseStream.ReadAsync(buffer, ct)) > 0)
+            await process.WaitForExitAsync(ct);
+
+            if (process.ExitCode != 0)
             {
-                totalRead += bytesRead;
-                if (totalRead > maxFileSize)
-                {
-                    Logger.Warn($"Voice message exceeded max size during download ({maxFileSize} bytes)");
-                    return null;
-                }
-                memoryStream.Write(buffer, 0, bytesRead);
-            }
-
-            Logger.Info($"Downloaded {totalRead} bytes, sending to Whisper API");
-            memoryStream.Position = 0;
-
-            // Build multipart request for Whisper API
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-            using var formContent = new MultipartFormDataContent();
-            var fileContent = new StreamContent(memoryStream);
-            fileContent.Headers.ContentType = new MediaTypeHeaderValue(
-                downloadResponse.Content.Headers.ContentType?.MediaType ?? "application/octet-stream");
-            formContent.Add(fileContent, "file", fileName);
-            formContent.Add(new StringContent(model), "model");
-
-            var response = await client.PostAsync(endpoint, formContent, ct);
-            response.EnsureSuccessStatusCode();
-
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
-            var transcription = JsonSerializer.Deserialize<TranscriptionResponse>(responseBody);
-
-            if (string.IsNullOrWhiteSpace(transcription?.Text))
-            {
-                Logger.Warn("Whisper API returned empty transcription");
+                var stderr = await process.StandardError.ReadToEndAsync(ct);
+                Logger.Error($"Whisper exited with code {process.ExitCode}: {stderr}");
                 return null;
             }
 
-            Logger.Info($"Transcription received: {transcription.Text.Length} characters");
-            return transcription.Text;
+            // Whisper outputs a .txt file with the same base name as the input
+            var outputPath = Path.Combine(tempDir, "voice.txt");
+            if (!File.Exists(outputPath))
+            {
+                Logger.Error($"Whisper output file not found at {outputPath}");
+                return null;
+            }
+
+            var transcription = (await File.ReadAllTextAsync(outputPath, ct)).Trim();
+
+            if (string.IsNullOrWhiteSpace(transcription))
+            {
+                Logger.Warn("Whisper returned empty transcription");
+                return null;
+            }
+
+            Logger.Info($"Transcription received: {transcription.Length} characters");
+            return transcription;
         }
         catch (Exception ex)
         {
             Logger.Error(ex, "Error during Whisper transcription");
             return null;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to cleanup Whisper temp files");
+            }
         }
     }
 }
