@@ -20,7 +20,7 @@ namespace KfChatDotNetBot.Services;
 /// Max file size: 25MB (configurable via Whisper.MaxFileSize setting)
 ///
 /// Configuration:
-/// - OpenAi.ApiKey: Your OpenAI API key (required, shared with moderation)
+/// - Whisper.ApiKey: OpenAI API key for Whisper (required)
 /// - Whisper.Enabled: Feature toggle (default: false)
 /// - Whisper.Endpoint: API endpoint (optional override)
 /// - Whisper.Model: Model name (default: whisper-1)
@@ -51,7 +51,7 @@ public static class WhisperTranscription
     public static async Task<string?> TranscribeFromUrlAsync(string url, string fileName, CancellationToken ct = default)
     {
         var settings = await SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.OpenAiApiKey,
+            BuiltIn.Keys.WhisperApiKey,
             BuiltIn.Keys.WhisperEnabled,
             BuiltIn.Keys.WhisperEndpoint,
             BuiltIn.Keys.WhisperModel,
@@ -65,7 +65,7 @@ public static class WhisperTranscription
             return null;
         }
 
-        var apiKey = settings[BuiltIn.Keys.OpenAiApiKey].Value;
+        var apiKey = settings[BuiltIn.Keys.WhisperApiKey].Value;
         if (string.IsNullOrEmpty(apiKey))
         {
             Logger.Error("OpenAI API key is not set, cannot transcribe");

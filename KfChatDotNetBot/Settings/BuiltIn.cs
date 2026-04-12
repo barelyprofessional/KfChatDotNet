@@ -574,6 +574,8 @@ public static class BuiltIn
         public static string KasinoKrashEnabled = "Kasino.Krash.Enabled";
         [BuiltInSetting("Delay in milliseconds before cleaning up krash", SettingValueType.Text, "10000", WholeNumberRegex)]
         public static string KasinoKrashCleanupDelay = "Kasino.Krash.CleanupDelay";
+        [BuiltInSetting("OpenAI API key for Whisper transcription", SettingValueType.Text, isSecret: true)]
+        public static string WhisperApiKey = "Whisper.ApiKey";
         [BuiltInSetting("Whether Whisper transcription is enabled", SettingValueType.Boolean, "false", BooleanRegex)]
         public static string WhisperEnabled = "Whisper.Enabled";
         [BuiltInSetting("OpenAI Whisper API endpoint", SettingValueType.Text, "https://api.openai.com/v1/audio/transcriptions")]
