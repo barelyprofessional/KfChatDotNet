@@ -43,6 +43,7 @@ public class BotServices
     public KasinoRain? KasinoRain;
     public KasinoShop? KasinoShop;
     public KasinoKrash? KasinoKrash;
+    private Winna? _winna;
     
     private Task? _websocketWatchdog;
     private Task? _howlggGetUserTimer;
@@ -97,7 +98,8 @@ public class BotServices
             BuildYouTubePubSub(),
             BuildKasinoRain(),
             BuildKasinoShop(),
-            BuildKasinoKrash()
+            BuildKasinoKrash(),
+            BuildWinna()
         ];
         try
         {
@@ -141,6 +143,16 @@ public class BotServices
         await _shuffle.StartWsClient();
     }
     
+    private async Task BuildWinna()
+    {
+        _logger.Debug("Building Winna");
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.WinnaEnabled, BuiltIn.Keys.Proxy]);
+        if (!settings[BuiltIn.Keys.WinnaEnabled].ToBoolean()) return;
+        _winna = new Winna(settings[BuiltIn.Keys.Proxy].Value);
+        _winna.OnWinnaBet += OnWinnaBet;
+        await _winna.StartWsClient();
+    }
+
     private async Task BuildShuffleDotUs()
     {
         _logger.Debug("Building Shuffle.us");
@@ -426,7 +438,7 @@ public class BotServices
                 BuiltIn.Keys.KickEnabled, BuiltIn.Keys.HowlggEnabled, BuiltIn.Keys.ChipsggEnabled,
                 BuiltIn.Keys.ClashggEnabled, BuiltIn.Keys.BetBoltEnabled, BuiltIn.Keys.YeetEnabled,
                 BuiltIn.Keys.RainbetEnabled, BuiltIn.Keys.PartiEnabled, BuiltIn.Keys.JackpotEnabled,
-                BuiltIn.Keys.YouTubePubSubEnabled
+                BuiltIn.Keys.YouTubePubSubEnabled, BuiltIn.Keys.WinnaEnabled
             ]);
             try
             {
@@ -549,6 +561,14 @@ public class BotServices
                     _youTubePubSub.Dispose();
                     _youTubePubSub = null;
                     await BuildYouTubePubSub();
+                }
+                
+                if (settings[BuiltIn.Keys.WinnaEnabled].ToBoolean() && _winna != null && !_winna.IsConnected())
+                {
+                    _logger.Error("Winna died, recreating it");
+                    _winna.Dispose();
+                    _winna = null!;
+                    await BuildWinna();
                 }
             }
             catch (Exception e)
@@ -1125,7 +1145,25 @@ public class BotServices
             preamble = "🦅🦅 Shuffle US! 🦅🦅";
         }
         // There will be a check for live status but ignoring that while we deal with an emergency dice situation
-        _chatBot.SendChatMessage($"{preamble} {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out [color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
+        _chatBot.SendChatMessage($"{preamble} {bet.Username} just bet {bet.Amount} {bet.Currency} which paid out " +
+                                 $"[color={payoutColor}]{bet.Payout} {bet.Currency}[/color] ({bet.Multiplier}x) on {bet.GameName} 💰💰", true);
+    }
+    
+    private void OnWinnaBet(object sender, WinnaBetModel bet)
+    {
+        var settings = SettingsProvider
+            .GetMultipleValuesAsync([
+                BuiltIn.Keys.WinnaBmjUsername, BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor,
+            ]).Result;
+        if (bet.Username != settings[BuiltIn.Keys.WinnaBmjUsername].Value) return;
+        var usd = bet.Amounts["USD"];
+        _ = UpdateBossmanLastSighting($"betting {bet.BetAmount:N} {bet.Currency} on {bet.GameName} at Winna");
+        var payoutColor = settings[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
+        if (bet.Multiplier < 1) payoutColor = settings[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        _chatBot.SendChatMessage(
+            $"🚨🚨 Winnafags! 🚨🚨 {bet.Username} just bet {bet.BetAmount:N} {bet.Currency} ({usd.BetAmount:C}) which paid out " +
+            $"[color={payoutColor}]{bet.Payout:N} {bet.Currency} ({usd.Payout:C})[/color] ({bet.Multiplier:N2} on {bet.GameName} 💰💰",
+            true);
     }
 
     private void OnTwitchStreamStateUpdated(object sender, string channelName, bool isLive)

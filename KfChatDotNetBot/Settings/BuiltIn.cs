@@ -580,6 +580,10 @@ public static class BuiltIn
         public static string WhisperBinaryPath = "Whisper.BinaryPath";
         [BuiltInSetting("Whisper model name (e.g. tiny, base, small, medium, large)", SettingValueType.Text, "base")]
         public static string WhisperModel = "Whisper.Model";
+        [BuiltInSetting("Whether Winna is enabled", SettingValueType.Boolean, "false", BooleanRegex)]
+        public static string WinnaEnabled = "Winna.Enabled";
+        [BuiltInSetting("BossmanJack's Winna username", SettingValueType.Text, "ImBossmanJack")]
+        public static string WinnaBmjUsername = "Winna.BmjUsername";
     }
 }
 
