@@ -156,6 +156,7 @@ public class KasinoKrash : IDisposable
         
         //any bets placed after this point will be cancelled, must wait until the last game finishes to start a new one.
         TheGame.BetsAccepted = false;
+        TheGame.KrashAccepted = true;
         await SaveKrashState(TheGame);
         
         //start the display of the game
@@ -166,7 +167,7 @@ public class KasinoKrash : IDisposable
         await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
         var green = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsGreenColor)).Value;
         var red = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsRedColor)).Value;
-        msg = await _kfChatBot.SendChatMessageAsync($"[center][b][size=200][color=limegreen]{TheGame.CurrentMulti}x");
+        msg = await _kfChatBot.SendChatMessageAsync($"[center][b][size=200][color=limegreen]{Math.Truncate(TheGame.CurrentMulti*100)/100.0m}x");
         var defaultGrowth = 0.01m;
         interval = TimeSpan.FromSeconds(0.1);
         timer = new PeriodicTimer(interval);
@@ -181,17 +182,31 @@ public class KasinoKrash : IDisposable
         }
         //at this point the game crashes and everybody who did not cash out or pre bet on a multi will have balance subtracted, winners will be paid out.
         await _kfChatBot.KfClient.EditMessageAsync(msg.ChatMessageUuid!, $"[center][b][size=200][color={red}]{TheGame.FinalMulti}x");
-        foreach (var bet in TheGame.Bets)
+        TheGame.KrashAccepted = false;
+        while (TheGame.Bets.Count >= 1)
         {
-            var freshBalance = await Money.GetGamblerEntityAsync(bet.Gambler.User.Id, ct: _ct);
-            if (freshBalance?.Balance < bet.Wager)
+            var bet = TheGame.Bets[0];
+            var freshBalance = (await Money.GetGamblerEntityAsync(bet.Gambler.User.Id, ct: _ct))!.Balance;
+            if (freshBalance < bet.Wager)
             {
-                await _kfChatBot.SendChatMessageAsync(
-                    $"Forfeited {bet.Gambler.User.FormatUsername()} as they no longer have a sufficient balance for their wager",
-                    true, autoDeleteAfter: TimeSpan.FromSeconds(10));
-                continue;
+                if (freshBalance < 1)
+                {
+                    await _kfChatBot.SendChatMessageAsync(
+                        $"{bet.Gambler.User.FormatUsername()}, bet nullified due to lack of balance.",
+                        true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+                }
+                else
+                {
+                    //scale the bet
+                    var ratio = freshBalance / bet.Wager;
+                    bet.Wager *= ratio;
+                    await _kfChatBot.SendChatMessageAsync(
+                        $"{bet.Gambler.User.FormatUsername()}, due to your poor gambling skills, your bet was scaled down to {await bet.Wager.FormatKasinoCurrencyAsync()} to match your remaining balance.",
+                        true, autoDeleteAfter: TimeSpan.FromSeconds(10));
+                    continue;
+                }
             }
-            if (bet.Multi <= TheGame.FinalMulti && bet.Multi != -1)
+            else if (bet.Multi <= TheGame.FinalMulti && bet.Multi != -1)
             {
                 //you win
                 var payout = bet.Multi * bet.Wager - bet.Wager;
@@ -218,11 +233,12 @@ public class KasinoKrash : IDisposable
                         -bet.Wager, newBalance);
                 }
             }
+            TheGame.Bets.RemoveAt(0);
         }
 
         HOUSE_EDGE = 0.98m;
         //now close the game
-        await Task.Delay(5000, _ct);
+        await Task.Delay(10000, _ct);
         await _kfChatBot.KfClient.DeleteMessageAsync(msg.ChatMessageUuid!);
         await RemoveKrashState();
     }
@@ -265,6 +281,7 @@ public class KasinoKrash : IDisposable
         public required GamblerDbModel Gambler{ get; set;}
         public required decimal Wager { get; set; }
         public required decimal Multi { get; set; }
+        
     }
     public void Dispose()
     {
