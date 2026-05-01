@@ -20,6 +20,7 @@
  */
 
 using System.Text;
+using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using Microsoft.EntityFrameworkCore;
 using NLog;
@@ -38,9 +39,19 @@ namespace KfChatDotNetBot
             await BuiltIn.SyncSettingsWithDb();
             logger.Info("Migrating settings from config.json (if needed)");
             await BuiltIn.MigrateJsonSettingsToDb();
+            logger.Info("Attempting to grab the Redis connection multiplexer so it's built");
+            try
+            {
+                _ = Redis.Multiplexer;
+            }
+            catch (Exception e)
+            {
+                logger.Error("Caught an error when attempting to grab the Redis multiplexer");
+                logger.Error(e);
+            }
             logger.Info("Handing over to bot now");
             Console.OutputEncoding = Encoding.UTF8;
-            new ChatBot();
+            _ = new ChatBot();
         }
     }
 }
