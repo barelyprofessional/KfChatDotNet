@@ -76,7 +76,7 @@ public class RouletteCommand : ICommand
             return;
         }
         
-        if (string.IsNullOrEmpty(settings[BuiltIn.Keys.BotRedisConnectionString].Value))
+        if (!Redis.IsAvailable)
         {
             await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, roulette is not available at this time", true,
                 autoDeleteAfter: TimeSpan.FromSeconds(15));
