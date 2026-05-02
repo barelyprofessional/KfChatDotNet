@@ -81,7 +81,7 @@ public class KrashBetCommand : ICommand
         if (wager > gambler.Balance)
         {
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, your balance of {gambler.Balance} is not enough to bet {wager} on krash.",
+                $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} is not enough to bet {wager} on krash.",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(5));
             return;
         }
