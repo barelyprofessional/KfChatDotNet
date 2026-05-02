@@ -18,7 +18,8 @@ public class GetBalanceCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex("^balance", RegexOptions.IgnoreCase),
-        new Regex("^bal$", RegexOptions.IgnoreCase)
+        new Regex("^bal$", RegexOptions.IgnoreCase),
+        new Regex("^bal exact$", RegexOptions.IgnoreCase)
     ];
     public string? HelpText => "Get your gamba balance";
     public UserRight RequiredRight => UserRight.Loser;
@@ -30,8 +31,17 @@ public class GetBalanceCommand : ICommand
         CancellationToken ctx)
     {
         var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
-        await botInstance.SendChatMessageAsync(
-            $"{user.FormatUsername()}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
+        if (message.MessageRawHtmlDecoded.EndsWith("exact"))
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, your balance is {gambler!.Balance}", true);
+        }
+        else
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, your balance is {await gambler!.Balance.FormatKasinoCurrencyAsync()}", true);
+        }
+
 
         if (botInstance.BotServices.KasinoShop != null)
         {
