@@ -586,6 +586,9 @@ public static class BuiltIn
         public static string WinnaBmjUsername = "Winna.BmjUsername";
         [BuiltInSetting("Array of cookies as a shitty hack to get Winna going", SettingValueType.Array, "[]")]
         public static string WinnaCookies = "Winna.Cookies";
+        [BuiltInSetting("Whether the DLive livestream check is enabled", SettingValueType.Boolean, "false",
+            BooleanRegex)]
+        public static string DLiveEnabled = "DLive.Enabled";
     }
 }
 

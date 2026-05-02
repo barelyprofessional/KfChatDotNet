@@ -390,12 +390,13 @@ public class BotServices
         _logger.Info("Built the almanac shill task");
     }
 
-    private Task BuildDLiveStatusCheck()
+    private async Task BuildDLiveStatusCheck()
     {
+        var enabled = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.DLiveEnabled)).ToBoolean();
+        if (!enabled) return;
         _dliveStatusCheck = new DLive(_chatBot);
         _dliveStatusCheck.StartLiveStatusCheck();
         _logger.Info("Built the DLive livestream status check task");
-        return Task.CompletedTask;
     }
     
     private Task BuildPeerTubeLiveStatusCheck()
