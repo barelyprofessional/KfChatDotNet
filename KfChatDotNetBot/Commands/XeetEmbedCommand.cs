@@ -351,6 +351,7 @@ public class XeetEmbedCommand : ICommand
             {
                 bodyBuilder.Append("[/spoiler]");
             }
+            bodyBuilder.Append("[br]");
         }
 
         // Handle quote tweet (if this tweet quotes another)
