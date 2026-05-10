@@ -657,6 +657,33 @@ public class ChatBot
             DeleteAt = DateTimeOffset.UtcNow.Add(deleteAfter)
         });
     }
+    
+    /// <summary>
+    /// Exposes the private task used to delete messages based on a TimeSpan in case you want to use it on-demand
+    /// e.g. for cleaning up a gambling message only after the game has finished
+    /// </summary>
+    /// <param name="messageUuid">The message you want to delete where you only have a message UUID
+    /// NOTE: The bot doesn't check against its sent message tracker, so you can use this with messages
+    /// the bot was not responsible for sending or were lost due to a restart.</param>
+    /// <param name="deleteAfter">When you want it deleted</param>
+    public void ScheduleMessageAutoDelete(string messageUuid, TimeSpan deleteAfter)
+    {
+        _scheduledDeletions.Add(new ScheduledAutoDeleteModel
+        {
+            Message = new SentMessageTrackerModel
+            {
+                ChatMessageUuid = messageUuid,
+                Delay = TimeSpan.Zero,
+                LastEdited = DateTimeOffset.UtcNow,
+                Message = "placeholder because I'm nigger rigging this shit big time",
+                Reference = Guid.NewGuid().ToString(),
+                SentAt = DateTimeOffset.UtcNow,
+                Status = SentMessageTrackerStatus.ResponseReceived,
+                Type = SentMessageType.ChatMessage
+            },
+            DeleteAt = DateTimeOffset.UtcNow.Add(deleteAfter)
+        });
+    }
 
     /// <summary>
     /// Non-async method which wraps the async method for sending a chat message
