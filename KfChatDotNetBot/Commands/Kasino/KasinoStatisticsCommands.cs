@@ -45,9 +45,13 @@ public class GetBiggestWins : ICommand
             bigWinsMsg += $"[br]{i}. {win.Gambler.User.KfUsername} bet {await win.WagerAmount.FormatKasinoCurrencyAsync()} on {win.Game.Humanize()} and won {await win.WagerEffect.FormatKasinoCurrencyAsync()} ({win.Multiplier:N}x)";
         }
 
-        await botInstance.SendChatMessageAsync($"Top 10 biggest wins for game day {gameDay:yyyy-MM-dd}" +
-            $"[br]Big Multees[br][spoiler]{multeesMsg}[/spoiler]" +
-            $"[br]Big Wins[br][spoiler]{bigWinsMsg}[/spoiler]", 
-            true, autoDeleteAfter: TimeSpan.FromSeconds(30));
+        var msgs = new List<string>
+        {
+            $"Top 10 biggest wins for game day {gameDay:yyyy-MM-dd}" +
+            $"[br]Big Multees[br][spoiler]{multeesMsg}[/spoiler]",
+            $"Big Wins[br][spoiler]{bigWinsMsg}[/spoiler]"
+        };
+        
+        await botInstance.SendChatMessagesAsync(msgs, true, autoDeleteAfter: TimeSpan.FromSeconds(60));
     }
 }
