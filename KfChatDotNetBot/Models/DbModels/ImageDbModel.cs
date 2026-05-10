@@ -6,4 +6,5 @@ public class ImageDbModel
     public required string Key { get; set; }
     public required string Url { get; set; }
     public required DateTimeOffset LastSeen { get; set; }
+    public string? Tags { get; set; }
 }
