@@ -97,6 +97,12 @@ public class AddImageTagsCommand : ICommand
         }
 
         image.TagList = image.TagList.Concat(tags).Distinct().ToList();
+        if (image.TagList.Count > 50)
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {id} has a shitload of tags already!",
+                true);
+            return;
+        }
         await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, updated tags for image ID {id} with {image.TagList.Humanize()}", true);
