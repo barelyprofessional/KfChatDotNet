@@ -48,8 +48,8 @@ public class GetBiggestWins : ICommand
         var msgs = new List<string>
         {
             $"Top 10 biggest wins for game day {gameDay:yyyy-MM-dd}" +
-            $"[br]Big Multees[br][spoiler]{multeesMsg}[/spoiler]",
-            $"Big Wins[br][spoiler]{bigWinsMsg}[/spoiler]"
+            $"[spoiler=\"Big Multees\"]{multeesMsg}[/spoiler]",
+            $"[spoiler=\"Big Wins\"]{bigWinsMsg}[/spoiler]"
         };
         
         await botInstance.SendChatMessagesAsync(msgs, true, autoDeleteAfter: TimeSpan.FromSeconds(60));
