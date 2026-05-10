@@ -96,6 +96,13 @@ public class AddImageTagsCommand : ICommand
             return;
         }
 
+        if (tags.Any(tag => tag.Length > 50))
+        {
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, tag length limit is 50 characters",
+                true);
+            return;
+        }
+
         image.TagList = image.TagList.Concat(tags).Distinct().ToList();
         if (image.TagList.Count > 50)
         {
