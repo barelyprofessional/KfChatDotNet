@@ -69,6 +69,71 @@ public class AddImageCommand : ICommand
     }
 }
 
+public class AddImageTagsCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin (image|images) tag (?<id>\d+) (?<tags>.+)$", RegexOptions.IgnoreCase),
+        new Regex(@"^(image|images) tag (?<id>\d+) (?<tags>.+)$", RegexOptions.IgnoreCase),
+    ];
+    public string HelpText => "Add tags to an image";
+    public UserRight RequiredRight => UserRight.Guest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var id = Convert.ToInt32(arguments["id"].Value);
+        var tags = arguments["tags"].Value.ToLower()
+            .Split(" ", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+        var image = await db.Images.FirstOrDefaultAsync(i => i.Id == id, cancellationToken: ctx);
+        if (image == null)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, the image ID you specified does not exist", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(15));
+            return;
+        }
+
+        image.TagList = tags;
+        await db.SaveChangesAsync(ctx);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, updated tags for image ID {id} with {tags.Humanize()}", true);
+    }
+}
+
+public class UntagImageCommand : ICommand
+{
+    public List<Regex> Patterns => [
+        new Regex(@"^admin (image|images) untag (?<id>\d+)$", RegexOptions.IgnoreCase)
+    ];
+    public string HelpText => "Remove tags from an image";
+    public UserRight RequiredRight => UserRight.TrueAndHonest;
+    public TimeSpan Timeout => TimeSpan.FromSeconds(10);
+    public RateLimitOptionsModel? RateLimitOptions => null;
+    public bool WhisperCanInvoke => false;
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
+        CancellationToken ctx)
+    {
+        await using var db = new ApplicationDbContext();
+        var id = Convert.ToInt32(arguments["id"].Value);
+        var image = await db.Images.FirstOrDefaultAsync(i => i.Id == id, cancellationToken: ctx);
+        if (image == null)
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, the image ID you specified does not exist", true,
+                autoDeleteAfter: TimeSpan.FromSeconds(15));
+            return;
+        }
+
+        image.TagList = [];
+        await db.SaveChangesAsync(ctx);
+        await botInstance.SendChatMessageAsync(
+            $"{user.FormatUsername()}, removed tags from {id}", true);
+    }
+}
+
 public class RemoveImageCommand : ICommand
 {
     public List<Regex> Patterns => [
@@ -112,6 +177,7 @@ public class ListImageCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex(@"^admin (image|images) (?<key>\w+) list$"),
+        new Regex(@"^(image|images) (?<key>\w+) list$"),
     ];
     public string HelpText => "List images for a given carousel";
     public UserRight RequiredRight => UserRight.Guest;
@@ -146,7 +212,7 @@ public class ListImageCommand : ICommand
             {
                 var ts = DateTimeOffset.UtcNow - image.LastSeen;
                 var time = $"{ts.TotalDays:N0}d{ts.Hours:N0}h{ts.Minutes:N0}m{ts.Seconds:N0}s";
-                content += $"{image.Url} - {time} - {image.TagList.Humanize(" ")}" + Environment.NewLine;
+                content += $"{image.Url} (ID: {image.Id}) - {time} - {image.TagList.Humanize(" ")}" + Environment.NewLine;
             }
 
             var paste = await Zipline.Upload(content, new MediaTypeHeaderValue("text/plain"), "1d", ctx);
@@ -160,7 +226,7 @@ public class ListImageCommand : ICommand
         {
             i++;
             var ts = DateTimeOffset.UtcNow - image.LastSeen;
-            result += $"[br]{i}: {image.Url} (Last seen {ts.TotalDays:N0}d{ts.Hours:N0}h{ts.Minutes:N0}m{ts.Seconds:N0}s ago)";
+            result += $"[br]{i}: {image.Url} (ID: {image.Id}) (Last seen {ts.TotalDays:N0}d{ts.Hours:N0}h{ts.Minutes:N0}m{ts.Seconds:N0}s ago)";
         }
 
         await botInstance.SendChatMessagesAsync(result.FancySplitMessage(partSeparator: "[br]"),
@@ -302,6 +368,12 @@ public class GetRandomImage : ICommand
             RateLimitService.AddEntry(user, this, message.MessageRawHtmlDecoded);
             timeToDeletion = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>());
         }
-        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]", true, autoDeleteAfter: timeToDeletion);
+
+        var tagNag = string.Empty;
+        if (image.TagList.Count == 0)
+        {
+            tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id} red troon balloon[/ditto]";
+        }
+        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]{tagNag}", true, autoDeleteAfter: timeToDeletion);
     }
 }
