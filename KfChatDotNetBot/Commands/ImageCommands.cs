@@ -62,7 +62,7 @@ public class AddImageCommand : ICommand
             Key = key, Url = result, LastSeen = DateTimeOffset.MinValue, TagList = tags,
             Metadata = new ImageMetadataModel { AddedByUserId = user.Id, WhenAdded = DateTimeOffset.UtcNow }
         }, ctx);
-        var count = await db.Images.CountAsync(cancellationToken: ctx);
+        var count = await db.Images.Where(i => i.Key == key).CountAsync(cancellationToken: ctx);
         await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you added the following media to the {key} carousel which now has {count:N0} images[spoiler=\"Image\"][img]{url}[/img]", true);
