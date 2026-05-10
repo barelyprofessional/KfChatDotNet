@@ -35,14 +35,14 @@ public class GetBiggestWins : ICommand
         foreach (var win in biggestMultees)
         {
             i++;
-            multeesMsg += $"[br]{i}. {win.Gambler.User.KfUsername} bet {await win.WagerAmount.FormatKasinoCurrencyAsync()} on {win.Game.Humanize()} and won {await win.WagerEffect.FormatKasinoCurrencyAsync()} ({win.Multiplier:N}x)";
+            multeesMsg += $"[br]{i}. {win.Gambler.User.FormatUsername()} bet {await win.WagerAmount.FormatKasinoCurrencyAsync()} on {win.Game.Humanize()} and won {await win.WagerEffect.FormatKasinoCurrencyAsync()} ({win.Multiplier:N}x)";
         }
         var bigWinsMsg = $"Big wins adding up to {await biggestWins.Sum(x => x.WagerEffect).FormatKasinoCurrencyAsync()}:";
         i = 0;
         foreach (var win in biggestWins)
         {
             i++;
-            bigWinsMsg += $"[br]{i}. {win.Gambler.User.KfUsername} bet {await win.WagerAmount.FormatKasinoCurrencyAsync()} on {win.Game.Humanize()} and won {await win.WagerEffect.FormatKasinoCurrencyAsync()} ({win.Multiplier:N}x)";
+            bigWinsMsg += $"[br]{i}. {win.Gambler.User.FormatUsername()} bet {await win.WagerAmount.FormatKasinoCurrencyAsync()} on {win.Game.Humanize()} and won {await win.WagerEffect.FormatKasinoCurrencyAsync()} ({win.Multiplier:N}x)";
         }
 
         var msgs = new List<string>
