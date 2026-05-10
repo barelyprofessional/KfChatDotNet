@@ -93,6 +93,7 @@ public class RainCommand : ICommand
             await botInstance.SendChatMessageAsync(
                 $"LFG {user.FormatUsername()} is now a participant! There's now {rain.Participants.Count + 1} participant{pluralSuffix}! Type [ditto]!rain[/ditto] to participate",
                 true, autoDeleteAfter: cleanupDelay);
+            await botInstance.KfClient.DeleteMessageAsync(message.MessageUuid!);
             return;
         }
         //if you're trying to start the rain
