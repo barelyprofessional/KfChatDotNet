@@ -96,7 +96,7 @@ public class AddImageTagsCommand : ICommand
             return;
         }
 
-        image.TagList = tags;
+        image.TagList = image.TagList.Concat(tags).Distinct().ToList();
         await db.SaveChangesAsync(ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, updated tags for image ID {id} with {tags.Humanize()}", true);
