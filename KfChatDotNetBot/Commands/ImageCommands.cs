@@ -372,7 +372,7 @@ public class GetRandomImage : ICommand
         var tagNag = string.Empty;
         if (image.TagList.Count == 0)
         {
-            tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id} red troon balloon[/ditto]";
+            tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id}[/ditto]";
         }
         await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]{tagNag}", true, autoDeleteAfter: timeToDeletion);
     }
