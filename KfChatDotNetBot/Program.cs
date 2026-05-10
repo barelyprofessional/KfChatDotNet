@@ -20,6 +20,7 @@
  */
 
 using System.Text;
+using KfChatDotNetBot.Migrations;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -48,6 +49,21 @@ namespace KfChatDotNetBot
             {
                 logger.Error("Caught an error when attempting to grab the Redis multiplexer");
                 logger.Error(e);
+            }
+
+            if (await db.Images.AnyAsync())
+            {
+                logger.Info("Checking to see if we need to migrate Tags to TagList");
+#pragma warning disable CS0618 // Type or member is obsolete
+                var scope = (await db.Images.Where(i => i.Tags != null).ToListAsync()).Where(i => i.TagList.Count == 0).ToList();
+                foreach (var item in scope)
+                {
+                    // Ignoring the null as my query literally filters for != null
+                    item.TagList = item.Tags!.Split(" ").ToList();
+#pragma warning restore CS0618 // Type or member is obsolete
+                    logger.Info($"Migrated tags for image {item.Id}");
+                }
+                await db.SaveChangesAsync();
             }
             logger.Info("Handing over to bot now");
             Console.OutputEncoding = Encoding.UTF8;

@@ -14,6 +14,8 @@ public class ApplicationDbContext : DbContext
     {
         //modelBuilder.Entity<KasinoShopProfileDbModel>()
         //    .OwnsOne(p => p.StateData, b => b.ToJson());
+        modelBuilder.Entity<ImageDbModel>().
+            OwnsOne(p => p.Metadata, b => b.ToJson());
     }
 
     public DbSet<UserDbModel> Users { get; set; }
