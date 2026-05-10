@@ -137,4 +137,41 @@ public static class Extensions
     {
         return $"@{user.KfUsername}";
     }
+
+    /// <summary>
+    /// Format a grid of equally spaced text into a table so it can be shrunk safely by prepending a [size] tag
+    /// </summary>
+    /// <param name="s">Grid you want to format</param>
+    /// <returns></returns>
+    public static string GridToTable(this string s)
+    {
+        var table = "[table width=\"1%\"]";
+        foreach (var row in s.Split(["[br]", "[BR]", "\n"], StringSplitOptions.None))
+        {
+            table += "[tr]";
+            table = row.ToCharArray().Aggregate(table, (current, glyph) => current + $"[td]{glyph}[/td]");
+            table += "[/tr]";
+        }
+
+        table += "[/table]";
+        return table;
+    }
+
+    /// <summary>
+    /// Format a string with multiple lines of text into a table so it can be shrunk without ugly spacing issues by prepending a [size] tag
+    /// </summary>
+    /// <param name="s">Multi-line text you want to format</param>
+    /// <returns></returns>
+    public static string MultilineToTable(this string s)
+    {
+        // No width on this one or it'll wrap text
+        var table = "[table]";
+        // Never use a th instead of a tr as it has a more prominent text style
+        foreach (var row in s.Split(["[br]", "[BR]", "\n"], StringSplitOptions.None))
+        {
+            table += $"[tr][td]{row}[/td][/tr]";
+        }
+        table += "[/table]";
+        return table;
+    }
 }
