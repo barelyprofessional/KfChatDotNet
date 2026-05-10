@@ -25,7 +25,8 @@ public class GetBiggestWins : ICommand
     {
         await using var db = new ApplicationDbContext();
         var gameDay = await Money.GetKasinoDate();
-        var wagers = await db.Wagers.Where(x => x.TimeUnixEpochSeconds > gameDay.ToUnixTimeSeconds()).ToListAsync(ctx);
+        var wagers = await db.Wagers.Where(x => x.TimeUnixEpochSeconds > gameDay.ToUnixTimeSeconds())
+            .Include(x => x.Gambler).ThenInclude(x => x.User).ToListAsync(ctx);
         var biggestMultees = wagers.OrderByDescending(x => x.Multiplier).Take(10).ToList();
         var biggestWins = wagers.OrderByDescending(x => x.WagerEffect).Take(10).ToList();
         var multeesMsg =
