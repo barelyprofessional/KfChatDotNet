@@ -212,7 +212,7 @@ public class ListImageCommand : ICommand
             {
                 var ts = DateTimeOffset.UtcNow - image.LastSeen;
                 var time = $"{ts.TotalDays:N0}d{ts.Hours:N0}h{ts.Minutes:N0}m{ts.Seconds:N0}s";
-                content += $"{image.Url} (ID: {image.Id}) - {time} - {image.TagList.Humanize(" ")}" + Environment.NewLine;
+                content += $"{image.Url} (ID: {image.Id}) - {time} - {image.TagList.Humanize()}" + Environment.NewLine;
             }
 
             var paste = await Zipline.Upload(content, new MediaTypeHeaderValue("text/plain"), "1d", ctx);
