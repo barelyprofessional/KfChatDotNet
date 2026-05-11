@@ -14,7 +14,6 @@ using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
@@ -127,7 +126,7 @@ public class SlotsCommand : ICommand
         {
             board.LoadAssets();
             board.ExecuteGameLoop(spins, 0, rigged);
-            using (var finalImageStream = board.ExportAndCleanup())
+            await using (var finalImageStream = await board.ExportAndCleanup())
             {
                 if (finalImageStream == null)
                 {
@@ -145,7 +144,7 @@ public class SlotsCommand : ICommand
                 delayHSec += board.AnimatedImage.Frames[i].Metadata.GetWebpMetadata().FrameDelay;
             }
         }
-        await Task.Delay(TimeSpan.FromSeconds(delayHSec));//adds delay to stop message showing gambling win/loss too early based on total frame count of the animated image 
+        await Task.Delay(TimeSpan.FromSeconds(delayHSec), ctx);//adds delay to stop message showing gambling win/loss too early based on total frame count of the animated image 
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
@@ -157,7 +156,7 @@ public class SlotsCommand : ICommand
         {
             newBalance = await Money.NewWagerAsync(gambler.Id, wager*spins, -wager*spins, WagerGame.Slots, ct: ctx);
             var totalWager = wager * spins;
-            await Task.Delay(TimeSpan.FromSeconds(spins));
+            await Task.Delay(TimeSpan.FromSeconds(spins), ctx);
             await botInstance.SendChatMessageAsync(
                 $"{user.FormatUsername()} you [color={colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}]lost[/color] {await totalWager.FormatKasinoCurrencyAsync()} with {spins} spins. Current balance: {await newBalance.FormatKasinoCurrencyAsync()}",
                 true, autoDeleteAfter: TimeSpan.FromSeconds(30));
@@ -185,7 +184,7 @@ public class SlotsCommand : ICommand
             await botInstance.BotServices.KasinoShop.ProcessWagerTracking(gambler, WagerGame.Slots, wager*spins, winnings, newBalance);
         }
         //---------------------------------------------------------------------------------------
-        await Task.Delay(TimeSpan.FromSeconds(spins * 2));
+        await Task.Delay(TimeSpan.FromSeconds(spins * 2), ctx);
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()}, you [color={colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}]won[/color] {await rawWinnings.FormatKasinoCurrencyAsync()} from {spins} spins worth {await wager.FormatKasinoCurrencyAsync()}! Net: {winstr}{await winnings.FormatKasinoCurrencyAsync()} Current balance: {await newBalance.FormatKasinoCurrencyAsync()}", true, autoDeleteAfter: TimeSpan.FromSeconds(30));
     }
@@ -233,8 +232,11 @@ public class SlotsCommand : ICommand
             [(1, 0), (2, 1), (3, 2), (2, 3), (1, 4)]
         ];
 
-        public KiwiSlotBoard(decimal bet)
+        private CancellationToken _ct;
+
+        public KiwiSlotBoard(decimal bet, CancellationToken ct = default)
         {
+            _ct = ct;
             _userBet = bet;
             AnimatedImage = new Image<Rgba32>(600, 800);
         }
@@ -370,7 +372,7 @@ public class SlotsCommand : ICommand
             lastFrame.Metadata.GetWebpMetadata().FrameDelay = (ushort)hundredthsOfASecond;
         }
         
-        public MemoryStream? ExportAndCleanup()
+        public async Task<MemoryStream?> ExportAndCleanup()
         {
             if (AnimatedImage.Frames.Count <= 1) return null;
 
@@ -378,7 +380,7 @@ public class SlotsCommand : ICommand
             // Remove the blank placeholder frame
             AnimatedImage.Frames.RemoveFrame(0);
             
-            AnimatedImage.Save(ms, new WebpEncoder { Quality = 80 });
+            await AnimatedImage.SaveAsync(ms, new WebpEncoder { Quality = 80 }, _ct);
             ms.Position = 0;
 
             // Free the animation memory now that it's encoded
