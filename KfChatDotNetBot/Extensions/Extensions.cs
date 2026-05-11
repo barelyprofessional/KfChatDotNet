@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models.DbModels;
 
@@ -149,7 +150,11 @@ public static class Extensions
         foreach (var row in s.Split(["[br]", "[BR]", "\n"], StringSplitOptions.None))
         {
             table += "[tr]";
-            table = row.ToCharArray().Aggregate(table, (current, glyph) => current + $"[td]{glyph}[/td]");
+            var enumerator = StringInfo.GetTextElementEnumerator(row);
+            while (enumerator.MoveNext())
+            {
+                table += $"[td]{enumerator.Current}[/td]";
+            }  
             table += "[/tr]";
         }
 
