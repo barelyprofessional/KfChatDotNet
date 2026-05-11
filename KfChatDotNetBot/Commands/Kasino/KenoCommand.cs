@@ -39,10 +39,12 @@ public class KenoCommand : ICommand
     private const string BlankSpaceDisplay = "⬛";
     
     private SentMessageTrackerModel? _kenoTable;
+    private CancellationToken _ct;
 
     public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        _ct = ctx;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay, BuiltIn.Keys.KasinoKenoCleanupDelay,
             BuiltIn.Keys.KasinoKenoFrameDelay, BuiltIn.Keys.KasinoKenoEnabled
@@ -185,7 +187,7 @@ public class KenoCommand : ICommand
             { "classic", payoutMultipliersClassic}
         };
 
-    _playerNumbers = GenerateKenoNumbers(numbers, gambler);
+        _playerNumbers = GenerateKenoNumbers(numbers, gambler);
         _casinoNumbers = GenerateKenoNumbers(10, gambler, true);
         var matches = _playerNumbers.Intersect(_casinoNumbers).ToList();
         var payoutMulti = payoutMultipliers[difficultyString][numbers - 1, matches.Count];
@@ -249,17 +251,10 @@ public class KenoCommand : ICommand
             displayMessage += "[br]";
         }
 
-        _kenoTable = await botInstance.SendChatMessageAsync(displayMessage, true);
-        var i = 0;
-        while (_kenoTable.ChatMessageUuid == null)
-        {
-            i++;
-            if (_kenoTable.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost) return;
-            if (i > 60) return;
-            await Task.Delay(100);
-        }
-
-        if (_kenoTable.ChatMessageUuid == null)
+        _kenoTable = await botInstance.SendChatMessageAsync("[size=70]" + displayMessage.GridToTable(), true);
+        var sent = await botInstance.WaitForChatMessageAsync(_kenoTable, patience: TimeSpan.FromSeconds(30), ct: _ct);
+        
+        if (!sent || _kenoTable.ChatMessageUuid == null)
         {
             throw new Exception($"_kenoTable chat message ID never got populated. Tracker status is: {_kenoTable?.Status}");
         }
@@ -293,8 +288,8 @@ public class KenoCommand : ICommand
                 }
                 displayMessage += "[br]";
             }
-            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageUuid, displayMessage);
-            await Task.Delay(frameDelay);
+            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageUuid, "[size=70]" + displayMessage.GridToTable());
+            await Task.Delay(frameDelay, _ct);
             if (displayMessage.Length <= 79 && displayMessage.Contains(BlankSpaceDisplay) &&
                 (displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay) ||
                  frame == 9)) continue; //every board should have blank spaces and casino numbers or matches. player numbers might be hidden by matches
