@@ -248,7 +248,7 @@ public class XeetEmbedCommand : ICommand
 
             var ffmpegPath = await SettingsProvider.GetValueAsync(BuiltIn.Keys.FFmpegBinaryPath);
 
-            var ffmpegArgs = $"-i \"{tempVideoPath}\" -vf \"fps=30,scale='min(640,iw)':'min(480,ih)':force_original_aspect_ratio=decrease\" -c:v libwebp -lossless 0 -quality 75 -loop 0 -an \"{tempWebpPath}\"";
+            var ffmpegArgs = $"-i \"{tempVideoPath}\" -vf \"fps=20,scale='min(640,iw)':'min(480,ih)':force_original_aspect_ratio=decrease\" -c:v libwebp -threads 4 -lossless 0 -quality 75 -loop 0 -an \"{tempWebpPath}\"";
 
             var processInfo = new ProcessStartInfo
             {
