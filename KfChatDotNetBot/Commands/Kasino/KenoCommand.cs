@@ -251,7 +251,8 @@ public class KenoCommand : ICommand
             displayMessage += "[br]";
         }
 
-        _kenoTable = await botInstance.SendChatMessageAsync("[size=70]" + displayMessage.GridToTable(), true);
+        var size = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KasinoKenoSize)).ToType<int>();
+        _kenoTable = await botInstance.SendChatMessageAsync($"[size={size}]" + displayMessage.GridToTable(), true);
         var sent = await botInstance.WaitForChatMessageAsync(_kenoTable, patience: TimeSpan.FromSeconds(30), ct: _ct);
         
         if (!sent || _kenoTable.ChatMessageUuid == null)
@@ -288,7 +289,7 @@ public class KenoCommand : ICommand
                 }
                 displayMessage += "[br]";
             }
-            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageUuid, "[size=70]" + displayMessage.GridToTable());
+            await botInstance.KfClient.EditMessageAsync(_kenoTable.ChatMessageUuid, $"[size={size}]" + displayMessage.GridToTable());
             await Task.Delay(frameDelay, _ct);
             if (displayMessage.Length <= 79 && displayMessage.Contains(BlankSpaceDisplay) &&
                 (displayMessage.Contains(CasinoNumberDisplay) || displayMessage.Contains(MatchRevealDisplay) ||

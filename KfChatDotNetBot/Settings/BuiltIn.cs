@@ -589,6 +589,8 @@ public static class BuiltIn
         [BuiltInSetting("Whether the DLive livestream check is enabled", SettingValueType.Boolean, "false",
             BooleanRegex)]
         public static string DLiveEnabled = "DLive.Enabled";
+        [BuiltInSetting("Size (%) of the Keno board", SettingValueType.Text, "70", WholeNumberRegex)]
+        public static string KasinoKenoSize = "Kasino.Keno.Size";
     }
 }
 
