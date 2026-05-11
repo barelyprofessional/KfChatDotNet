@@ -6,7 +6,6 @@ using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using NLog;
 using SixLabors.Fonts;
@@ -47,6 +46,7 @@ public class RouletteCommand : ICommand
     private IDatabase? _redisDb;
 
     private ApplicationDbContext _dbContext = new();
+    private CancellationToken _ct;
 
     // European Roulette wheel configuration
     private static readonly HashSet<int> BlackNumbers = new() 
@@ -58,6 +58,7 @@ public class RouletteCommand : ICommand
     public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user, GroupCollection arguments,
         CancellationToken ctx)
     {
+        _ct = ctx;
         var settings = await SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KasinoGameDisabledMessageCleanupDelay,
             BuiltIn.Keys.KasinoRouletteEnabled,
@@ -271,7 +272,7 @@ public class RouletteCommand : ICommand
 
             // Wait until message is fully sent
             logger.Debug("Waiting for countdown message to be sent...");
-            var success = await botInstance.WaitForChatMessageAsync(countdownMessage, TimeSpan.FromSeconds(30));
+            var success = await botInstance.WaitForChatMessageAsync(countdownMessage, TimeSpan.FromSeconds(30), _ct);
 
             if (!success)
             {
@@ -289,7 +290,7 @@ public class RouletteCommand : ICommand
                 if (remaining.TotalSeconds <= 0) break;
                 
                 // Wait 1 second between updates
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1), _ct);
                 
                 try
                 {
@@ -386,7 +387,7 @@ public class RouletteCommand : ICommand
         {
             // Generate winning number using first gambler's seed
             var firstGambler = await _dbContext.Gamblers
-                .FirstOrDefaultAsync(g => g.Id == round.Bets[0].GamblerId);
+                .FirstOrDefaultAsync(g => g.Id == round.Bets[0].GamblerId, cancellationToken: _ct);
             
             if (firstGambler == null)
             {
@@ -398,7 +399,7 @@ public class RouletteCommand : ICommand
 
             // Generate animation
             logger.Info($"Generating roulette animation for round {round.RoundId}");
-            var (animationDuration, animationBytes) = RouletteAnimationGenerator.GenerateAnimation(winningNumber);
+            var (animationDuration, animationBytes) = await RouletteAnimationGenerator.GenerateAnimation(winningNumber, _ct);
             logger.Info($"Animation generated: {animationBytes.Length} bytes, duration: {animationDuration}s");
 
             // Upload animation to Zipline
@@ -407,7 +408,7 @@ public class RouletteCommand : ICommand
             var animationUrl = await Zipline.Upload(
                 animationStream, 
                 new MediaTypeHeaderValue("image/webp"), 
-                expiration: "1h");
+                expiration: "1h", ct: _ct);
 
             if (string.IsNullOrEmpty(animationUrl))
             {
@@ -432,7 +433,7 @@ public class RouletteCommand : ICommand
 
             // Wait for animation duration before revealing results
             logger.Info($"Waiting {animationDuration} seconds for animation to complete");
-            await Task.Delay(TimeSpan.FromSeconds(animationDuration));
+            await Task.Delay(TimeSpan.FromSeconds(animationDuration), _ct);
 
             // Process all bets and show results
             await ProcessBets(botInstance, round, winningNumber);
@@ -459,20 +460,20 @@ public class RouletteCommand : ICommand
             {
                 var wager = await _dbContext.Wagers
                     .Include(w => w.Gambler)
-                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId);
+                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId, cancellationToken: _ct);
 
                 if (wager != null)
                 {
                     wager.IsComplete = true;
                     wager.WagerEffect = 0;
                     wager.Multiplier = 1;
-                    await _dbContext.SaveChangesAsync();
+                    await _dbContext.SaveChangesAsync(_ct);
 
                     await Money.ModifyBalanceAsync(
                         wager.Gambler.Id,
                         wager.WagerAmount,
                         TransactionSourceEventType.Gambling,
-                        $"Roulette round {round.RoundId} cancelled due to error, wager {wager.Id} refunded");
+                        $"Roulette round {round.RoundId} cancelled due to error, wager {wager.Id} refunded", ct: _ct);
 
                     totalRefunded += wager.WagerAmount;
                 }
@@ -520,7 +521,7 @@ public class RouletteCommand : ICommand
             {
                 var wager = await _dbContext.Wagers
                     .Include(w => w.Gambler)
-                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId);
+                    .FirstOrDefaultAsync(w => w.Id == bet.WagerId, cancellationToken: _ct);
 
                 if (wager == null)
                 {
@@ -537,7 +538,7 @@ public class RouletteCommand : ICommand
                 wager.WagerEffect = effect;
                 wager.Multiplier = payout / bet.Amount;
 
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync(_ct);
 
                 // Update balance
                 var balanceAdjustment = payout;
@@ -545,7 +546,7 @@ public class RouletteCommand : ICommand
                     wager.Gambler.Id, 
                     balanceAdjustment, 
                     TransactionSourceEventType.Gambling,
-                    $"Roulette outcome from wager {wager.Id}");
+                    $"Roulette outcome from wager {wager.Id}", ct: _ct);
 
                 // Track results by user
                 if (!winnersByUser.ContainsKey(bet.Username))
@@ -923,7 +924,7 @@ public static class RouletteAnimationGenerator
     /// </summary>
     /// <param name="winningNumber">The number (0-36) that the ball should land on</param>
     /// <returns>A tuple containing the animation duration in seconds and the WebP animation bytes</returns>
-    public static (int durationSeconds, byte[] animationBytes) GenerateAnimation(int winningNumber)
+    public static async Task<(int duration, byte[])> GenerateAnimation(int winningNumber, CancellationToken ct = default)
     {
         if (winningNumber < 0 || winningNumber > 36)
         {
@@ -994,7 +995,7 @@ public static class RouletteAnimationGenerator
 
         animation.Frames.RemoveFrame(0);
         using var ms = new MemoryStream();
-        animation.SaveAsWebp(ms, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = 50 });
+        await animation.SaveAsWebpAsync(ms, new WebpEncoder { FileFormat = WebpFileFormatType.Lossy, Quality = 50 }, cancellationToken: ct);
         
         return (duration, ms.ToArray());
     }
