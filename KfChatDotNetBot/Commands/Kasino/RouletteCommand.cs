@@ -34,7 +34,7 @@ public class RouletteCommand : ICommand
 
     public string? HelpText => "!roulette <amount> <bet> - Bet types: number (0-36), red/black, odd/even, low/high, 1st12/2nd12/3rd12, col1/col2/col3";
     public UserRight RequiredRight => UserRight.Loser;
-    public TimeSpan Timeout => TimeSpan.FromSeconds(5);
+    public TimeSpan Timeout => TimeSpan.FromSeconds(300);
     public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 10,
