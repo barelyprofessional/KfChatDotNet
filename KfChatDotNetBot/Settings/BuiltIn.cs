@@ -591,6 +591,8 @@ public static class BuiltIn
         public static string DLiveEnabled = "DLive.Enabled";
         [BuiltInSetting("Size (%) of the Keno board", SettingValueType.Text, "70", WholeNumberRegex)]
         public static string KasinoKenoSize = "Kasino.Keno.Size";
+        [BuiltInSetting("Size (%) of the Planes board", SettingValueType.Text, "70", WholeNumberRegex)]
+        public static string KasinoPlanesSize = "Kasino.Planes.Size";
     }
 }
 
