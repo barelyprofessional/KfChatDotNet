@@ -477,9 +477,8 @@ public class SlotsCommand : ICommand
             for (var i = 0; i < 5; i++) {
                 for (var j = 0; j < 5; j++)
                 {
-                    var r = _rand.NextDouble() * 100.6;
-                    if (f != 0 && j > 2) r *= 1.1;
-                    if (rigged == 'L') r = _rand.NextDouble() * 97.01;
+                    var r = _rand.NextDouble() * 100.1;
+                    if (f != 0 && j > 1) r *= 1.1;
 
                     if (rigged == 'W') // guarantee max win
                     {
@@ -609,16 +608,16 @@ public class SlotsCommand : ICommand
             if (rigged == 'L') RigSlotBoard();
             char PickSlotSymbol(double r, int i, int j)
             {
-                if (r < 22) return 'A';
-                else if (r < 44) return 'B';
-                else if (r < 52) return 'C';
-                else if (r < 66) return 'D';
-                else if (r < 78) return 'E';
-                else if (r < 84) return 'F';
-                else if (r < 89) return 'G';
-                else if (r < 92) return 'H';
-                else if (r < 95) return 'I';
-                else if (r < 97) return 'J';
+                if (r < 22.5) return 'A';
+                else if (r < 44.5) return 'B';
+                else if (r < 52.5) return 'C';
+                else if (r < 66.5) return 'D';
+                else if (r < 78.5) return 'E';
+                else if (r < 84.5) return 'F';
+                else if (r < 89.5) return 'G';
+                else if (r < 92.5) return 'H';
+                else if (r < 95.5) return 'I';
+                else if (r < 97.5) return 'J';
                 else if (r < 98.5) return WILD;
                 else if (r < (j <= 2 ? 99 : 99.5)) { if (!ex.Contains(j)) { return EXPANDER; } else return WILD; }
                 else { if (fc < 5) { fc++;
