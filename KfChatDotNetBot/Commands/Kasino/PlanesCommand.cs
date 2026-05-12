@@ -153,7 +153,7 @@ public class Planes : ICommand
             if (fullCounter >= 3)
             {
                 planesDisplay = GetGameBoard(fullCounter, planesBoards, plane, CarrierCount, noseUp);
-                planesDisplay += $"[br]Multi: {plane.MultiTracker}x";
+                planesDisplay += $"[/size][br]Multi: {plane.MultiTracker}x";
                 for (var i = 0; i < 10; i++)
                 {
                     planesDisplay += BlankSpace;
