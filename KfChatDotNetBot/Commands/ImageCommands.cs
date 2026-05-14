@@ -303,7 +303,9 @@ public class GetRandomImage : ICommand
 {
     public List<Regex> Patterns => [
         new Regex(@"^(?<key>\w+)$"),
-        new Regex(@"^(?<key>\w+) (?<search>.+)")
+        new Regex(@"^(?<key>\w+) (?<search>.+)"),
+        new Regex("^untagged$", RegexOptions.IgnoreCase),
+        new Regex("i (?<search>.+)")
     ];
     public string HelpText => "Get a random image";
     public UserRight RequiredRight => UserRight.Loser;
@@ -319,9 +321,16 @@ public class GetRandomImage : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var key = arguments["key"].Value.ToLower();
+        var untagged = message.MessageRawHtmlDecoded.Equals("untagged", StringComparison.CurrentCultureIgnoreCase);
+        var keyKnown = arguments.TryGetValue("key", out var keyGroup);
+        var key = "everything";
+        if (keyKnown) key = keyGroup!.Value;
         var searchTerm = arguments.TryGetValue("search", out var searchArg) ? searchArg.Value.ToLower().Trim() : null;
-        var images = db.Images.Where(i => i.Key == key);
+        var images = db.Images.AsQueryable();
+        if (keyKnown)
+        {
+            images = images.Where(i => i.Key == key);
+        }
         if (!await images.AnyAsync(ctx))
         {
             RateLimitService.RemoveMostRecentEntry(user, this);
@@ -341,6 +350,12 @@ public class GetRandomImage : ICommand
         ]);
 
         var selection = await images.ToListAsync(ctx);
+        // It's buried down here instead of right up the top since it needs to be a list first as SQLite doesn't have
+        // native support for JSON types so it won't be able to construct a query to see if it's empty using IQueryable
+        if (untagged)
+        {
+            selection = selection.Where(s => s.TagList.Count == 0).ToList();
+        }
         if (!string.IsNullOrEmpty(searchTerm))
         {
             var searchTokens = searchTerm.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -369,14 +384,14 @@ public class GetRandomImage : ICommand
         db.Images.Update(image);
         await db.SaveChangesAsync(ctx);
         TimeSpan? timeToDeletion = null;
-        if (key == "pigcube" && settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean())
+        if (image.Key == "pigcube" && settings[BuiltIn.Keys.BotImagePigCubeSelfDestruct].ToBoolean())
         {
             timeToDeletion = TimeSpan.FromMilliseconds(image.Url == settings[BuiltIn.Keys.BotImageInvertedCubeUrl].Value
                 ? settings[BuiltIn.Keys.BotImageInvertedPigCubeSelfDestructDelay].ToType<int>()
                 : new Random().Next(settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMin].ToType<int>(),
                     settings[BuiltIn.Keys.BotImagePigCubeSelfDestructMax].ToType<int>()));
         }
-        else if (key is "chink" or "sloppa" && settings[BuiltIn.Keys.BotImageChinkSelfDestruct].ToBoolean())
+        else if (image.Key is "chink" or "sloppa" && settings[BuiltIn.Keys.BotImageChinkSelfDestruct].ToBoolean())
         {
             RateLimitService.AddEntry(user, this, message.MessageRawHtmlDecoded);
             timeToDeletion = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>());
