@@ -382,11 +382,25 @@ public class GetRandomImage : ICommand
             timeToDeletion = TimeSpan.FromMilliseconds(settings[BuiltIn.Keys.BotImageChinkSelfDestructDelay].ToType<int>());
         }
 
+        var addedBy = "Unknown";
+        var whenAdded = "Unknown";
+        if (image.Metadata != null)
+        {
+            var addedByUser = await db.Users.FirstOrDefaultAsync(u => u.Id == image.Metadata.AddedByUserId, cancellationToken: ctx);
+            addedBy = addedByUser?.KfUsername ?? $"User ID {image.Metadata.AddedByUserId} for this image didn't point to a real user?";
+            whenAdded = image.Metadata.WhenAdded.ToString("yyyy-MM-dd HH:mm:ss zzz");
+        }
+
+        var imageMeta =
+            $"[size=60][spoiler=\"Image Info\"][heading=1]ID: {image.Id}; Tags: {image.TagList.Humanize()}; Added By: {addedBy}; Date Added: {whenAdded}[/heading][/spoiler][/size]";
+
         var tagNag = string.Empty;
         if (image.TagList.Count == 0)
         {
-            tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id}[/ditto]";
+            tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id} [/ditto]";
         }
-        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img]{tagNag}", true, autoDeleteAfter: timeToDeletion);
+
+        var result = $"[img]{image.Url}[/img]{tagNag}[br]{imageMeta}";
+        await botInstance.SendChatMessageAsync(result, true, autoDeleteAfter: timeToDeletion);
     }
 }
