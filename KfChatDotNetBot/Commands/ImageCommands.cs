@@ -392,7 +392,7 @@ public class GetRandomImage : ICommand
         }
 
         var imageMeta =
-            $"[size=75][spoiler=\"Image Info\"][heading=1]ID: {image.Id}; Tags: {image.TagList.Humanize()}; Added By: {addedBy}; Date Added: {whenAdded}[/heading][/spoiler][/size]";
+            $"[size=60][spoiler=\"Image Info\"][heading=1]ID: {image.Id}; Tags: {image.TagList.Humanize()}; Added By: {addedBy}; Date Added: {whenAdded}[/heading][/spoiler][/size]";
 
         var tagNag = string.Empty;
         if (image.TagList.Count == 0)
@@ -400,11 +400,7 @@ public class GetRandomImage : ICommand
             tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id}[/ditto]";
         }
 
-        var result = $"[img]{image.Url}[/img][br]{imageMeta}{tagNag}";
-        if (tagNag != string.Empty)
-        {
-            result = result.MultilineToTable();
-        }
+        var result = $"[img]{image.Url}[/img]{tagNag}[br]{imageMeta}";
         await botInstance.SendChatMessageAsync(result, true, autoDeleteAfter: timeToDeletion);
     }
 }
