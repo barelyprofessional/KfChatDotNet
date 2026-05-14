@@ -407,7 +407,7 @@ public class GetRandomImage : ICommand
         }
 
         var imageMeta =
-            $"[size=60][spoiler=\"Image Info\"][heading=1]ID: {image.Id}; Tags: {image.TagList.Humanize()}; Added By: {addedBy}; Date Added: {whenAdded}[/heading][/spoiler][/size]";
+            $"[size=60][spoiler=\"Image Info\"][heading=1]ID: {image.Id}; Tags: {image.TagList.Humanize()}; Carousel: {image.Key}; Added By: {addedBy}; Date Added: {whenAdded}[/heading][/spoiler][/size]";
 
         var tagNag = string.Empty;
         if (image.TagList.Count == 0)
