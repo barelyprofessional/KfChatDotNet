@@ -399,6 +399,12 @@ public class GetRandomImage : ICommand
         {
             tagNag = $"[br]This image has no tags. You can add some using [ditto]!images tag {image.Id}[/ditto]";
         }
-        await botInstance.SendChatMessageAsync($"[img]{image.Url}[/img][br]{imageMeta}{tagNag}", true, autoDeleteAfter: timeToDeletion);
+
+        var result = $"[img]{image.Url}[/img][br]{imageMeta}{tagNag}";
+        if (tagNag != string.Empty)
+        {
+            result = result.MultilineToTable();
+        }
+        await botInstance.SendChatMessageAsync(result, true, autoDeleteAfter: timeToDeletion);
     }
 }
