@@ -593,6 +593,8 @@ public static class BuiltIn
         public static string KasinoKenoSize = "Kasino.Keno.Size";
         [BuiltInSetting("Size (%) of the Planes board", SettingValueType.Text, "70", WholeNumberRegex)]
         public static string KasinoPlanesSize = "Kasino.Planes.Size";
+        [BuiltInSetting("Size (%) of the Plinko board", SettingValueType.Text, "70", WholeNumberRegex)]
+        public static string KasinoPlinkoSize = "Kasino.Plinko.Size";
     }
 }
 
