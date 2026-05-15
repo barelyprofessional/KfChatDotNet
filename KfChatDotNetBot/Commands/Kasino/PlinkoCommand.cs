@@ -232,7 +232,7 @@ public class PlinkoCommand : ICommand
             }
 
             await Task.Delay(300, ctx);
-            PlinkoMessage = PlinkoBoardDisplay(ballsInPlay) + "[br]" + lastPayoutMessage;
+            PlinkoMessage = $"[size={size}]"+PlinkoBoardDisplay(ballsInPlay) + "[/size][br]" + lastPayoutMessage;
             await botInstance.KfClient.EditMessageAsync(plinkoMessageID.ChatMessageUuid!, PlinkoMessage);
             await Task.Delay(300, ctx);
 
