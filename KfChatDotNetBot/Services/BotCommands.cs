@@ -42,16 +42,16 @@ internal class BotCommands
 
     internal void ProcessMessage(BotCommandMessageModel message)
     {
-        if (string.IsNullOrEmpty(message.MessageRaw))
+        if (string.IsNullOrEmpty(message.MessageRawHtmlDecoded))
         {
             return;
         }
 
-        var messageTrimmed = message.MessageRaw.TrimStart(CommandPrefix);
+        var messageTrimmed = message.MessageRawHtmlDecoded.TrimStart(CommandPrefix);
         foreach (var command in Commands)
         {
             var noPrefixCommand = HasAttribute<NoPrefixRequired>(command);
-            if (!noPrefixCommand && !message.MessageRaw.StartsWith(CommandPrefix)) continue;
+            if (!noPrefixCommand && !message.MessageRawHtmlDecoded.StartsWith(CommandPrefix)) continue;
             foreach (var regex in command.Patterns)
             {
                 var match = regex.Match(messageTrimmed);
