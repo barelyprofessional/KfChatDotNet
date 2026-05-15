@@ -321,7 +321,7 @@ public class GetRandomImage : ICommand
         CancellationToken ctx)
     {
         await using var db = new ApplicationDbContext();
-        var untagged = message.MessageRawHtmlDecoded.Equals("untagged", StringComparison.CurrentCultureIgnoreCase);
+        var untagged = message.MessageRawHtmlDecoded.EndsWith("untagged", StringComparison.CurrentCultureIgnoreCase);
         var keyKnown = arguments.TryGetValue("key", out var keyGroup);
         var key = "everything";
         if (keyKnown) key = keyGroup!.Value;
