@@ -4,24 +4,24 @@ using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
-using NLog;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
+[KasinoCommand]
+[WagerCommand]
 public class CecilCommand : ICommand
 {
     public List<Regex> Patterns => [
         new Regex(@"^cecil (?<bet>\d+(?:\.\d+)?) (?<difficulty>\d+(?:\.\d+)?) (?<maxwin>\d+(?:\.\d+)?)", RegexOptions.IgnoreCase),
         new Regex(@"^cecil (?<bet>\d+(?:\.\d+)?) (?<difficulty>\d+(?:\.\d+)?)", RegexOptions.IgnoreCase),
         new Regex(@"^cecil (?<bet>\d+(?:\.\d+)?)", RegexOptions.IgnoreCase),
-        new Regex("^keno")
+        new Regex("^cecil")
     ];
     
     public string? HelpText => "!cecil <bet> <optional difficulty> <optional max win>";
     public UserRight RequiredRight => UserRight.Loser;
     public TimeSpan Timeout => TimeSpan.FromSeconds(60);
-    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    public RateLimitOptionsModel? RateLimitOptions => new()
     {
         MaxInvocations = 5,
         Window = TimeSpan.FromSeconds(10)
@@ -41,7 +41,7 @@ public class CecilCommand : ICommand
         
         if (!arguments.TryGetValue("bet", out var amount)) //if user just enters !keno
         {
-            await botInstance.SendChatMessageAsync(
+            await botInstance.ReplyToUser(message,
                 $"{user.FormatUsername()}, not enough arguments. !cecil <bet> <optional difficulty> <[i]optional max win > 1[/i] - Cecil Tool: https://i.ddos.lgbt/raw/CecilHelper.html>",
                 true, autoDeleteAfter: cleanupDelay);
             RateLimitService.RemoveMostRecentEntry(user, this);
@@ -54,14 +54,13 @@ public class CecilCommand : ICommand
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
         if (gambler.Balance < wager)
         {
-            await botInstance.SendChatMessageAsync(
+            await botInstance.ReplyToUser(message,
                 $"{user.FormatUsername()}, your balance of {await gambler.Balance.FormatKasinoCurrencyAsync()} isn't enough for this wager.",
                 true, autoDeleteAfter: cleanupDelay);
             RateLimitService.RemoveMostRecentEntry(user, this);
             return;
         }
 
-        bool beta;
         double difficulty;
 
         double result;
@@ -76,32 +75,32 @@ public class CecilCommand : ICommand
 
         if (!arguments.TryGetValue("maxwin", out var maxWin))
         {
-            GammaSkew skew = new GammaSkew(difficulty, 0);
+            var skew = new GammaSkew(difficulty, 0);
             result = Cecil.Consult(skew, 0);
         }
         else
         {
-            double mWin = Convert.ToDouble(maxWin.Value);
+            var mWin = Convert.ToDouble(maxWin.Value);
             if (mWin < 1)
             {
-                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, max win must be greater than 1.", true, autoDeleteAfter: cleanupDelay);
+                await botInstance.ReplyToUser(message, $"{user.FormatUsername()}, max win must be greater than 1.", true, autoDeleteAfter: cleanupDelay);
                 return;
             }
-            BetaSkew skew = new BetaSkew(difficulty, mWin, 0);
-            result = Cecil.Consult(skew, 0);
+            var skew = new BetaSkew(difficulty, mWin, 0);
+            result = Cecil.Consult(skew);
         }
 
         var payout = wager * Convert.ToDecimal(result);
         var net = payout - wager;
-        var newBalance = await Money.NewWagerAsync(gambler.Id, wager, net, WagerGame.Cecil);
+        var newBalance = await Money.NewWagerAsync(gambler.Id, wager, net, WagerGame.Cecil, ct: ctx);
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
                 BuiltIn.Keys.KiwiFarmsGreenColor, BuiltIn.Keys.KiwiFarmsRedColor
             ]);
-        var red = $"{colors[BuiltIn.Keys.KiwiFarmsRedColor].Value}";
-        var green = $"{colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value}";
+        var red = colors[BuiltIn.Keys.KiwiFarmsRedColor].Value;
+        var green = colors[BuiltIn.Keys.KiwiFarmsGreenColor].Value;
         var color = (payout > wager) ? green : red;
-        await botInstance.SendChatMessageAsync(
+        await botInstance.ReplyToUser(message, 
             $"{user.FormatUsername()}, Cecil has determined you are due [color={color}]{await payout.FormatKasinoCurrencyAsync()}[/color] from your wager of {await wager.FormatKasinoCurrencyAsync()}. Balance: {await newBalance.FormatKasinoCurrencyAsync()}",
             true, autoDeleteAfter: cleanupDelay);
 

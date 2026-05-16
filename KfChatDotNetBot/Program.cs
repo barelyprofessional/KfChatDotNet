@@ -65,6 +65,42 @@ namespace KfChatDotNetBot
                 }
                 await db.SaveChangesAsync();
             }
+
+            if (Path.Exists("tags.csv"))
+            {
+                logger.Info("Importing from tags.csv");
+                var tags = await File.ReadAllTextAsync("tags.csv");
+                var i = 0;
+                foreach (var row in tags.Split(Environment.NewLine))
+                {
+                    i++;
+                    var values = row.Split(",", StringSplitOptions.RemoveEmptyEntries);
+                    if (values.Length < 2)
+                    {
+                        logger.Error($"Row {i} does not have enough columns");
+                        continue;
+                    }
+                    var image = await db.Images.FirstOrDefaultAsync(image => image.Id == Convert.ToInt32(values[0]));
+                    if (image == null)
+                    {
+                        logger.Error($"Row {i} has an unknown image ID");
+                        continue;
+                    }
+
+                    var importTags = values[1].ToLower().Split(" ",
+                        StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+                    if (importTags.Count == 0)
+                    {
+                        logger.Error($"Row {i} has no tags after splitting the string");
+                        continue;
+                    }
+
+                    var newList = image.TagList.Concat(importTags).Distinct().ToList();
+                    if (newList == image.TagList) continue;
+                    image.TagList = newList;
+                }
+                await db.SaveChangesAsync();
+            }
             logger.Info("Handing over to bot now");
             Console.OutputEncoding = Encoding.UTF8;
             _ = new ChatBot();

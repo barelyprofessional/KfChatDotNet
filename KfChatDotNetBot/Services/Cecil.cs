@@ -1,50 +1,51 @@
-using KfChatDotNetBot.Migrations;
 using MathNet.Numerics;
-using KfChatDotNetBot.Services;
 using MathNet.Numerics.Distributions;
 using RandN;
 using RandN.Compat;
-namespace KfChatDotNetBot.Commands.Kasino;
+
+namespace KfChatDotNetBot.Services;
 
 public static class Cecil
 {
-    private static RandomShim<StandardRng> _rand = RandomShim.Create<StandardRng>(StandardRng.Create());
+    private static readonly RandomShim<StandardRng> Rand = RandomShim.Create(StandardRng.Create());
     public static double Consult(Skew skew, double minThreshold = 0)
     {
-        double r = _rand.NextDouble();
+        var r = Rand.NextDouble();
         if (r < skew.LossRate)
         {
             return 0;
         }
 
-        double winRate = 1 - skew.LossRate;
-        double scaledR = (r - skew.LossRate) / winRate;
+        var winRate = 1 - skew.LossRate;
+        var scaledR = (r - skew.LossRate) / winRate;
 
         double baseResult;
-        if (skew is BetaSkew betaSkew)
+        switch (skew)
         {
-            baseResult = Beta.InvCDF(betaSkew.Weight, betaSkew.Beta, scaledR) * betaSkew.CalibratedMaxWin;
+            case BetaSkew betaSkew:
+                baseResult = Beta.InvCDF(betaSkew.Weight, betaSkew.Beta, scaledR) * betaSkew.CalibratedMaxWin;
+                break;
+            case GammaSkew gammaSkew:
+                baseResult = Gamma.InvCDF(gammaSkew.Weight, gammaSkew.Weight, scaledR);
+                break;
+            default:
+                return 0;
         }
-        else if (skew is GammaSkew gammaSkew)
-        {
-            baseResult = Gamma.InvCDF(gammaSkew.Weight, gammaSkew.Weight, scaledR);
-        }
-        else return 0;
 
         baseResult /= winRate;
         
         if (minThreshold == 0) return baseResult;
 
-        double limit = (skew is BetaSkew b) ? b.MaxWin : double.MaxValue;
+        var limit = (skew is BetaSkew b) ? b.MaxWin : double.MaxValue;
         
         return Math.Min(Round(baseResult, minThreshold), limit);
 
         double Round(double baseR, double minT)
         {
-            double lower = Math.Floor(baseR / minT) * minT;
-            double upper = lower + minT;
-            double roundChance = (baseR - lower) / minT;
-            return (_rand.NextDouble() < roundChance) ? lower : upper;
+            var lower = Math.Floor(baseR / minT) * minT;
+            var upper = lower + minT;
+            var roundChance = (baseR - lower) / minT;
+            return (Rand.NextDouble() < roundChance) ? lower : upper;
         }
         
     }
@@ -82,7 +83,7 @@ public class BetaSkew : Skew
     public override void Calibrate(double winRate)
     {
         CalibratedMaxWin = MaxWin * winRate;
-        double normalizer = TargetEv / CalibratedMaxWin;
+        var normalizer = TargetEv / CalibratedMaxWin;
         Alpha = normalizer * Weight;
         Beta = (1 - normalizer) * Weight;
     }
