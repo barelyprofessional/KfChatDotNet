@@ -595,6 +595,8 @@ public static class BuiltIn
         public static string KasinoPlanesSize = "Kasino.Planes.Size";
         [BuiltInSetting("Size (%) of the Plinko board", SettingValueType.Text, "70", WholeNumberRegex)]
         public static string KasinoPlinkoSize = "Kasino.Plinko.Size";
+        [BuiltInSetting("Whether Cecil is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
+        public static string KasinoCecilEnabled = "Kasino.Cecil.Enabled";
     }
 }
 

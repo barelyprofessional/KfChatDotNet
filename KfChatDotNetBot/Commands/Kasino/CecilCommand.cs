@@ -38,6 +38,16 @@ public class CecilCommand : ICommand
         }
 
         var cleanupDelay = TimeSpan.FromSeconds(15);
+        var settings = await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KasinoCecilEnabled]);
+        
+        var cecilEnabled = settings[BuiltIn.Keys.KasinoCecilEnabled].ToBoolean();
+        if (!cecilEnabled)
+        {
+            await botInstance.ReplyToUser(message, 
+                $"{user.FormatUsername()}, Cecil is currently disabled.",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
         
         if (!arguments.TryGetValue("bet", out var amount)) //if user just enters !keno
         {
@@ -61,14 +71,10 @@ public class CecilCommand : ICommand
             return;
         }
 
-        double difficulty;
+        var difficulty = 1.0;
 
         double result;
-        if (!arguments.TryGetValue("difficulty", out var diff))
-        {
-            difficulty = 1;
-        }
-        else
+        if (arguments.TryGetValue("difficulty", out var diff))
         {
             difficulty = Convert.ToDouble(diff.Value);
         }
