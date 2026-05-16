@@ -305,7 +305,7 @@ public class GetRandomImage : ICommand
         new Regex(@"^(?<key>\w+)$"),
         new Regex(@"^(?<key>\w+) (?<search>.+)"),
         new Regex("^untagged$", RegexOptions.IgnoreCase),
-        new Regex("i (?<search>.+)")
+        new Regex("^i (?<search>.+)")
     ];
     public string HelpText => "Get a random image";
     public UserRight RequiredRight => UserRight.Loser;
