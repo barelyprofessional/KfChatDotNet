@@ -82,6 +82,11 @@ public class CecilCommand : ICommand
         else
         {
             double mWin = Convert.ToDouble(maxWin.Value);
+            if (mWin < 1)
+            {
+                await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, max win must be greater than 1.", true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
             BetaSkew skew = new BetaSkew(difficulty, mWin, 0);
             result = Cecil.Consult(skew, 0);
         }
