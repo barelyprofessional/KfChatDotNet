@@ -650,7 +650,7 @@ internal static class BlackjackDisplay
     {
         return
             $"{user.FormatUsername()}{handLabel} drew {FmtCard(drawnCard, redHex)} — " +
-            $"[B]You:[/B] {FmtHand(currentHand, redHex)} ({handValue}) " +
+            $"[B]You:[/B] {FmtHand(currentHand, redHex)} [plain]({handValue})[/plain] " +
             $"[I]vs[/I] [B]Dealer:[/B] {FmtHand(dealerHand, redHex, hideFirst: true)}[br]" +
             ActionHints();
     }
@@ -676,7 +676,7 @@ internal static class BlackjackDisplay
     {
         return
             $"{user.FormatUsername()} split · Wager: [B]{await totalWager.FormatKasinoCurrencyAsync()}[/B][br]" +
-            $"[B]H1:[/B] {FmtHand(hand1, redHex)} ({value1}) · [B]H2:[/B] {FmtHand(hand2, redHex)} ({value2})[br]" +
+            $"[B]H1:[/B] {FmtHand(hand1, redHex)} [plain]({value1})[/plain] · [B]H2:[/B] {FmtHand(hand2, redHex)} [plain]({value2})[/plain][br]" +
             $"Playing [B]H1[/B] — {ActionHints()}";
     }
 
@@ -696,8 +696,8 @@ internal static class BlackjackDisplay
             : $"stood [B]{finishedValue}[/B]";
 
         return
-            $"[B]H{finishedIndex + 1}:[/B] {FmtHand(finishedHand, redHex)} ({finishedValue}) — {outcome} " +
-            $"→ [B]H{nextIndex + 1}:[/B] {FmtHand(nextHand, redHex)} ({nextValue})[br]" +
+            $"[B]H{finishedIndex + 1}:[/B] {FmtHand(finishedHand, redHex)} [plain]({finishedValue})[/plain] — {outcome} " +
+            $"→ [B]H{nextIndex + 1}:[/B] {FmtHand(nextHand, redHex)} [plain]({nextValue})[/plain][br]" +
             ActionHints();
     }
 
