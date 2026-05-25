@@ -138,7 +138,9 @@ public class ShopSetDifficultyCommand : ICommand
         {
             throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
         }
-        if (botInstance.BotServices.KasinoShop == null)
+
+        bool shopActive = botInstance.BotServices.KasinoShop != null;
+        if (!shopActive)
         {
             await botInstance.SendChatMessageAsync("KasinoShop is not currently running.", true, autoDeleteAfter: cleanupDelay);
             return;
@@ -158,6 +160,11 @@ public class ShopSetDifficultyCommand : ICommand
         //validate difficulty string
         
         string diff = betstr.Value;
+        if (diff.ToUpper() == "DEFAULT")
+        {
+            botInstance.BotServices.KasinoShop!.Gambler_Profiles[user.KfId].Difficulty = "";
+            return;
+        }
         var parts = diff.Trim().Split(':');
         string typeId = parts[0].ToUpper(CultureInfo.InvariantCulture);
 
