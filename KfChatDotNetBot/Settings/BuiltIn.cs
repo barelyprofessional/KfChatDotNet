@@ -597,6 +597,8 @@ public static class BuiltIn
         public static string KasinoPlinkoSize = "Kasino.Plinko.Size";
         [BuiltInSetting("Whether Cecil is enabled", SettingValueType.Boolean, "true", BooleanRegex)]
         public static string KasinoCecilEnabled = "Kasino.Cecil.Enabled";
+        [BuiltInSetting("Proxy to use when connecting to Kiwi Farms for WS and logging in", SettingValueType.Text)]
+        public static string KiwiFarmsProxy = "KiwiFarms.Proxy";
     }
 }
 
