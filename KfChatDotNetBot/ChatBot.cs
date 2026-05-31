@@ -156,12 +156,13 @@ public class ChatBot
                 _logger.Info("Not pinging the connection as we're currently disconnected");
             }
             var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
+            var lastReconnect = DateTime.UtcNow - _lastReconnectAttempt;
+
             _logger.Debug($"Last KF event was {inactivityTime:g} ago");
             var inactivityTimeout = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
-            if (inactivityTime.TotalSeconds > inactivityTimeout)
+            if (inactivityTime.TotalSeconds > inactivityTimeout && lastReconnect.TotalMinutes > 1)
             {
-                // Yeah, super dodgy
-                KfClient.LastPacketReceived = DateTime.UtcNow;
+                _lastReconnectAttempt = DateTime.UtcNow;
                 _logger.Error("Forcing reconnect as bot is completely dead");
                 await KfClient.ReconnectAsync();
             }
@@ -178,7 +179,7 @@ public class ChatBot
             var deadTime = DateTime.UtcNow - _lastReconnectAttempt;
             // No connection and no successful reconnection attempt in the last 5 minutes
             // Either the site is completely dead or the bot got screwed by a nasty error and can't reconnect
-            if (inactivityTime > TimeSpan.FromMinutes(10) || deadTime > TimeSpan.FromMinutes(15))
+            if (inactivityTime > TimeSpan.FromMinutes(10) && deadTime > TimeSpan.FromMinutes(15))
             {
                 var shouldExit = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotExitOnDeath)).ToBoolean();
                 _logger.Error("The bot as is dead beyond belief right now");
