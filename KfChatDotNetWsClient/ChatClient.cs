@@ -114,6 +114,12 @@ public class ChatClient
         _logger.Debug("Websocket client started!");
     }
 
+    public void DisposeWsClient()
+    {
+        if (_wsClient == null) throw new WebSocketNotInitializedException();
+        _wsClient.Dispose();
+    }
+
     public bool IsConnected()
     {
         return _wsClient is { IsRunning: true };

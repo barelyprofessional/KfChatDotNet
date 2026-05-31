@@ -162,7 +162,7 @@ public class ChatBot
             {
                 // Yeah, super dodgy
                 KfClient.LastPacketReceived = DateTime.UtcNow;
-                _logger.Error("Forcing disconnect and restart as bot is completely dead");
+                _logger.Error("Forcing reconnect as bot is completely dead");
                 await KfClient.ReconnectAsync();
             }
         }
@@ -856,6 +856,13 @@ public class ChatBot
             RefreshXfToken().Wait(_cancellationToken);
             _logger.Info("Reconnecting");
             KfClient.ReconnectAsync().Wait(_cancellationToken);
+        }
+
+        if (disconnectionInfo.Exception is TaskCanceledException)
+        {
+            _logger.Error("WebSocket client is broken as the cancellation token it held onto is FUCKING DEAD. Going to dispose and restart the WS client");
+            KfClient.DisposeWsClient();
+            KfClient.StartWsClient().Wait(_cancellationToken);
         }
     }
     
