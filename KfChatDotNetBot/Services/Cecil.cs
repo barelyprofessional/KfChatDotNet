@@ -1,3 +1,4 @@
+using System.Globalization;
 using MathNet.Numerics;
 using MathNet.Numerics.Distributions;
 using RandN;
@@ -23,7 +24,7 @@ public static class Cecil
         switch (skew)
         {
             case BetaSkew betaSkew:
-                baseResult = Beta.InvCDF(betaSkew.Weight, betaSkew.Beta, scaledR) * betaSkew.CalibratedMaxWin;
+                baseResult = Beta.InvCDF(betaSkew.Alpha, betaSkew.Beta, scaledR) * betaSkew.CalibratedMaxWin;
                 break;
             case GammaSkew gammaSkew:
                 baseResult = Gamma.InvCDF(gammaSkew.Weight, gammaSkew.Weight, scaledR);
@@ -62,6 +63,52 @@ public abstract class Skew
     {
         TargetEv = desiredEv;
         Calibrate(1-lr);
+    }
+
+    /// <summary>
+    /// Parses a serialized configuration token string from the HTML configuration utility
+    /// and instantiates a fully calibrated Skew state profile.
+    /// </summary>
+    /// <param name="token">Example formats: "B:0.5:50:0:0.95" or "G:1.2:0.05:1.0"</param>
+    public static Skew FromToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            throw new ArgumentException("Engine initialization token cannot be empty.", nameof(token));
+
+        string[] parts = token.Split(':');
+        string typeId = parts[0].ToUpper(CultureInfo.InvariantCulture);
+
+        switch (typeId)
+        {
+            case "B":
+                if (parts.Length != 5)
+                    throw new FormatException("BetaSkew token profile requires exactly 5 dynamic segments.");
+
+                double bVol = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                double bMw = double.Parse(parts[2], CultureInfo.InvariantCulture);
+                double bLr = double.Parse(parts[3], CultureInfo.InvariantCulture);
+                double bEv = double.Parse(parts[4], CultureInfo.InvariantCulture);
+
+                // Instantiates structural object components, automatically applying calibrated settings.
+                BetaSkew beta = new BetaSkew(bVol, bMw, bLr);
+                beta.Rig(bEv, bLr); 
+                return beta;
+
+            case "G":
+                if (parts.Length != 4)
+                    throw new FormatException("GammaSkew token profile requires exactly 4 dynamic segments.");
+
+                double gWght = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                double gLr = double.Parse(parts[2], CultureInfo.InvariantCulture);
+                double gEv = double.Parse(parts[3], CultureInfo.InvariantCulture);
+
+                GammaSkew gamma = new GammaSkew(gWght, gLr);
+                gamma.Rig(gEv, gLr);
+                return gamma;
+
+            default:
+                throw new NotSupportedException($"Unrecognized skew mathematical distribution identifier classification: '{typeId}'");
+        }
     }
 }
 

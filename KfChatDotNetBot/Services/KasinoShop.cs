@@ -1050,6 +1050,7 @@ public class KasinoShop
         public string name;
         private decimal CryptoBalance;
         public decimal OutstandingLoanBalance;
+        public string Difficulty = "";
         public Dictionary<int, Asset> Assets;
         public Dictionary<int, Loan> Loans = new();
         public decimal[] SponsorWagerLock = new decimal[2]; //[0] is how much you've wagered against your wager requirement, [1] is the wager requirement

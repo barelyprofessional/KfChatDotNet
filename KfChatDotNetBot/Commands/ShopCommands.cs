@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
@@ -104,6 +105,174 @@ public class ShopHelpCommand : ICommand
         await botInstance.SendChatMessageAsync(
             $"{user.FormatUsername()} - Kasino Shop Help Tool: {KasinoShopHelpLink}", true, autoDeleteAfter: TimeSpan.FromSeconds(15));
         //just gonna link to an html hosted on iddos
+    }
+}
+
+public class ShopSetDifficultyCommand : ICommand
+{
+    public List<Regex> Patterns =>
+    [
+        new Regex(@"^shop difficulty (?<betstr>.*)$", RegexOptions.IgnoreCase),
+        new Regex(@"^shop difficulty", RegexOptions.IgnoreCase)
+    ];
+
+    public string? HelpText => "Set your difficulty for cecil based games using the cecil tool";
+
+    public UserRight RequiredRight => UserRight.Loser;
+
+    public TimeSpan Timeout => TimeSpan.FromSeconds(30);
+    
+    public RateLimitOptionsModel? RateLimitOptions => new RateLimitOptionsModel
+    {
+        MaxInvocations = 1,
+        Window = TimeSpan.FromSeconds(120)
+    };
+    public bool WhisperCanInvoke => true;
+
+    public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user,
+        GroupCollection arguments, CancellationToken ctx)
+    {
+        var cleanupDelay = TimeSpan.FromSeconds(10);
+        var gambler = await Money.GetGamblerEntityAsync(user.Id, ct: ctx);
+        if (gambler == null)
+        {
+            throw new InvalidOperationException($"Caught a null when retrieving gambler for {user.KfUsername}");
+        }
+
+        bool shopActive = botInstance.BotServices.KasinoShop != null;
+        if (!shopActive)
+        {
+            await botInstance.SendChatMessageAsync("KasinoShop is not currently running.", true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+        
+        
+        
+
+        if (!arguments.TryGetValue("betstr", out var betstr))
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, use the cecil tool to set your difficulty. https://i.ddos.lgbt/raw/CecilHelper.html",
+                true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        //validate difficulty string
+        
+        string diff = betstr.Value;
+        if (diff.ToUpper() == "DEFAULT")
+        {
+            botInstance.BotServices.KasinoShop!.Gambler_Profiles[user.KfId].Difficulty = "";
+            return;
+        }
+        var parts = diff.Trim().Split(':');
+        string typeId = parts[0].ToUpper(CultureInfo.InvariantCulture);
+
+        if (typeId != "B" && typeId != "G")
+        {
+            await botInstance.SendChatMessageAsync(
+                $"{user.FormatUsername()}, distribution type {typeId} is not valid, type must be B for beta or G for gamma.", true, autoDeleteAfter: cleanupDelay);
+            return;
+        }
+        if (typeId == "B")
+        {
+            if (parts.Length != 5)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, Beta profile format error. Expected 5 parameters, but found {parts.Length}.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double weight) || weight <= 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, volatility weight value '{parts[1]}' is not valid, value must be a number greater than 0.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out double maxWin) || maxWin <= 1.0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, Max Win value '{parts[2]}' is not valid, value must be a number greater than 1.0x.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double lossRate) || lossRate < 0 || lossRate >= 1.0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, loss rate percentage '{parts[3]}' is not valid, value must be between 0.0 and 1.0.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[4], NumberStyles.Any, CultureInfo.InvariantCulture, out double targetEv) || targetEv <= 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, target EV calculation setup value '{parts[4]}' is not valid, value must be a number greater than 0.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (targetEv > 1.0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, house protection violation, target EV value {targetEv} cannot exceed 1.0 (100% RTP).", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+        }
+        // --- Gamma Validation: G:[weight]:[lossRate]:[targetEv] ---
+        else if (typeId == "G")
+        {
+            if (parts.Length != 4)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, Gamma profile format error. Expected 4 parameters, but found {parts.Length}.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out double weight) || weight <= 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, inverse risk weight value '{parts[1]}' is not valid, value must be a number greater than 0.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[2], NumberStyles.Any, CultureInfo.InvariantCulture, out double lossRate) || lossRate < 0 || lossRate >= 1.0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, loss rate percentage '{parts[2]}' is not valid, value must be between 0.0 and 1.0.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (!double.TryParse(parts[3], NumberStyles.Any, CultureInfo.InvariantCulture, out double targetEv) || targetEv <= 0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, target EV calculation setup value '{parts[3]}' is not valid, value must be a number greater than 0.", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+
+            if (targetEv > 1.0)
+            {
+                await botInstance.SendChatMessageAsync(
+                    $"{user.FormatUsername()}, house protection violation, target EV value {targetEv} cannot exceed 1.0 (100% RTP).", 
+                    true, autoDeleteAfter: cleanupDelay);
+                return;
+            }
+        }
+
+        botInstance.BotServices.KasinoShop.Gambler_Profiles[user.KfId].Difficulty = diff;
+        await botInstance.BotServices.KasinoShop.SaveProfiles();
+
+
+
     }
 }
 

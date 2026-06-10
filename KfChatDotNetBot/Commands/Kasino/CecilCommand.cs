@@ -28,6 +28,8 @@ public class CecilCommand : ICommand
     };
     public bool WhisperCanInvoke => true;
 
+    public decimal HOUSE_EDGE = 0.98m;
+
     public async Task RunCommand(ChatBot botInstance, BotCommandMessageModel message, UserDbModel user,
         GroupCollection arguments,
         CancellationToken ctx)
@@ -71,17 +73,34 @@ public class CecilCommand : ICommand
             return;
         }
 
-        var difficulty = 1.0;
 
+        bool shopActive = botInstance.BotServices.KasinoShop != null;
+        if (shopActive)
+        {
+            await GlobalShopFunctions.CheckProfile(botInstance, user, gambler);
+            HOUSE_EDGE += botInstance.BotServices.KasinoShop!.Gambler_Profiles[user.KfId].HouseEdgeModifier;
+        }
+        
+        var difficulty = 1.0;
+        bool customDiff = false;
         double result;
         if (arguments.TryGetValue("difficulty", out var diff))
         {
             difficulty = Convert.ToDouble(diff.Value);
+            customDiff = true;
         }
 
-        if (!arguments.TryGetValue("maxwin", out var maxWin))
+        if (!customDiff && shopActive &&
+            botInstance.BotServices.KasinoShop!.Gambler_Profiles[user.KfId].Difficulty != "")
+        {
+            var skew = Skew.FromToken(botInstance.BotServices.KasinoShop!.Gambler_Profiles[user.KfId].Difficulty);
+            skew.Rig((double)HOUSE_EDGE, 0);
+            result = Cecil.Consult(skew);
+        }
+        else if (!arguments.TryGetValue("maxwin", out var maxWin))
         {
             var skew = new GammaSkew(difficulty, 0);
+            skew.Rig((double)HOUSE_EDGE, 0);
             result = Cecil.Consult(skew, 0);
         }
         else
@@ -93,8 +112,10 @@ public class CecilCommand : ICommand
                 return;
             }
             var skew = new BetaSkew(difficulty, mWin, 0);
+            skew.Rig((double)HOUSE_EDGE, 0);
             result = Cecil.Consult(skew);
         }
+        
 
         var payout = wager * Convert.ToDecimal(result);
         var net = payout - wager;
