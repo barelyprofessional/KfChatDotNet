@@ -310,6 +310,10 @@ public enum WagerGame
     Plinko,
     [Description("Roulette but live")]
     Roulette,
+    /// <summary>
+    /// User predictions with multiple outcomes where winners share the pot
+    /// </summary>
+    Prediction,
     Krash,
     Cecil
 }
