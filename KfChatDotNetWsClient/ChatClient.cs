@@ -101,7 +101,7 @@ public class ChatClient
 
         var client = new WebsocketClient(_config.WsUri, factory)
         {
-            ReconnectTimeout = TimeSpan.FromSeconds(_config.ReconnectTimeout)
+            IsReconnectionEnabled = false
         };
         _wsClient = client;
 

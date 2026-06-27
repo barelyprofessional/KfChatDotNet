@@ -51,11 +51,11 @@ public class ChatBot
         _kfDeadBotDetection = KfDeadBotDetectionTask();
         var settings = SettingsProvider.GetMultipleValuesAsync([
             BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
-            BuiltIn.Keys.KiwiFarmsProxy, BuiltIn.Keys.KiwiFarmsWsReconnectTimeout]).Result;
+            BuiltIn.Keys.KiwiFarmsProxy]).Result;
 
         _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
             settings[BuiltIn.Keys.KiwiFarmsProxy].Value, _cancellationToken);
-        
+
         if (_kfTokenService.GetCookies().Count == 0)
         {
             try
@@ -68,14 +68,13 @@ public class ChatBot
                 _logger.Error(e);
             }
         }
-        
+
         KfClient = new ChatClient(new ChatClientConfigModel
         {
             WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
             Cookies = _kfTokenService.GetCookies(),
             CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
-            Proxy = settings[BuiltIn.Keys.KiwiFarmsProxy].Value,
-            ReconnectTimeout = settings[BuiltIn.Keys.KiwiFarmsWsReconnectTimeout].ToType<int>()
+            Proxy = settings[BuiltIn.Keys.KiwiFarmsProxy].Value
         });
   
         _logger.Debug("Creating bot command instance");
@@ -135,8 +134,8 @@ public class ChatBot
             _logger.Error("Caught an exception while trying to refresh the XF token");
             _logger.Error(e);
         }
-        _logger.Info("Retrieved fresh token. Reconnecting.");
-        KfClient.ReconnectAsync().Wait(_cancellationToken);
+        _logger.Info("Retrieved fresh token. Recreating WS client.");
+        RecreateKfClientAsync().Wait(_cancellationToken);
         _logger.Info("Client should be reconnecting now");
     }
 
@@ -162,9 +161,8 @@ public class ChatBot
             var inactivityTimeout = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
             if (inactivityTime.TotalSeconds > inactivityTimeout && lastReconnect.TotalMinutes > 1)
             {
-                _lastReconnectAttempt = DateTime.UtcNow;
                 _logger.Error("Forcing reconnect as bot is completely dead");
-                await KfClient.ReconnectAsync();
+                await RecreateKfClientAsync();
             }
         }
     }
@@ -188,7 +186,7 @@ public class ChatBot
                 _logger.Error($"deadTime -> {deadTime:g}");
                 if (shouldExit) Environment.Exit(1);
                 _logger.Error("Since we didn't exit, let's try forcing a reconnect");
-                await KfClient.ReconnectAsync();
+                await RecreateKfClientAsync();
             }
         }
     }
@@ -845,6 +843,14 @@ public class ChatBot
         await db.SaveChangesAsync(_cancellationToken);
     }
 
+    private async Task RecreateKfClientAsync()
+    {
+        _lastReconnectAttempt = DateTime.UtcNow;
+        _logger.Info("Disposing and recreating the WS client");
+        KfClient.DisposeWsClient();
+        await KfClient.StartWsClient();
+    }
+
     private void OnKfWsDisconnected(object sender, DisconnectionInfo disconnectionInfo)
     {
         _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
@@ -855,16 +861,9 @@ public class ChatBot
         {
             _logger.Info("Chat 203'd, getting a new token");
             RefreshXfToken().Wait(_cancellationToken);
-            _logger.Info("Reconnecting");
-            KfClient.ReconnectAsync().Wait(_cancellationToken);
         }
-
-        if (disconnectionInfo.Exception is TaskCanceledException)
-        {
-            _logger.Error("WebSocket client is broken as the cancellation token it held onto is FUCKING DEAD. Going to dispose and restart the WS client");
-            KfClient.DisposeWsClient();
-            KfClient.StartWsClient().Wait(_cancellationToken);
-        }
+        _logger.Info("Recreating WS client after disconnect");
+        RecreateKfClientAsync().Wait(_cancellationToken);
     }
     
     private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
