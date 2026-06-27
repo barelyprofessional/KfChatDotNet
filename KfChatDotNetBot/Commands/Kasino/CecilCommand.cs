@@ -118,7 +118,7 @@ public class CecilCommand : ICommand
         
 
         var payout = wager * Convert.ToDecimal(result);
-        var net = payout - wager;
+        var net = payout + wager;
         var newBalance = await Money.NewWagerAsync(gambler.Id, wager, net, WagerGame.Cecil, ct: ctx);
         var colors =
             await SettingsProvider.GetMultipleValuesAsync([
