@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
+[KasinoCommand]
 public class TempExcludeCommand : ICommand
 {
     public List<Regex> Patterns => [
@@ -78,6 +79,7 @@ public class TempExcludeCommand : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoGameToggleCommand : ICommand
 {
     public List<Regex> Patterns => [
@@ -161,6 +163,7 @@ public class KasinoGameToggleCommand : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoGameListCommand : ICommand
 {
     public List<Regex> Patterns => [

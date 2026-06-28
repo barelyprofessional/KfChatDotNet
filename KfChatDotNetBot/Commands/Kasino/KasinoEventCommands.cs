@@ -9,6 +9,7 @@ using KfChatDotNetWsClient.Models.Events;
 
 namespace KfChatDotNetBot.Commands.Kasino;
 
+[KasinoCommand]
 public class KasinoNewEventCommand : ICommand
 {
     public List<Regex> Patterns =>
@@ -99,6 +100,7 @@ public class KasinoNewEventCommand : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoEventStart : ICommand
 {
     public List<Regex> Patterns =>
@@ -168,6 +170,7 @@ public class KasinoEventStart : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoNewEventOption : ICommand
 {
     public List<Regex> Patterns =>
@@ -234,6 +237,7 @@ public class KasinoNewEventOption : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoRemoveEventOption : ICommand
 {
     public List<Regex> Patterns =>
@@ -293,6 +297,7 @@ public class KasinoRemoveEventOption : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoGetEventInfo : ICommand
 {
     public List<Regex> Patterns =>
@@ -339,6 +344,7 @@ public class KasinoGetEventInfo : ICommand
     }
 }
 
+[KasinoCommand]
 public class KasinoGetEvents : ICommand
 {
     public List<Regex> Patterns =>
