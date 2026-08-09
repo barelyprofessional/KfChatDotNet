@@ -40,6 +40,15 @@ namespace KfChatDotNetBot
             await BuiltIn.SyncSettingsWithDb();
             logger.Info("Migrating settings from config.json (if needed)");
             await BuiltIn.MigrateJsonSettingsToDb();
+
+            if (args.Contains("--auth-test"))
+            {
+                // Gate and login only, then exit. Never touches the chat socket, so it can't read or say anything
+                Console.OutputEncoding = Encoding.UTF8;
+                Environment.ExitCode = await AuthTest.Run(args.Contains("--fresh"));
+                return;
+            }
+
             logger.Info("Attempting to grab the Redis connection multiplexer so it's built");
             try
             {
