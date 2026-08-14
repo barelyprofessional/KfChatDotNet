@@ -12,6 +12,7 @@ public class KfTokenService
     private readonly CancellationToken _ctx;
     private CookieContainer _cookies = new();
     private KiwiFlare _kiwiFlare;
+    private readonly Monocle _monocle;
     private readonly string _kfDomain;
     private readonly string? _proxy;
 
@@ -19,6 +20,7 @@ public class KfTokenService
     {
         _ctx = cancellationToken ?? CancellationToken.None;
         _kiwiFlare = new KiwiFlare(kfDomain, proxy, cancellationToken);
+        _monocle = new Monocle(proxy, cancellationToken);
         _proxy = proxy;
         _kfDomain = kfDomain;
         var cachedCookies = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsCookies).Result
@@ -46,9 +48,15 @@ public class KfTokenService
     private async Task GetNewClearanceToken()
     {
         _logger.Debug("Getting a new clearance token");
+        const int attempts = 10;
+        // Bounded separately from the general retries. The gate telling us twice that our assessment is no good
+        // means the browserless mint has stopped being accepted, not that we got unlucky.
+        const int assessmentRetryLimit = 2;
+        var assessmentRetries = 0;
+        var forceFreshAssessment = false;
         var i = 0;
         // Shitty retry logic as the forum is still annoyingly unstable
-        while (i < 10)
+        while (i < attempts)
         {
             i++;
             try
@@ -59,11 +67,25 @@ public class KfTokenService
                     _logger.Error("Challenge data was null. Might be KiwiFlare is only partially enabled? Not going to do anything.");
                     return;
                 }
+
+                string? assessment = null;
+                if (challenge.MonocleKey != null)
+                {
+                    // Minted before solving deliberately. The assessment is independent of the salt, so if Spur
+                    // refuses us we find out without having burned any CPU on the proof of work.
+                    assessment = await _monocle.GetAssessmentAsync(challenge.MonocleKey, forceFreshAssessment);
+                    forceFreshAssessment = false;
+                }
+                else if (challenge.IsTtrs)
+                {
+                    _logger.Info("ttrs challenge page carried no monocle key, submitting without an assessment");
+                }
+
                 var solution = await _kiwiFlare.SolveChallenge(challenge);
                 string token;
                 if (challenge.IsTtrs)
                 {
-                    token = await _kiwiFlare.SubmitAnswerTtrs(solution);
+                    token = await _kiwiFlare.SubmitAnswerTtrs(solution, assessment, challenge.StagingClearance);
                     _cookies.Add(new Cookie("ttrs_clearance", token, "/", _kfDomain));
 
                 }
@@ -75,9 +97,36 @@ public class KfTokenService
                 _logger.Debug("Successfully retrieved a new token and added to the cookie container");
                 return;
             }
+            catch (TtrsChallengeRejectedException e) when (e.IsConnectionRejection)
+            {
+                _logger.Error("Spur judged our connection unacceptable (reason MCL), it thinks this address is a " +
+                              "VPN, proxy or datacentre. Retrying cannot fix this. Mint from an acceptable address " +
+                              $"via the {BuiltIn.Keys.MonocleProxy} setting, or move the bot.");
+                throw;
+            }
+            catch (TtrsChallengeRejectedException e) when (e.IsAssessmentProblem)
+            {
+                assessmentRetries++;
+                _logger.Error($"The gate rejected our Monocle assessment ({e.Reason}), attempt {assessmentRetries} " +
+                              $"of {assessmentRetryLimit}. Discarding the cached assessment and re-minting.");
+                if (assessmentRetries >= assessmentRetryLimit)
+                {
+                    _logger.Error("The gate keeps rejecting freshly minted assessments. Tartarus has most likely " +
+                                  "started declining browserless ones, which needs a browser fallback to fix " +
+                                  "(SITE-SECURITY-AND-LOGIN.md §2.2).");
+                    throw;
+                }
+                forceFreshAssessment = true;
+            }
+            catch (UnsupportedPowAlgorithmException e)
+            {
+                // No amount of retrying will teach us Argon2id
+                _logger.Error(e.Message);
+                throw;
+            }
             catch (Exception e)
             {
-                _logger.Error($"Failed to solve the KiwiFlare challenge, attempt {i} of 10");
+                _logger.Error($"Failed to solve the KiwiFlare challenge, attempt {i} of {attempts}");
                 _logger.Error(e);
             }
         }

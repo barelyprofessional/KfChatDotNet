@@ -623,6 +623,21 @@ public static class BuiltIn
         public static string KasinoRapBattleCheatEnabled = "Kasino.RapBattle.CheatEnabled";
         [BuiltInSetting("Proxy to use when connecting to Kiwi Farms for WS and logging in", SettingValueType.Text)]
         public static string KiwiFarmsProxy = "KiwiFarms.Proxy";
+        [BuiltInSetting("URL of Spur's Monocle loader. The bot GETs this with the site key from the challenge page " +
+                        "and lifts the assessment Spur bakes into the bundle, so no browser is involved",
+            SettingValueType.Text, "https://mcl.spur.us/d/mcl.js")]
+        public static string MonocleLoaderUrl = "Monocle.LoaderUrl";
+        [BuiltInSetting("How long in seconds to reuse a minted Monocle assessment before fetching another. Spur " +
+                        "publishes no lifetime, they've been measured good for 30 minutes or more",
+            SettingValueType.Text, "600", WholeNumberRegex)]
+        public static string MonocleCacheDuration = "Monocle.CacheDuration";
+        [BuiltInSetting("Proxy to use when minting a Monocle assessment. null to use KiwiFarms.Proxy. Spur judges " +
+                        "the connection it sees, so mint from the same egress address you talk to KF from",
+            SettingValueType.Text)]
+        public static string MonocleProxy = "Monocle.Proxy";
+        [BuiltInSetting("User agent to send when fetching Spur's Monocle loader", SettingValueType.Text,
+            "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0")]
+        public static string MonocleUserAgent = "Monocle.UserAgent";
     }
 }
 
