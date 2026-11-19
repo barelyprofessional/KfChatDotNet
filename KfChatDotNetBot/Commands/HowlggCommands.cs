@@ -3,7 +3,6 @@ using Humanizer;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace KfChatDotNetBot.Commands;

@@ -5,7 +5,6 @@ using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using NLog;
 
@@ -59,8 +58,10 @@ internal class BotCommands
                 _logger.Debug($"Message matches {regex}");
                 if (!command.WhisperCanInvoke && message.IsWhisper) continue;
                 using var db = new ApplicationDbContext();
-                var user = db.Users.AsNoTracking().FirstOrDefault(u => u.KfId == message.Author.Id);
-                // This should never happen as brand-new users are created upon join
+                // Looked up by principal as that's the one thing the chat guarantees. ChatBot links it to the forum ID
+                // before the message gets here, users it couldn't identify have no row and get ignored
+                var user = db.Users.AsNoTracking().FirstOrDefault(u => u.PrincipalUuid == message.Author.PrincipalUuid);
+                // Only happens if the user's forum ID couldn't be worked out (no avatar and the whois failed)
                 if (user == null) return;
                 if (user.Ignored) return;
                 var continueAfterProcess = HasAttribute<AllowAdditionalMatches>(command);
@@ -76,10 +77,10 @@ internal class BotCommands
                 {
                     if (message.IsWhisper)
                     {
-                        _ = _bot.SendWhisperAsync(message.Author.Id, $"@{message.Author.Username}, you've been permanently banned from the kasino. Contact support for more information.");
+                        _ = _bot.SendWhisperAsync(message.Author.Id, $"{message.Author.FormatUsername()}, you've been permanently banned from the kasino. Contact support for more information.");
                         return;
                     }
-                    _bot.SendChatMessage($"@{message.Author.Username}, you've been permanently banned from the kasino. Contact support for more information.", true);
+                    _bot.SendChatMessage($"{message.Author.FormatUsername()}, you've been permanently banned from the kasino. Contact support for more information.", true);
                     return;
                 }
 
@@ -96,11 +97,11 @@ internal class BotCommands
                             if (message.IsWhisper)
                             {
                                 _ = _bot.SendWhisperAsync(message.Author.Id,
-                                    $"@{message.Author.Username}, you're self excluded from the kasino for another {(exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 3)}");
+                                    $"{message.Author.FormatUsername()}, you're self excluded from the kasino for another {(exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 3)}");
                                 return;
                             }
                             _bot.SendChatMessage(
-                                $"@{message.Author.Username}, you're self excluded from the kasino for another {(exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 3)}", true);
+                                $"{message.Author.FormatUsername()}, you're self excluded from the kasino for another {(exclusion.Expires - DateTimeOffset.UtcNow).Humanize(precision: 3)}", true);
                             return;
                         }
                     }
@@ -111,11 +112,11 @@ internal class BotCommands
                     if (message.IsWhisper)
                     {
                         _ = _bot.SendWhisperAsync(message.Author.Id,
-                            $"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}");
+                            $"{message.Author.FormatUsername()}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}");
                     }
                     else
                     {
-                        _bot.SendChatMessage($"@{message.Author.Username}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
+                        _bot.SendChatMessage($"{message.Author.FormatUsername()}, you do not have access to use this command. Your rank: {user.UserRight.Humanize()}; Required rank: {command.RequiredRight.Humanize()}", true);
                     }
                     if (continueAfterProcess) continue;
                     break;

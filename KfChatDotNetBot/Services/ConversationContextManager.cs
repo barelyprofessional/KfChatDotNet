@@ -47,7 +47,7 @@ public class ConversationContextManager
         _redisDb = Redis.Multiplexer.GetDatabase();
     }
 
-    public static string GetContextKeyAsync(string mode, int userId, int roomId)
+    public static string GetContextKeyAsync(string mode, int userId, string roomId)
     {
         return mode.ToLowerInvariant() switch
         {

@@ -136,7 +136,10 @@ public static class Extensions
     // Placeholder for future expansion involving custom titles
     public static string FormatUsername(this UserDbModel user)
     {
-        return $"@{user.KfUsername}";
+        // A real mention needs the principal UUID. Users who haven't been seen since the move to Ephyra don't have one
+        return user.PrincipalUuid == null
+            ? $"@{user.KfUsername}"
+            : EphyraChatClient.EphyraBbCode.Mention(user.PrincipalUuid, user.KfUsername);
     }
 
     /// <summary>

@@ -1,7 +1,6 @@
 using System.Text.RegularExpressions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
-using KfChatDotNetWsClient.Models.Events;
 
 namespace KfChatDotNetBot.Commands;
 

@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
-using KfChatDotNetWsClient.Models.Events;
 using RandN;
 using RandN.Compat;
 

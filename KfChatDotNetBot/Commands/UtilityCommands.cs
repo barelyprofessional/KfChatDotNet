@@ -5,7 +5,6 @@ using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 
 namespace KfChatDotNetBot.Commands;
 

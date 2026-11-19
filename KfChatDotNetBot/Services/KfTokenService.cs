@@ -1,5 +1,7 @@
 ﻿using System.Net;
 using System.Text.Json;
+using EphyraChatClient;
+using EphyraChatClient.Models.Events;
 using HtmlAgilityPack;
 using KfChatDotNetBot.Settings;
 using NLog;
@@ -188,6 +190,75 @@ public class KfTokenService
     {
         _logger.Info("Wiping out cookies");
         _cookies = new CookieContainer();
+    }
+
+    /// <summary>
+    /// Add (or replace) a cookie in the jar. Used for holding onto the chat session cookie Ephyra issues so it gets
+    /// persisted along with the forum ones
+    /// </summary>
+    public void SetCookie(string name, string value)
+    {
+        _cookies.Add(new Cookie(name, value, "/", _kfDomain));
+    }
+
+    private EphyraForumClient GetForumClient(HttpClient client)
+    {
+        return new EphyraForumClient(client, new Uri($"https://{_kfDomain}"));
+    }
+
+    /// <summary>
+    /// Get a ticket from the forum which the Ephyra chat host will swap for a session. Logs in first if needed
+    /// </summary>
+    /// <param name="username">Username to log in with if the session turns out to be dead</param>
+    /// <param name="password">Password to log in with if the session turns out to be dead</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>The ticket. Only good for a couple of minutes</returns>
+    public async Task<string> GetChatTicketAsync(string? username, string? password, CancellationToken ct = default)
+    {
+        // GetLoginPage deals with KiwiFlare, so by the time it's back we should have clearance for the POST as well
+        var html = await GetLoginPage();
+        if (!IsLoggedInHtml(html))
+        {
+            if (username == null || password == null)
+            {
+                throw new KiwiFarmsLogonFailedException();
+            }
+
+            _logger.Info("Not logged into the forum, logging in before asking for a chat ticket");
+            await PerformLogin(username, password);
+            html = await GetLoginPage();
+        }
+
+        var csrf = EphyraForumClient.ExtractCsrfToken(html);
+        if (csrf == null) throw new Exception("data-csrf missing from html element");
+        using var client = new HttpClient(GetHttpClientHandler());
+        return await GetForumClient(client).RequestTicketAsync(csrf, ct);
+    }
+
+    private static bool IsLoggedInHtml(string html)
+    {
+        var document = new HtmlDocument();
+        document.LoadHtml(html);
+        return document.DocumentNode.SelectSingleNode("//html")?.GetAttributeValue("data-logged-in", "false") == "true";
+    }
+
+    /// <summary>
+    /// Ask the forum which user is behind an Ephyra principal UUID
+    /// </summary>
+    /// <returns>Null if the forum doesn't know the principal</returns>
+    public async Task<ChatWhoisModel?> WhoisAsync(string principalUuid, CancellationToken ct = default)
+    {
+        using var client = new HttpClient(GetHttpClientHandler());
+        try
+        {
+            return await GetForumClient(client).WhoisAsync(principalUuid, ct);
+        }
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NonAuthoritativeInformation)
+        {
+            _logger.Info("Caught a 203 response when doing a whois which means we have to solve a KiwiFlare challenge");
+            await GetNewClearanceToken();
+            return await GetForumClient(client).WhoisAsync(principalUuid, ct);
+        }
     }
     
     public class KiwiFarmsLogonFailedException : Exception;

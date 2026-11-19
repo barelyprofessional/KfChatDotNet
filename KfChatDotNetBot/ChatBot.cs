@@ -1,36 +1,39 @@
-﻿using System.Net;
-using System.Text.Json;
+﻿using System.Text.Json;
+using EphyraChatClient;
+using EphyraChatClient.Models;
+using EphyraChatClient.Models.Events;
 using Homoglyphic;
 using KfChatDotNetBot.Extensions;
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient;
-using KfChatDotNetWsClient.Models;
-using KfChatDotNetWsClient.Models.Events;
-using KfChatDotNetWsClient.Models.Json;
 using Microsoft.EntityFrameworkCore;
 using NLog;
-using Websocket.Client;
 
 namespace KfChatDotNetBot;
 
 public class ChatBot
 {
-    internal readonly ChatClient KfClient;
+    /// <summary>
+    /// Everything to do with whispers is marked [Obsolete] with this message so the compiler points out each usage
+    /// </summary>
+    public const string WhispersGoneMessage =
+        "Ephyra-Chat has no whispers. This does nothing now and is only still here so its usages can be found and cleaned up.";
+
+    internal readonly EphyraClient KfClient;
     private readonly Logger _logger = LogManager.GetCurrentClassLogger();
     // Oh no it's an ever expanding list that may never get cleaned up!
     // BUY MORE RAM
     private readonly List<SeenMessageMetadataModel> _seenMessages = [];
-    // Suppresses the command handler on initial start, so it doesn't pick up things already handled on restart
+    // Set until the bot has joined the room for the first time. Other services use it to hold off until chat is usable
     internal bool InitialStartCooldown = true;
     private readonly CancellationToken _cancellationToken = new();
     private readonly BotCommands _botCommands;
     public readonly List<SentMessageTrackerModel> SentMessages = [];
     internal bool GambaSeshPresent;
     internal readonly BotServices BotServices;
-    private Task _kfChatPing;
+    private Task _kfChatWatchdog;
     private KfTokenService _kfTokenService;
     private int _joinFailures = 0;
     private Task _kfDeadBotDetection;
@@ -38,7 +41,17 @@ public class ChatBot
     private List<ScheduledAutoDeleteModel> _scheduledDeletions = [];
     private Task _scheduledAutoDeleteTask;
     private List<UserModel> _currentUsersInChat = [];
+    private readonly Lock _currentUsersLock = new();
     private HomoglyphSearch? _homoglyphSearch;
+    /// <summary>
+    /// UUID of the room the bot lives in (KiwiFarms.RoomUuid). Null if it hasn't been configured
+    /// </summary>
+    internal readonly string? RoomUuid;
+    // Principal UUID -> user, for everyone whose forum ID we've managed to work out
+    private readonly Dictionary<string, UserModel> _knownUsers = new(StringComparer.OrdinalIgnoreCase);
+    // Principal UUID -> when a whois for them last came up empty, so we don't hammer the forum over the same person
+    private readonly Dictionary<string, DateTime> _whoisFailures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Lock _userResolveLock = new();
 
     public ChatBot()
     {
@@ -50,11 +63,11 @@ public class ChatBot
         
         _kfDeadBotDetection = KfDeadBotDetectionTask();
         var settings = SettingsProvider.GetMultipleValuesAsync([
-            BuiltIn.Keys.KiwiFarmsWsEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
-            BuiltIn.Keys.KiwiFarmsProxy]).Result;
+            BuiltIn.Keys.KiwiFarmsChatEndpoint, BuiltIn.Keys.KiwiFarmsDomain,
+            BuiltIn.Keys.KiwiFarmsProxy, BuiltIn.Keys.KiwiFarmsRoomUuid]).Result;
 
-        _kfTokenService = new KfTokenService(settings[BuiltIn.Keys.KiwiFarmsDomain].Value!,
-            settings[BuiltIn.Keys.KiwiFarmsProxy].Value, _cancellationToken);
+        var domain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null");
+        _kfTokenService = new KfTokenService(domain, settings[BuiltIn.Keys.KiwiFarmsProxy].Value, _cancellationToken);
 
         if (_kfTokenService.GetCookies().Count == 0)
         {
@@ -69,30 +82,51 @@ public class ChatBot
             }
         }
 
-        KfClient = new ChatClient(new ChatClientConfigModel
+        KfClient = new EphyraClient(new EphyraClientConfigModel
         {
-            WsUri = new Uri(settings[BuiltIn.Keys.KiwiFarmsWsEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsWsEndpoint} cannot be null")),
+            ChatEndpoint = new Uri(settings[BuiltIn.Keys.KiwiFarmsChatEndpoint].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsChatEndpoint} cannot be null")),
+            ForumBaseUri = new Uri($"https://{domain}"),
+            // If there's a chat session cookie left over from the last run in here, the bot gets straight back in
             Cookies = _kfTokenService.GetCookies(),
-            CookieDomain = settings[BuiltIn.Keys.KiwiFarmsDomain].Value ?? throw new InvalidOperationException($"{BuiltIn.Keys.KiwiFarmsDomain} cannot be null"),
-            Proxy = settings[BuiltIn.Keys.KiwiFarmsProxy].Value
+            CookieDomain = domain,
+            Proxy = settings[BuiltIn.Keys.KiwiFarmsProxy].Value,
+            // The chat host calls on this whenever it stops accepting our session. Going through the token service
+            // means KiwiFlare and logging back into the forum are taken care of
+            TicketProvider = GetChatTicketAsync
         });
   
         _logger.Debug("Creating bot command instance");
         _botCommands = new BotCommands(this, _cancellationToken);
 
-        KfClient.OnMessages += OnKfChatMessage;
+        KfClient.OnMessagePosted += OnKfChatMessage;
+        KfClient.OnMessageRevised += OnKfChatMessage;
         KfClient.OnUsersParted += OnUsersParted;
         KfClient.OnUsersJoined += OnUsersJoined;
-        KfClient.OnWsDisconnection += OnKfWsDisconnected;
-        KfClient.OnWsReconnect += OnKfWsReconnected;
-        KfClient.OnFailedToJoinRoom += OnFailedToJoinRoom;
-        KfClient.OnMotd += OnMotd;
-        KfClient.OnWhisper += OnWhisper;
-        
-        KfClient.StartWsClient().Wait(_cancellationToken);
+        KfClient.OnDisconnected += OnKfDisconnected;
+        KfClient.OnConnected += OnKfConnected;
+        KfClient.OnRoomJoined += OnRoomJoined;
+        KfClient.OnRoomJoinFailed += OnFailedToJoinRoom;
+        KfClient.OnRoomLeft += OnRoomLeft;
+        KfClient.OnAdmissionFailed += OnAdmissionFailed;
+        KfClient.OnSessionEstablished += OnSessionEstablished;
+        KfClient.OnError += OnKfChatError;
 
-        _logger.Debug("Creating ping task");
-        _kfChatPing = KfPingTask();
+        RoomUuid = settings[BuiltIn.Keys.KiwiFarmsRoomUuid].Value;
+        if (RoomUuid == null)
+        {
+            _logger.Error($"{BuiltIn.Keys.KiwiFarmsRoomUuid} isn't set so the bot has no room to join. " +
+                          "Once connected it'll log the rooms the chat host lists, set the right one and restart.");
+        }
+        else
+        {
+            // The client keeps this joined from here on, including after reconnects
+            KfClient.JoinRoom(RoomUuid);
+        }
+
+        KfClient.StartAsync().Wait(_cancellationToken);
+
+        _logger.Debug("Creating chat watchdog task");
+        _kfChatWatchdog = KfWatchdogTask();
         _logger.Debug("Creating scheduled auto deletion task");
         _scheduledAutoDeleteTask = ScheduledDeletionTask();
         
@@ -108,51 +142,131 @@ public class ChatBot
         exitEvent.WaitOne();
     }
 
-    private void OnMotd(object sender, MessageModel message)
+    /// <summary>
+    /// Ticket provider for the chat client. Gets called from its connection loop when a new chat session is needed
+    /// </summary>
+    private async Task<string> GetChatTicketAsync(CancellationToken ct)
     {
-        SettingsProvider.SetValueAsync(BuiltIn.Keys.KiwiFarmsMotdUuid, message.MessageUuid).Wait(_cancellationToken);
+        var settings =
+            await SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.KiwiFarmsPassword]);
+        var ticket = await _kfTokenService.GetChatTicketAsync(settings[BuiltIn.Keys.KiwiFarmsUsername].Value,
+            settings[BuiltIn.Keys.KiwiFarmsPassword].Value, ct);
+        // We may have logged in or solved a challenge along the way
+        await _kfTokenService.SaveCookies();
+        return ticket;
     }
 
-    private void OnFailedToJoinRoom(object sender, string message)
+    private void OnSessionEstablished(object sender)
+    {
+        // Hang onto the session cookie so a restart doesn't need a fresh ticket
+        if (!KfClient.GetCookies().TryGetValue(EphyraClient.SessionCookieName, out var session)) return;
+        _logger.Info("Got a new chat session, saving its cookie");
+        _kfTokenService.SetCookie(EphyraClient.SessionCookieName, session);
+        _kfTokenService.SaveCookies().Wait(_cancellationToken);
+    }
+
+    private void OnAdmissionFailed(object sender, ChatAdmissionFailedModel failure)
     {
         var failureLimit = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsJoinFailLimit).Result.ToType<int>();
         _joinFailures++;
-        _logger.Error($"Couldn't join the room, attempt {_joinFailures}. KF returned: {message}");
-        _logger.Error("This is likely due to the session cookie expiring. Retrieving a new one.");
-        if (_joinFailures >= failureLimit)
-        {
-            _logger.Error("Seems we're in a rejoin loop. Wiping out cookies entirely in hopes it'll make this piece of shit work");
-            _kfTokenService.WipeCookies();
-        }
-
-        try
-        {
-            RefreshXfToken().Wait(_cancellationToken);
-        }
-        catch (Exception e)
-        {
-            _logger.Error("Caught an exception while trying to refresh the XF token");
-            _logger.Error(e);
-        }
-        _logger.Info("Retrieved fresh token. Recreating WS client.");
-        RecreateKfClientAsync().Wait(_cancellationToken);
-        _logger.Info("Client should be reconnecting now");
+        _logger.Error($"Couldn't get a chat session, attempt {_joinFailures}. Failure was {failure.Failure}, status code {failure.StatusCode}");
+        _logger.Error(failure.Exception);
+        if (_joinFailures < failureLimit) return;
+        _logger.Error("Seems we're in a loop. Wiping out cookies entirely in hopes it'll make this piece of shit work");
+        _kfTokenService.WipeCookies();
+        KfClient.ForgetSession();
+        _joinFailures = 0;
     }
 
-    private async Task KfPingTask()
+    private void OnFailedToJoinRoom(object sender, ChatRoomJoinFailedModel failure)
+    {
+        _logger.Error($"Couldn't join {failure.RoomUuid}. Chat returned: {failure.Code}");
+        _logger.Error(failure.Terminal
+            ? $"That's a flat out denial so the bot will not try again. Check {BuiltIn.Keys.KiwiFarmsRoomUuid} is right and the account is allowed in there."
+            : "The chat client will try again shortly.");
+    }
+
+    private void OnRoomLeft(object sender, string roomUuid, string? reason)
+    {
+        _logger.Error($"Chat removed us from {roomUuid}, reason: {reason}");
+    }
+
+    private void OnRoomJoined(object sender, ChatRoomJoinedModel room)
+    {
+        if (room.RoomUuid != RoomUuid) return;
+        _logger.Info($"Joined the room. Head sequence is {room.HeadSeq}, resumed from where we left off => {room.Resumed}");
+        // Reset value to 0 as we've now successfully joined
+        if (_joinFailures > 0) _joinFailures = 0;
+        var replayLimit = SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDisconnectReplayLimit).Result.ToType<int>();
+        // Send messages if there are any to replay (Assuming we DC'd and are now back)
+        foreach (var replayMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected)
+                     .TakeLast(replayLimit).ToList())
+        {
+            // Bypass the helpful method we have for sending messages so we don't create new sent message items for them
+            // The validation of whether to send based on GambaSesh's presence etc. has already been performed for msgs here
+            // Fresh nonce as the chat only honours them for ten minutes and who knows how long we were gone
+            replayMsg.ClientNonce = EphyraClient.NewClientNonce();
+            replayMsg.Status = SentMessageTrackerStatus.WaitingForResponse;
+            replayMsg.SentAt = DateTimeOffset.UtcNow;
+            replayMsg.SendAttempts = 1;
+            if (!KfClient.SendMessageAsync(room.RoomUuid, replayMsg.Message, replayMsg.ClientNonce, _cancellationToken).Result)
+            {
+                replayMsg.Status = SentMessageTrackerStatus.Lost;
+            }
+        }
+        foreach(var lostMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected).ToList())
+        {
+            lostMsg.Status = SentMessageTrackerStatus.Lost;
+        }
+
+        if (InitialStartCooldown) InitialStartCooldown = false;
+    }
+
+    private void OnKfChatError(object sender, ChatErrorModel error)
+    {
+        // For a message we tried to post, the chat refers to it by the nonce we sent it with
+        var sentMessage = error.Ref == null ? null : SentMessages.LastOrDefault(msg => msg.ClientNonce == error.Ref);
+        if (sentMessage == null)
+        {
+            _logger.Error($"Chat refused something: {error.Code} (ref: {error.Ref})");
+            return;
+        }
+
+        if (error.IsTransient && sentMessage.SendAttempts < 4)
+        {
+            _logger.Info($"Chat couldn't take message {sentMessage.Reference} right now ({error.Code}), will try it again");
+            _ = RetrySendAsync(sentMessage);
+            return;
+        }
+
+        _logger.Error($"Chat refused message {sentMessage.Reference} with {error.Code}. Message was: {sentMessage.Message}");
+        sentMessage.Status = SentMessageTrackerStatus.Lost;
+    }
+
+    private async Task RetrySendAsync(SentMessageTrackerModel message)
+    {
+        // Same nonce on purpose. If the first attempt did go through after all, the chat won't post it a second time
+        await Task.Delay(TimeSpan.FromSeconds(message.SendAttempts), _cancellationToken);
+        message.SendAttempts++;
+        if (message.Status != SentMessageTrackerStatus.WaitingForResponse || message.ClientNonce == null || RoomUuid == null) return;
+        if (!await KfClient.SendMessageAsync(RoomUuid, message.Message, message.ClientNonce, _cancellationToken))
+        {
+            message.Status = SentMessageTrackerStatus.Lost;
+        }
+    }
+
+    private async Task KfWatchdogTask()
     {
         var interval = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsPingInterval)).ToType<int>();
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
-            _logger.Debug("Pinging KF");
-            if (KfClient.IsConnected())
+            // The chat client pings and reconnects by itself. This is only here to give it a kick if it somehow
+            // manages to sit there receiving nothing at all (pongs count) for longer than the inactivity timeout
+            if (KfClient.IsHalted())
             {
-                KfClient.SendMessage("/ping");
-            }
-            else
-            {
-                _logger.Info("Not pinging the connection as we're currently disconnected");
+                _logger.Debug("Chat client has given up (banned or not permitted), leaving it to the dead bot detection");
+                continue;
             }
             var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
             var lastReconnect = DateTime.UtcNow - _lastReconnectAttempt;
@@ -182,6 +296,7 @@ public class ChatBot
                 var shouldExit = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotExitOnDeath)).ToBoolean();
                 _logger.Error("The bot as is dead beyond belief right now");
                 _logger.Error($"IsConnected() -> {KfClient.IsConnected()}");
+                _logger.Error($"IsHalted() -> {KfClient.IsHalted()}");
                 _logger.Error($"inactivityTime -> {inactivityTime:g}");
                 _logger.Error($"deadTime -> {deadTime:g}");
                 if (shouldExit) Environment.Exit(1);
@@ -206,37 +321,55 @@ public class ChatBot
 
             var now = DateTimeOffset.UtcNow;
             var removals = new List<ScheduledAutoDeleteModel>();
-            foreach (var deletion in _scheduledDeletions)
+            // Copy as things get scheduled from all over the place while this is running
+            foreach (var deletion in _scheduledDeletions.ToList())
             {
                 if (deletion.DeleteAt > now) continue;
                 if (deletion.Message.ChatMessageUuid == null)
                 {
+                    // Messages which were never going to be sent will never get an ID either
+                    if (deletion.Message.Status is SentMessageTrackerStatus.NotSending or SentMessageTrackerStatus.Lost)
+                    {
+                        removals.Add(deletion);
+                        continue;
+                    }
                     _logger.Error($"Can't clean up {deletion.Message.Reference} as it doesn't have a chat message ID");
-                    if (failures.TryGetValue(deletion.Message.Reference, out var failure))
-                    {
-                        if (failure > 20)
-                        {
-                            removals.Add(deletion);
-                            _logger.Error($"Giving up on {deletion.Message.Reference} and removing it from the deletion queue");
-                            continue;
-                        }
-
-                        failures[deletion.Message.Reference] += 1;
-                    }
-                    else
-                    {
-                        failures[deletion.Message.Reference] = 1;
-                    }
+                    if (GiveUpOnDeletion(failures, deletion.Message.Reference)) removals.Add(deletion);
                     continue;
                 }
-                await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageUuid);
+
+                try
+                {
+                    // Unlike Sneedchat this waits for the chat to say it's done, so we know if it needs another go
+                    var result = await KfClient.DeleteMessageAsync(deletion.Message.ChatMessageUuid, ct: _cancellationToken);
+                    if (result.Status is ChatCommandStatus.TimedOut or ChatCommandStatus.NotConnected)
+                    {
+                        _logger.Info($"Deletion of {deletion.Message.ChatMessageUuid} didn't go through ({result.Status}), leaving it in the queue");
+                        if (GiveUpOnDeletion(failures, deletion.Message.Reference)) removals.Add(deletion);
+                        continue;
+                    }
+                }
+                catch (Exception e) when (e is not OperationCanceledException)
+                {
+                    _logger.Error($"Caught an exception while deleting {deletion.Message.ChatMessageUuid}");
+                    _logger.Error(e);
+                }
                 removals.Add(deletion);
             }
             foreach (var removal in removals)
             {
                 _scheduledDeletions.Remove(removal);
+                failures.Remove(removal.Message.Reference);
             }
         }
+    }
+
+    private bool GiveUpOnDeletion(Dictionary<string, int> failures, string reference)
+    {
+        failures[reference] = failures.GetValueOrDefault(reference) + 1;
+        if (failures[reference] <= 20) return false;
+        _logger.Error($"Giving up on {reference} and removing it from the deletion queue");
+        return true;
     }
 
     private async Task RefreshXfToken()
@@ -248,7 +381,8 @@ public class ChatBot
                 _logger.Info("We were already logged in and should have a fresh cookie for chat now");
                 _logger.Info("Updating cookies");
                 await _kfTokenService.SaveCookies();
-                KfClient.UpdateCookies(_kfTokenService.GetCookies());
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+                if (KfClient != null) KfClient.UpdateCookies(_kfTokenService.GetCookies());
                 // Only seems to happen if the bot thinks it's already logged in
                 return;
             }
@@ -276,212 +410,287 @@ public class ChatBot
         _logger.Info("Successfully logged in");
         _logger.Info("Updating cookies");
         await _kfTokenService.SaveCookies();
-        KfClient.UpdateCookies(_kfTokenService.GetCookies());
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+        if (KfClient != null) KfClient.UpdateCookies(_kfTokenService.GetCookies());
     }
     
-    private void OnWhisper(object sender, WhisperModel whisper)
+    /// <summary>
+    /// Work out who a chat principal is in terms the rest of the bot understands (forum ID, row in the Users table).
+    /// Ephyra only deals in principal UUIDs. The forum ID comes from the avatar URL when there is one and from a whois
+    /// against the forum when there isn't, then the UUID is stored against the user so it only has to happen once
+    /// </summary>
+    /// <param name="principal">Principal as received from the chat</param>
+    /// <param name="allowWhois">Whether it's OK to block on a whois lookup if the avatar doesn't give the ID away</param>
+    /// <returns>The user. Id will be 0 if their forum ID couldn't be established</returns>
+    private UserModel ResolveUser(ChatPrincipalModel principal, bool allowWhois)
     {
-        var settings = SettingsProvider.GetMultipleValuesAsync([
-                BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit
-            ]).Result;
-        if (whisper.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value)
+        var unresolved = new UserModel
         {
-            _logger.Debug("Ignoring my own whisper");
-            return;
+            Id = 0, Username = principal.DisplayName, AvatarUrl = principal.AvatarUrl, PrincipalUuid = principal.PrincipalUuid
+        };
+        if (string.IsNullOrEmpty(principal.PrincipalUuid)) return unresolved;
+        lock (_userResolveLock)
+        {
+            if (_knownUsers.TryGetValue(principal.PrincipalUuid, out var known))
+            {
+                if (principal.AvatarUrl != null) known.AvatarUrl = principal.AvatarUrl;
+                // Detect a username change
+                if (principal.DisplayName.Length == 0 || known.Username == principal.DisplayName) return known;
+                _logger.Debug("Username has updated, updating DB");
+                known.Username = principal.DisplayName;
+                using var renameDb = new ApplicationDbContext();
+                var renamed = renameDb.Users.FirstOrDefault(u => u.PrincipalUuid == principal.PrincipalUuid);
+                if (renamed == null) return known;
+                renamed.KfUsername = principal.DisplayName;
+                renameDb.SaveChanges();
+                return known;
+            }
+
+            using var db = new ApplicationDbContext();
+            var userDb = db.Users.FirstOrDefault(u => u.PrincipalUuid == principal.PrincipalUuid);
+            if (userDb == null)
+            {
+                var forumId = principal.ForumUserIdFromAvatar;
+                string? forumUsername = null;
+                if (forumId == null && allowWhois)
+                {
+                    var whois = WhoisPrincipal(principal.PrincipalUuid);
+                    forumId = whois?.UserId;
+                    forumUsername = whois?.Username;
+                }
+
+                if (forumId == null) return unresolved;
+                var username = principal.DisplayName.Length > 0 ? principal.DisplayName : forumUsername ?? $"Unknown {forumId}";
+                userDb = db.Users.FirstOrDefault(u => u.KfId == forumId);
+                if (userDb == null)
+                {
+                    _logger.Debug("Adding user to DB");
+                    userDb = new UserDbModel { KfId = forumId.Value, KfUsername = username, PrincipalUuid = principal.PrincipalUuid };
+                    db.Users.Add(userDb);
+                }
+                else
+                {
+                    if (userDb.PrincipalUuid != null)
+                    {
+                        _logger.Error($"Forum user {forumId} was linked to principal {userDb.PrincipalUuid} but has turned up as {principal.PrincipalUuid}. Relinking.");
+                    }
+                    _logger.Info($"Linking existing user {userDb.KfUsername} ({userDb.KfId}) to principal {principal.PrincipalUuid}");
+                    userDb.PrincipalUuid = principal.PrincipalUuid;
+                }
+            }
+
+            if (principal.DisplayName.Length > 0 && userDb.KfUsername != principal.DisplayName)
+            {
+                _logger.Debug("Username has updated, updating DB");
+                userDb.KfUsername = principal.DisplayName;
+            }
+
+            db.SaveChanges();
+            var user = new UserModel
+            {
+                Id = userDb.KfId, Username = userDb.KfUsername, AvatarUrl = principal.AvatarUrl, PrincipalUuid = principal.PrincipalUuid
+            };
+            _knownUsers[principal.PrincipalUuid] = user;
+            return user;
+        }
+    }
+
+    // Caller must hold _userResolveLock
+    private ChatWhoisModel? WhoisPrincipal(string principalUuid)
+    {
+        if (_whoisFailures.TryGetValue(principalUuid, out var failedAt) && DateTime.UtcNow - failedAt < TimeSpan.FromMinutes(5))
+        {
+            return null;
         }
 
-        var sentMsgMaybe = SentMessages.FirstOrDefault(msg =>
-            msg.Type == SentMessageType.Whisper && msg.WhisperMessage == whisper.MessageRawHtmlDecoded &&
-            msg.Status == SentMessageTrackerStatus.WaitingForResponse);
-        sentMsgMaybe?.Status = SentMessageTrackerStatus.ResponseReceived;
-        _logger.Debug("Passing message to command interface");
-        var botCommandsMsg = new BotCommandMessageModel
-        {
-            Author = whisper.Author,
-            Recipient = whisper.Recipient,
-            Message = whisper.Message,
-            MessageDate = whisper.MessageDate,
-            MessageEditDate = null,
-            MessageRaw = whisper.MessageRaw,
-            MessageRawHtmlDecoded = whisper.MessageRawHtmlDecoded,
-            MessageUuid = null,
-            RoomId = null,
-            IsWhisper = true
-        };
         try
         {
-            _botCommands.ProcessMessage(botCommandsMsg);
+            var whois = _kfTokenService.WhoisAsync(principalUuid, _cancellationToken).Result;
+            if (whois == null)
+            {
+                _logger.Error($"Forum has no idea who principal {principalUuid} is");
+                _whoisFailures[principalUuid] = DateTime.UtcNow;
+                return null;
+            }
+
+            _logger.Info($"Whois says principal {principalUuid} is {whois.Username} ({whois.UserId})");
+            _whoisFailures.Remove(principalUuid);
+            return whois;
         }
         catch (Exception e)
         {
-            _logger.Error("ProcessMessage threw an exception");
+            _logger.Error($"Whois lookup for principal {principalUuid} failed");
             _logger.Error(e);
+            _whoisFailures[principalUuid] = DateTime.UtcNow;
+            return null;
         }
     }
 
-    private void OnKfChatMessage(object sender, List<MessageModel> messages, MessagesJsonModel jsonPayload)
+    private void OnKfChatMessage(object sender, ChatMessageModel chatMessage)
     {
-        // Reset value to 0 as we've now successfully joined
-        if (_joinFailures > 0) _joinFailures = 0;
+        // Side rooms and anything else we didn't ask for
+        if (chatMessage.RoomUuid != RoomUuid) return;
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshDetectEnabled,
-                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.KiwiFarmsUsername, BuiltIn.Keys.BotDisconnectReplayLimit,
-                BuiltIn.Keys.BotRespondToDiscordImpersonation])
+                BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.BotRespondToDiscordImpersonation])
             .Result;
-        // Send messages if there are any to replay (Assuming we DC'd, and it's now the message flood)
-        foreach (var replayMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected)
-                     .TakeLast(settings[BuiltIn.Keys.BotDisconnectReplayLimit].ToType<int>()))
+        // The backlog the chat sends when joining a room from scratch. Stuff we've either dealt with already or weren't
+        // around for, so it's noted but not acted on. (Things missed during a disconnect are NOT history, the chat
+        // replays those from where we left off and they're handled as if they'd just happened)
+        var isHistory = chatMessage.Origin == ChatEntryOrigin.History;
+        var isOwnMessage = chatMessage.Author.PrincipalUuid == KfClient.PrincipalUuid;
+        var author = ResolveUser(chatMessage.Author, allowWhois: !isHistory);
+        // Commands were written for Sneedchat where a mention is just text, so give them @Name instead of [user=uuid]Name[/user]
+        var messageRaw = EphyraBbCode.MentionsToPlainText(chatMessage.BodyBbcode);
+        var message = new BotCommandMessageModel
         {
-            // Bypass the helpful method we have for sending messages so we don't create new sent message items for them
-            // The validation of whether to send based on GambaSesh's presence etc. has already been performed for msgs here
-            KfClient.SendMessage(replayMsg.Message);
-            replayMsg.Status = SentMessageTrackerStatus.WaitingForResponse;
-            replayMsg.SentAt = DateTimeOffset.UtcNow;
+            Author = author,
+            MessageRaw = messageRaw,
+            Message = chatMessage.BodyHtml,
+            MessageDate = chatMessage.PostedAt,
+            MessageEditDate = chatMessage.EditedAt,
+            MessageRawHtmlDecoded = messageRaw,
+            MessageUuid = chatMessage.MessageUuid,
+            RoomUuid = chatMessage.RoomUuid,
+            MessageBbCode = chatMessage.BodyBbcode,
+            MentionedPrincipalUuids = chatMessage.Mentions.Select(mention => mention.PrincipalUuid).ToList()
+        };
+
+        if (message.MessageEditDate == null)
+        {
+            _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.MessageRaw}");
         }
-        foreach(var lostMsg in SentMessages.Where(msg => msg.Status == SentMessageTrackerStatus.ChatDisconnected))
+        // Update last edit timestamp
+        if (isOwnMessage && message.MessageEditDate != null)
         {
-            lostMsg.Status = SentMessageTrackerStatus.Lost;
+            var sentMessage = SentMessages.FirstOrDefault(x => x.ChatMessageUuid == message.MessageUuid);
+            if (sentMessage != null)
+            {
+                sentMessage.LastEdited = message.MessageEditDate.Value;
+            }
         }
-        _logger.Debug($"Received {messages.Count} message(s)");
-        foreach (var message in messages)
+        if (isOwnMessage && message.MessageEditDate == null && !isHistory)
         {
-            if (message.MessageEditDate == null)
+            // The chat echoes the nonce we sent the message with, so there's no guesswork about which one this is
+            var sentMessage = chatMessage.ClientNonce == null
+                ? null
+                : SentMessages.LastOrDefault(sent => sent.ClientNonce == chatMessage.ClientNonce);
+            // Unless the echo got lost to a disconnect. What comes back on the replay has no nonce, so match on content
+            sentMessage ??= SentMessages.FirstOrDefault(sent =>
+                sent.Message == chatMessage.BodyBbcode && sent is { Status: SentMessageTrackerStatus.WaitingForResponse, Type: SentMessageType.ChatMessage });
+            if (sentMessage == null && chatMessage.Origin == ChatEntryOrigin.Recovered)
             {
-                _logger.Info($"KF ({message.MessageDate.ToLocalTime():HH:mm:ss}) <{message.Author.Username}> {message.Message}");
-            }
-            // Update last edit timestamp
-            if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate != null)
-            {
-                var sentMessage = SentMessages.FirstOrDefault(x => x.ChatMessageUuid == message.MessageUuid);
-                if (sentMessage != null)
+                _logger.Error("Received message from chat that I sent but have no idea about. Message Data Follows:");
+                _logger.Error(JsonSerializer.Serialize(message));
+                _logger.Error("Last item inserted into the sent messages collection waiting for response:");
+                var latest =
+                    SentMessages.LastOrDefault(msg => msg is { Status: SentMessageTrackerStatus.WaitingForResponse, Type: SentMessageType.ChatMessage });
+                _logger.Error(JsonSerializer.Serialize(latest));
+                if (latest != null)
                 {
-                    sentMessage.LastEdited = message.MessageEditDate.Value;
-                }
-            }
-            if (message.Author.Username == settings[BuiltIn.Keys.KiwiFarmsUsername].Value && message.MessageEditDate == null)
-            {
-                // MessageRaw is not actually REAL and RAW. The messages are still HTML encoded
-                var decodedMessage = WebUtility.HtmlDecode(message.MessageRaw);
-                var sentMessage = SentMessages.FirstOrDefault(sent =>
-                    sent.Message == decodedMessage && sent is { Status: SentMessageTrackerStatus.WaitingForResponse, Type: SentMessageType.ChatMessage });
-                if (sentMessage == null)
-                {
-                    _logger.Error("Received message from Sneedchat that I sent but have no idea about. Message Data Follows:");
-                    _logger.Error(JsonSerializer.Serialize(message));
-                    _logger.Error("Last item inserted into the sent messages collection waiting for response:");
-                    var latest =
-                        SentMessages.LastOrDefault(msg => msg is { Status: SentMessageTrackerStatus.WaitingForResponse, Type: SentMessageType.ChatMessage });
-                    _logger.Error(JsonSerializer.Serialize(latest));
-                    if (latest != null)
-                    {
-                        // Generally when you msg Sneedchat, the next message you get in response is your message echoed
-                        // back to you. So this fallback should be generally correct and will account for the occasional
-                        // mismatch due to messages not being 1:1 with what we thought we sent
-                        _logger.Info("Just going to lazily associate it with the latest message");
-                        latest.ChatMessageUuid = message.MessageUuid;
-                        latest.Delay = DateTimeOffset.UtcNow - latest.SentAt;
-                        latest.Status = SentMessageTrackerStatus.ResponseReceived;
-                    }
-                }
-                else
-                {
-                    sentMessage.ChatMessageUuid = message.MessageUuid;
-                    sentMessage.Delay = DateTimeOffset.UtcNow - sentMessage.SentAt;
-                    sentMessage.Status = SentMessageTrackerStatus.ResponseReceived;
+                    // Only done for messages replayed after a disconnect, which is the one time an echo can go
+                    // missing. Accounts for the occasional mismatch due to messages not being 1:1 with what we
+                    // thought we sent
+                    _logger.Info("Just going to lazily associate it with the latest message");
+                    sentMessage = latest;
                 }
             }
 
-            if (message.Author.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && BotServices.TemporarilyBypassGambaSeshForDiscord &&
-                message.MessageRaw.Contains("discord16"))
+            if (sentMessage == null)
             {
-                _logger.Info("GambaSesh fixed itself, turning off bypass");
-                BotServices.TemporarilyBypassGambaSeshForDiscord = false;
-            }
-            if (settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !InitialStartCooldown && message.Author.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && !GambaSeshPresent)
-            {
-                _logger.Info("Received a GambaSesh message after cooldown and while thinking he's not here. Setting the presence flag to avoid spamming chat");
-                GambaSeshPresent = true;
-            }
-
-            // Basically the bot will ignore the message if it has been seen before and its edit time is the same
-            // So this avoids reprocessing messages on reconnect while being able to handle edits, even if the edit came
-            // during a disconnect / reconnect event
-            if (!_seenMessages.Any(msg =>
-                    msg.MessageUuid == message.MessageUuid && msg.LastEdited == message.MessageEditDate) &&
-                !InitialStartCooldown)
-            {
-                _logger.Debug("Passing message to command interface");
-                var botCommandsMsg = new BotCommandMessageModel
-                {
-                    Author = message.Author,
-                    MessageRaw = message.MessageRaw,
-                    Message = message.Message,
-                    MessageDate = message.MessageDate,
-                    MessageEditDate = message.MessageEditDate,
-                    MessageRawHtmlDecoded = message.MessageRawHtmlDecoded,
-                    MessageUuid = message.MessageUuid,
-                    Recipient = null,
-                    RoomId = message.RoomId,
-                    IsWhisper = false
-                };
-                try
-                {
-                    _botCommands.ProcessMessage(botCommandsMsg);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error("ProcessMessage threw an exception");
-                    _logger.Error(e);
-                }
-            }
-
-            // Update or add the element to keep it in sync
-            var existingMsg = _seenMessages.FirstOrDefault(msg => msg.MessageUuid == message.MessageUuid);
-            if (existingMsg != null)
-            {
-                existingMsg.LastEdited = message.MessageEditDate;
+                // Somebody is logged into the bot's account elsewhere and posting, or it's from before a restart
+                _logger.Debug($"Message {message.MessageUuid} is from our account but isn't one this instance sent");
             }
             else
             {
-                _seenMessages.Add(new SeenMessageMetadataModel {MessageUuid = message.MessageUuid, LastEdited = message.MessageEditDate});
-            }
-            UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
-            // Strip weird control characters and just allow basic punctuation + whitespace
-            var kindaSanitized = new string(message.MessageRawHtmlDecoded
-                .Where(c => c == ' ' || char.IsPunctuation(c) || char.IsLetter(c) || char.IsDigit(c)).ToArray());
-            var homoglyphFound = false;
-            if (_homoglyphSearch != null)
-            {
-                var searchStrings =
-                    SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDiscordImpersonationSearchStrings).Result
-                    .JsonDeserialize<List<string>>();
-                var lowerStrings = searchStrings?.Select(x => x.ToLower()).ToList();
-                var search = _homoglyphSearch.Search(kindaSanitized.ToLower(), lowerStrings);
-                if (search.Count == 0)
-                {
-                    search = _homoglyphSearch.Search(kindaSanitized, searchStrings);
-                }
-                homoglyphFound = search.Count > 0;
-            }
-            if ((message.MessageEditDate == null || message.MessageDate > DateTimeOffset.UtcNow.AddSeconds(-15))
-                && message.Author.Id != settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() &&
-                message.Author.Username != settings[BuiltIn.Keys.KiwiFarmsUsername].Value &&
-                settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() && kindaSanitized.Contains("[img]") 
-                && homoglyphFound)
-            {
-                var deleteOrNah = SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDiscordImpersonationDeleteAttempt)
-                    .Result.ToBoolean();
-                if (deleteOrNah)
-                {
-                    _ = KfClient.DeleteMessageAsync(message.MessageUuid);
-                }
-                else
-                {
-                    SendChatMessage($"☝️ {message.Author.Username} is a nigger faggot", true);
-                }
+                sentMessage.ChatMessageUuid = message.MessageUuid;
+                sentMessage.Delay = DateTimeOffset.UtcNow - sentMessage.SentAt;
+                sentMessage.Status = SentMessageTrackerStatus.ResponseReceived;
             }
         }
-        
-        if (InitialStartCooldown) InitialStartCooldown = false;
+
+        var gambaSeshUserId = settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>();
+        if (message.Author.Id == gambaSeshUserId && BotServices.TemporarilyBypassGambaSeshForDiscord &&
+            message.MessageRaw.Contains("discord16"))
+        {
+            _logger.Info("GambaSesh fixed itself, turning off bypass");
+            BotServices.TemporarilyBypassGambaSeshForDiscord = false;
+        }
+        if (settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean() && !isHistory && message.Author.Id == gambaSeshUserId && !GambaSeshPresent)
+        {
+            _logger.Info("Received a GambaSesh message while thinking he's not here. Setting the presence flag to avoid spamming chat");
+            GambaSeshPresent = true;
+        }
+
+        // Basically the bot will ignore the message if it has been seen before and its edit time is the same
+        // The chat client already makes sure nothing is delivered twice, this is a second line of defence for the
+        // case where the chat makes us resync a room from scratch
+        if (!_seenMessages.Any(msg =>
+                msg.MessageUuid == message.MessageUuid && msg.LastEdited == message.MessageEditDate) &&
+            !isHistory)
+        {
+            _logger.Debug("Passing message to command interface");
+            try
+            {
+                _botCommands.ProcessMessage(message);
+            }
+            catch (Exception e)
+            {
+                _logger.Error("ProcessMessage threw an exception");
+                _logger.Error(e);
+            }
+        }
+
+        // Update or add the element to keep it in sync
+        var existingMsg = _seenMessages.FirstOrDefault(msg => msg.MessageUuid == message.MessageUuid);
+        if (existingMsg != null)
+        {
+            existingMsg.LastEdited = message.MessageEditDate;
+        }
+        else
+        {
+            _seenMessages.Add(new SeenMessageMetadataModel {MessageUuid = chatMessage.MessageUuid, LastEdited = message.MessageEditDate});
+        }
+
+        // Everything from here on is about things happening right now
+        if (isHistory) return;
+        if (message.Author.Id != 0)
+        {
+            UpdateUserLastActivityAsync(message.Author.Id, WhoWasActivityType.Message).Wait(_cancellationToken);
+        }
+        // Strip weird control characters and just allow basic punctuation + whitespace
+        var kindaSanitized = new string(chatMessage.BodyBbcode
+            .Where(c => c == ' ' || char.IsPunctuation(c) || char.IsLetter(c) || char.IsDigit(c)).ToArray());
+        var homoglyphFound = false;
+        if (_homoglyphSearch != null)
+        {
+            var searchStrings =
+                SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDiscordImpersonationSearchStrings).Result
+                .JsonDeserialize<List<string>>();
+            var lowerStrings = searchStrings?.Select(x => x.ToLower()).ToList();
+            var search = _homoglyphSearch.Search(kindaSanitized.ToLower(), lowerStrings);
+            if (search.Count == 0)
+            {
+                search = _homoglyphSearch.Search(kindaSanitized, searchStrings);
+            }
+            homoglyphFound = search.Count > 0;
+        }
+        if ((message.MessageEditDate == null || message.MessageDate > DateTimeOffset.UtcNow.AddSeconds(-15))
+            && message.Author.Id != gambaSeshUserId &&
+            !isOwnMessage &&
+            settings[BuiltIn.Keys.BotRespondToDiscordImpersonation].ToBoolean() && kindaSanitized.Contains("[img]") 
+            && homoglyphFound)
+        {
+            var deleteOrNah = SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDiscordImpersonationDeleteAttempt)
+                .Result.ToBoolean();
+            if (deleteOrNah)
+            {
+                _ = KfClient.DeleteMessageAsync(chatMessage.MessageUuid);
+            }
+            else
+            {
+                SendChatMessage($"☝️ {message.Author.Username} is a nigger faggot", true);
+            }
+        }
     }
 
     // Reference for Sneedchat hardcoded length limit
@@ -507,8 +716,7 @@ public class ChatBot
             Reference = reference,
             Message = message.TrimEnd(), // Sneedchat trims trailing spaces
             Status = SentMessageTrackerStatus.Unknown,
-            Type = SentMessageType.ChatMessage,
-            WhisperMessage = null
+            Type = SentMessageType.ChatMessage
         };
         if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].ToBoolean())
         {
@@ -526,9 +734,18 @@ public class ChatBot
             return messageTracker;
         }
 
-        if (!KfClient.IsConnected())
+        if (RoomUuid == null)
         {
-            _logger.Info($"Not sending message '{message}' as Sneedchat is not connected");
+            _logger.Info($"Not sending message '{message}' as {BuiltIn.Keys.KiwiFarmsRoomUuid} isn't set");
+            messageTracker.Status = SentMessageTrackerStatus.NotSending;
+            SentMessages.Add(messageTracker);
+            return messageTracker;
+        }
+
+        // Has to be in the room, not just connected, or the chat would never echo the message back to us
+        if (!KfClient.IsJoined(RoomUuid))
+        {
+            _logger.Info($"Not sending message '{message}' as chat is not connected");
             messageTracker.Status = SentMessageTrackerStatus.ChatDisconnected;
             SentMessages.Add(messageTracker);
             return messageTracker;
@@ -558,9 +775,20 @@ public class ChatBot
         
         messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
         messageTracker.SentAt = DateTimeOffset.UtcNow;
+        // The chat echoes this back with the message, which is how OnKfChatMessage ties the two together
+        messageTracker.ClientNonce = EphyraClient.NewClientNonce();
+        messageTracker.SendAttempts = 1;
         _logger.Debug($"Message is {messageTracker.Message.Utf8LengthBytes()} bytes");
         SentMessages.Add(messageTracker);
-        await KfClient.SendMessageInstantAsync(messageTracker.Message);
+        if (!await KfClient.SendMessageAsync(RoomUuid, messageTracker.Message, messageTracker.ClientNonce, _cancellationToken))
+        {
+            // Lost the connection in the last few milliseconds (it'll get replayed) or the chat will never take it
+            // (frozen, or bigger than a frame is allowed to be)
+            messageTracker.Status = KfClient.IsJoined(RoomUuid)
+                ? SentMessageTrackerStatus.Lost
+                : SentMessageTrackerStatus.ChatDisconnected;
+            return messageTracker;
+        }
         if (autoDeleteAfter != null)
         {
             ScheduleMessageAutoDelete(messageTracker, autoDeleteAfter.Value);
@@ -568,78 +796,29 @@ public class ChatBot
         return messageTracker;
     }
     
-    // Reference for Sneedchat hardcoded length limit
-    // https://github.com/jaw-sh/ruforo/blob/master/src/web/chat/connection.rs#L226
     /// <summary>
-    /// Async method for sending a whisper
+    /// Used to send a whisper. Ephyra doesn't have them so this sends nothing at all, the message is just logged.
+    /// (The closest thing is a "side room" which is a different beast: a private room you open with someone)
     /// </summary>
     /// <param name="recipient">Kiwi Farms user ID of the recipient for this whisper</param>
     /// <param name="message">The message you wish to whisper</param>
-    /// <param name="lengthLimitBehavior">What behavior to use when encountering a message that exceeds the length limit</param>
-    /// <param name="lengthLimit">Length limit to enforce in bytes</param>
-    /// <returns>An object you can use to check the status of the message</returns>
-    public async Task<SentMessageTrackerModel> SendWhisperAsync(int recipient, string message, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 2048)
+    /// <param name="lengthLimitBehavior">Ignored</param>
+    /// <param name="lengthLimit">Ignored</param>
+    /// <returns>A tracker which is always NotSending</returns>
+    [Obsolete(WhispersGoneMessage)]
+    public Task<SentMessageTrackerModel> SendWhisperAsync(int recipient, string message, LengthLimitBehavior lengthLimitBehavior = LengthLimitBehavior.TruncateNicely, int lengthLimit = 2048)
     {
-        var settings = await SettingsProvider
-            .GetMultipleValuesAsync([
-                BuiltIn.Keys.KiwiFarmsSuppressChatMessages
-            ]);
-        var originalMessage = message;
-        message = $"/w {recipient} {message}";
-        var reference = Guid.NewGuid().ToString();
+        _logger.Error($"Something tried to whisper {recipient} but whispers don't exist anymore. Message was: {message}");
         var messageTracker = new SentMessageTrackerModel
         {
-            Reference = reference,
-            Message = message.TrimEnd(), // Sneedchat trims trailing spaces
-            Status = SentMessageTrackerStatus.Unknown,
+            Reference = Guid.NewGuid().ToString(),
+            Message = message.TrimEnd(),
+            Status = SentMessageTrackerStatus.NotSending,
             Type = SentMessageType.Whisper,
-            WhisperMessage = originalMessage.TrimEnd()
+            WhisperMessage = message.TrimEnd()
         };
-        if (settings[BuiltIn.Keys.KiwiFarmsSuppressChatMessages].ToBoolean())
-        {
-            _logger.Info("Not sending message as SuppressChatMessages is enabled");
-            _logger.Info($"Message was: {message}");
-            messageTracker.Status = SentMessageTrackerStatus.NotSending;
-            SentMessages.Add(messageTracker);
-            return messageTracker;
-        }
-
-        if (!KfClient.IsConnected())
-        {
-            _logger.Info($"Not sending message '{message}' as Sneedchat is not connected");
-            messageTracker.Status = SentMessageTrackerStatus.ChatDisconnected;
-            SentMessages.Add(messageTracker);
-            return messageTracker;
-        }
-        
-        if (messageTracker.Message.Utf8LengthBytes() > lengthLimit && lengthLimitBehavior != LengthLimitBehavior.DoNothing)
-        {
-            if (lengthLimitBehavior == LengthLimitBehavior.RefuseToSend)
-            {
-                _logger.Info("Refusing to send message as it exceeds the length limit and LengthLimitBehavior is RefuseToSend");
-                messageTracker.Status = SentMessageTrackerStatus.NotSending;
-                SentMessages.Add(messageTracker);
-                return messageTracker;
-            }
-            if (lengthLimitBehavior == LengthLimitBehavior.TruncateNicely)
-            {
-                // '…' is 3 bytes so we have to make room for it
-                messageTracker.Message = messageTracker.Message.TruncateBytes(lengthLimit - 3).TrimEnd() + "…";
-            }
-
-            if (lengthLimitBehavior == LengthLimitBehavior.TruncateExactly)
-            {
-                // TrimEnd in case you end up truncating on a space (happened during testing) as Sneedchat will trim it
-                messageTracker.Message = messageTracker.Message.TruncateBytes(lengthLimit).TrimEnd();
-            }
-        }
-        
-        messageTracker.Status = SentMessageTrackerStatus.WaitingForResponse;
-        messageTracker.SentAt = DateTimeOffset.UtcNow;
-        _logger.Debug($"Message is {messageTracker.Message.Utf8LengthBytes()} bytes");
         SentMessages.Add(messageTracker);
-        await KfClient.SendMessageInstantAsync(messageTracker.Message);
-        return messageTracker;
+        return Task.FromResult(messageTracker);
     }
 
     /// <summary>
@@ -752,55 +931,100 @@ public class ChatBot
 
     public class SentMessageNotFoundException : Exception;
 
-    private void OnUsersJoined(object sender, List<UserModel> users, UsersJsonModel jsonPayload)
+    private void OnUsersJoined(object sender, string roomUuid, List<ChatPrincipalModel> principals)
+    {
+        if (roomUuid != RoomUuid) return;
+        _logger.Debug($"Received {principals.Count} user join events");
+        var needWhois = new List<ChatPrincipalModel>();
+        foreach (var principal in principals)
+        {
+            // No whois here. On joining a room this is everybody in it, and there'd be a lookup for every single
+            // person without an avatar holding up everything else the chat is trying to tell us
+            var user = ResolveUser(principal, allowWhois: false);
+            if (user.Id == 0)
+            {
+                needWhois.Add(principal);
+                continue;
+            }
+            HandleUserJoined(user);
+        }
+
+        if (needWhois.Count == 0) return;
+        _logger.Info($"{needWhois.Count} user(s) joined who can't be identified from their avatar, asking the forum who they are");
+        _ = Task.Run(() => ResolveJoinedUsersAsync(needWhois), _cancellationToken);
+    }
+
+    private async Task ResolveJoinedUsersAsync(List<ChatPrincipalModel> principals)
+    {
+        foreach (var principal in principals)
+        {
+            try
+            {
+                var user = ResolveUser(principal, allowWhois: true);
+                if (user.Id == 0)
+                {
+                    _logger.Error($"{principal.DisplayName} ({principal.PrincipalUuid}) joined but their forum ID couldn't be found, so the bot will ignore them for now");
+                    continue;
+                }
+
+                // They may well have left again by the time the forum got back to us
+                if (RoomUuid == null || KfClient.GetPresence(RoomUuid).All(present => present.PrincipalUuid != principal.PrincipalUuid)) continue;
+                HandleUserJoined(user);
+                // Be gentle with the forum
+                await Task.Delay(TimeSpan.FromMilliseconds(250), _cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Caught an exception while resolving {principal.PrincipalUuid}");
+                _logger.Error(e);
+            }
+        }
+    }
+
+    private void HandleUserJoined(UserModel user)
     {
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled, BuiltIn.Keys.BotKeesSeen])
             .Result;
-        _logger.Debug($"Received {users.Count} user join events");
-        _currentUsersInChat.AddRange(users);
-        using var db = new ApplicationDbContext();
-        foreach (var user in users)
+        lock (_currentUsersLock)
         {
-            if (user.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
-            {
-                _logger.Info("GambaSesh is now present");
-                GambaSeshPresent = true;
-            }
-
-            if (user.Id == 89776 && !settings[BuiltIn.Keys.BotKeesSeen].ToBoolean())
-            {
-                _logger.Info("Kees has joined!");
-                SendChatMessage($":!: :!: {user.Username} has appeared! :!: :!:", true);
-                SettingsProvider.SetValueAsBooleanAsync(BuiltIn.Keys.BotKeesSeen, true).Wait(_cancellationToken);
-            }
-            _logger.Info($"{user.Username} joined!");
-
-            var userDb = db.Users.FirstOrDefault(u => u.KfId == user.Id);
-            if (userDb == null)
-            {
-                db.Users.Add(new UserDbModel { KfId = user.Id, KfUsername = user.Username });
-                _logger.Debug("Adding user to DB");
-                // Immediately add to DB so we can populate activity
-                db.SaveChanges();
-                UpdateUserLastActivityAsync(user.Id, WhoWasActivityType.Join).Wait(_cancellationToken);
-                continue;
-            }
-            // Detect a username change
-            if (userDb.KfUsername != user.Username)
-            {
-                _logger.Debug("Username has updated, updating DB");
-                userDb.KfUsername = user.Username;
-            }
-
-            UpdateUserLastActivityAsync(user.Id, WhoWasActivityType.Join).Wait(_cancellationToken);
+            _currentUsersInChat.RemoveAll(u => u.PrincipalUuid == user.PrincipalUuid);
+            _currentUsersInChat.Add(user);
         }
 
-        db.SaveChanges();
+        if (user.Id == settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>() && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
+        {
+            _logger.Info("GambaSesh is now present");
+            GambaSeshPresent = true;
+        }
+
+        if (user.Id == 89776 && !settings[BuiltIn.Keys.BotKeesSeen].ToBoolean())
+        {
+            _logger.Info("Kees has joined!");
+            SendChatMessage($":!: :!: {user.Username} has appeared! :!: :!:", true);
+            SettingsProvider.SetValueAsBooleanAsync(BuiltIn.Keys.BotKeesSeen, true).Wait(_cancellationToken);
+        }
+        _logger.Info($"{user.Username} joined!");
+        // Adding them to the DB (or noticing a username change) was already taken care of by ResolveUser
+        UpdateUserLastActivityAsync(user.Id, WhoWasActivityType.Join).Wait(_cancellationToken);
     }
 
-    private void OnUsersParted(object sender, List<int> userIds)
+    private void OnUsersParted(object sender, string roomUuid, List<ChatPrincipalModel> principals)
     {
-        _currentUsersInChat.RemoveAll(u => userIds.Contains(u.Id));
+        if (roomUuid != RoomUuid) return;
+        var userIds = new List<int>();
+        lock (_userResolveLock)
+        {
+            foreach (var principal in principals)
+            {
+                // Anyone not in here never had their join processed either
+                if (_knownUsers.TryGetValue(principal.PrincipalUuid, out var user)) userIds.Add(user.Id);
+            }
+        }
+
+        lock (_currentUsersLock)
+        {
+            _currentUsersInChat.RemoveAll(u => principals.Any(principal => principal.PrincipalUuid == u.PrincipalUuid));
+        }
         var settings = SettingsProvider.GetMultipleValuesAsync([BuiltIn.Keys.GambaSeshUserId, BuiltIn.Keys.GambaSeshDetectEnabled])
             .Result;
         if (userIds.Contains(settings[BuiltIn.Keys.GambaSeshUserId].ToType<int>()) && settings[BuiltIn.Keys.GambaSeshDetectEnabled].ToBoolean())
@@ -843,43 +1067,66 @@ public class ChatBot
         await db.SaveChangesAsync(_cancellationToken);
     }
 
+    /// <summary>
+    /// Kick the chat client into dropping whatever connection it has and connecting again right now. The name is a
+    /// leftover from Sneedchat where the whole client had to be thrown away, this one reconnects on its own and only
+    /// needs this if it's been declared dead or has given up
+    /// </summary>
     private async Task RecreateKfClientAsync()
     {
         _lastReconnectAttempt = DateTime.UtcNow;
-        _logger.Info("Disposing and recreating the WS client");
-        KfClient.DisposeWsClient();
-        await KfClient.StartWsClient();
+        _logger.Info("Forcing the chat client to reconnect");
+        await KfClient.ReconnectAsync();
     }
 
-    private void OnKfWsDisconnected(object sender, DisconnectionInfo disconnectionInfo)
+    private void OnKfDisconnected(object sender, ChatDisconnectedModel disconnection)
     {
-        _logger.Error($"Sneedchat disconnected due to {disconnectionInfo.Type}");
-        _logger.Error($"Close Status => {disconnectionInfo.CloseStatus}; Close Status Description => {disconnectionInfo.CloseStatusDescription}");
-        _logger.Error(disconnectionInfo.Exception);
-        _currentUsersInChat.Clear();
-        if (disconnectionInfo.Exception != null && disconnectionInfo.Exception.Message.Contains("status code '203'"))
+        _logger.Error($"Chat disconnected (or never connected). Was Connected => {disconnection.WasConnected}; Was Welcomed => {disconnection.WasWelcomed}");
+        _logger.Error($"Close Code => {disconnection.CloseCode}; Close Description => {disconnection.CloseDescription}; Upgrade Status Code => {disconnection.UpgradeStatusCode}");
+        _logger.Error(disconnection.Exception);
+        lock (_currentUsersLock)
         {
-            _logger.Info("Chat 203'd, getting a new token");
-            RefreshXfToken().Wait(_cancellationToken);
+            _currentUsersInChat.Clear();
         }
-        _logger.Info("Recreating WS client after disconnect");
-        RecreateKfClientAsync().Wait(_cancellationToken);
-    }
-    
-    private void OnKfWsReconnected(object sender, ReconnectionInfo reconnectionInfo)
-    {
-        _lastReconnectAttempt = DateTime.UtcNow;
-        var roomId = SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsRoomId).Result.ToType<int>();
-        _logger.Error($"Sneedchat reconnected due to {reconnectionInfo.Type}");
         _logger.Info("Resetting GambaSesh presence so it can resync if he crashed while the bot was DC'd");
         GambaSeshPresent = false;
-        _logger.Info($"Rejoining {roomId}");
-        KfClient.JoinRoom(roomId);
+        if (disconnection.WillReconnect)
+        {
+            _logger.Info("The chat client will reconnect by itself");
+            return;
+        }
+
+        _logger.Error($"The chat client has given up: {disconnection.HaltReason}. It won't reconnect until the dead bot detection forces it to.");
+    }
+    
+    private void OnKfConnected(object sender, ChatWelcomeModel welcome)
+    {
+        _lastReconnectAttempt = DateTime.UtcNow;
+        _logger.Info($"Chat connected as {welcome.DisplayName} ({welcome.PrincipalUuid}). Link state is {welcome.LinkState}");
+        if (RoomUuid != null) return;
+        // Nothing configured, so at least make it easy to find out what to configure
+        try
+        {
+            var rooms = KfClient.GetRoomHeadsAsync(ct: _cancellationToken).Result;
+            _logger.Error($"{BuiltIn.Keys.KiwiFarmsRoomUuid} isn't set. The chat lists {rooms.Count} room(s):");
+            foreach (var room in rooms)
+            {
+                _logger.Error($"  {room.RoomUuid} => {room.RawJson}");
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Couldn't get the list of rooms from the chat");
+            _logger.Error(e);
+        }
     }
 
     public UserModel? FindUserByName(string username)
     {
-        return _currentUsersInChat.FirstOrDefault(u => u.Username.Equals(username, StringComparison.CurrentCulture));
+        lock (_currentUsersLock)
+        {
+            return _currentUsersInChat.FirstOrDefault(u => u.Username.Equals(username, StringComparison.CurrentCulture));
+        }
     }
 
     public enum LengthLimitBehavior

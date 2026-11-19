@@ -22,7 +22,17 @@ public class SentMessageTrackerModel
     /// <summary>
     /// Contains just the whisper message
     /// </summary>
+    [Obsolete(ChatBot.WhispersGoneMessage)]
     public string? WhisperMessage { get; set; }
+    /// <summary>
+    /// Nonce the message was last sent to Ephyra with. The chat echoes it back which is how the bot knows the message
+    /// is its own. Unlike Reference this changes if the message has to be replayed after a disconnect
+    /// </summary>
+    public string? ClientNonce { get; set; }
+    /// <summary>
+    /// How many times the bot has tried to send this, for giving up on messages the chat keeps refusing
+    /// </summary>
+    public int SendAttempts { get; set; }
 }
 
 public enum SentMessageTrackerStatus
@@ -42,5 +52,6 @@ public enum SentMessageTrackerStatus
 public enum SentMessageType
 {
     ChatMessage,
+    [Obsolete(ChatBot.WhispersGoneMessage)]
     Whisper
 }

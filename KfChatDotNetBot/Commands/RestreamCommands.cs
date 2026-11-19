@@ -2,7 +2,6 @@
 using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace KfChatDotNetBot.Commands;
@@ -22,7 +21,7 @@ public class GetRestreamCommand : ICommand
         CancellationToken ctx)
     {
         var url = await SettingsProvider.GetValueAsync(BuiltIn.Keys.RestreamUrl);
-        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: {url.Value}", true);
+        await botInstance.SendChatMessageAsync($"{message.Author.FormatUsername()}, restream URL: {url.Value}", true);
     }
 }
 
@@ -41,7 +40,7 @@ public class SetRestreamCommand : ICommand
         CancellationToken ctx)
     {
         await SettingsProvider.SetValueAsync(BuiltIn.Keys.RestreamUrl, arguments["url"].Value);
-        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, updated URL", true);
+        await botInstance.SendChatMessageAsync($"{message.Author.FormatUsername()}, updated URL", true);
     }
 }
 
@@ -90,6 +89,6 @@ public class GetRestreamPlainCommand : ICommand
         CancellationToken ctx)
     {
         var url = await SettingsProvider.GetValueAsync(BuiltIn.Keys.RestreamUrl);
-        await botInstance.SendChatMessageAsync($"@{message.Author.Username}, restream URL: [plain]{url.Value}", true);
+        await botInstance.SendChatMessageAsync($"{message.Author.FormatUsername()}, restream URL: [plain]{url.Value}", true);
     }
 }

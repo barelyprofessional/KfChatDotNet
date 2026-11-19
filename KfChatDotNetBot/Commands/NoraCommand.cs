@@ -5,7 +5,6 @@ using KfChatDotNetBot.Models;
 using KfChatDotNetBot.Models.DbModels;
 using KfChatDotNetBot.Services;
 using KfChatDotNetBot.Settings;
-using KfChatDotNetWsClient.Models.Events;
 using NLog;
 
 namespace KfChatDotNetBot.Commands;
@@ -76,7 +75,7 @@ public class NoraCommand : ICommand
                 return;
             }
 
-            var resetKey = ConversationContextManager.GetContextKeyAsync(mode, user.KfId, message.RoomId!.Value);
+            var resetKey = ConversationContextManager.GetContextKeyAsync(mode, user.KfId, message.RoomUuid!);
             var cleared = await manager.ClearContextAsync(resetKey);
             await botInstance.SendChatMessageAsync(
                 cleared
@@ -167,7 +166,7 @@ public class NoraCommand : ICommand
         // Compute context key once (used for mood and later for context messages)
         string? contextKey = null;
         if (!contextDisabled)
-            contextKey = ConversationContextManager.GetContextKeyAsync(contextMode, user.KfId, message.RoomId!.Value);
+            contextKey = ConversationContextManager.GetContextKeyAsync(contextMode, user.KfId, message.RoomUuid!);
 
         // Optionally inject user info into the system prompt
         var userInfoEnabled = settings[BuiltIn.Keys.GrokNoraUserInfoEnabled].Value?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;

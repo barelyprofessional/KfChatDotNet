@@ -7,6 +7,10 @@ public class UserDbModel
     public int Id { get; set; }
     public required string KfUsername { get; set; }
     public int KfId { get; set; }
+    /// <summary>
+    /// Ephyra principal UUID. Null until the user has been seen in the new chat and linked up with their forum ID
+    /// </summary>
+    public string? PrincipalUuid { get; set; }
     public UserRight UserRight { get; set; } = UserRight.Guest;
     public bool Ignored { get; set; } = false;
 }

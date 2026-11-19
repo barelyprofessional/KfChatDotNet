@@ -15,7 +15,7 @@ namespace KfChatDotNetBot.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
             modelBuilder.Entity("KfChatDotNetBot.Models.DbModels.ChipsggBetDbModel", b =>
                 {
@@ -454,6 +454,9 @@ namespace KfChatDotNetBot.Migrations
 
                     b.Property<string>("KfUsername")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PrincipalUuid")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("UserRight")

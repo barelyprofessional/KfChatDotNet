@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-KfChatDotNet is a C# .NET 10.0 chat bot for KiwiFarms (Sneedchat) with extensive third-party integrations. The solution consists of three projects:
+KfChatDotNet is a C# .NET 10.0 chat bot for KiwiFarms chat (Ephyra-Chat, which replaced Sneedchat) with extensive third-party integrations. The solution consists of these projects:
 
-- **KfChatDotNetWsClient**: WebSocket client library for KiwiFarms chat communication
+- **EphyraChatClient**: Client library for Ephyra-Chat, the current KiwiFarms chat. This is what the bot uses
+- **KfChatDotNetWsClient**: Legacy WebSocket client library for Sneedchat. No longer referenced by the bot
 - **KickWsClient**: WebSocket client library for Kick platform integration
 - **KfChatDotNetBot**: Main bot application with command handling and service integrations
 
@@ -53,13 +54,18 @@ Migrations run automatically on startup via `Program.cs`.
 
 ### Message Flow
 
-1. **ChatClient** ([KfChatDotNetWsClient/ChatClient.cs](KfChatDotNetWsClient/ChatClient.cs)): WebSocket connection and event emission
-   - Connects to KiwiFarms WebSocket endpoint
-   - Parses incoming packets and emits typed events
-   - Handles reconnection logic and cookie management
+1. **EphyraClient** ([EphyraChatClient/EphyraClient.cs](EphyraChatClient/EphyraClient.cs), public API in [EphyraClient.Api.cs](EphyraChatClient/EphyraClient.Api.cs)): WebSocket connection and event emission
+   - Connects to `{KiwiFarms.ChatEndpoint}/v1/connect` using raw `ClientWebSocket` (no Websocket.Client)
+   - Looks after itself: reconnects with backoff, pings, rejoins rooms from the last sequence seen (nothing missed or duplicated)
+   - When the chat host refuses the session (401 on upgrade, close 4001/4003) it gets a ticket via `TicketProvider` and swaps it for an `ephyra_chat_session` cookie
+   - Parses frames and emits typed events one at a time on a dedicated dispatcher thread, so handlers may block
+   - Users are identified by principal UUID only. Rooms are UUIDs (`KiwiFarms.RoomUuid`)
+   - Edits/deletes need the message's current state sequence. The client tracks it and `EditMessageAsync`/`DeleteMessageAsync` wait for the host's acknowledgement
+   - There are no whispers and no MOTD. Whisper-related members in the bot are `[Obsolete]` so usages show up as CS0618 warnings
 
 2. **ChatBot** ([KfChatDotNetBot/ChatBot.cs](KfChatDotNetBot/ChatBot.cs)): Core bot orchestration
-   - Subscribes to ChatClient events
+   - Subscribes to EphyraClient events
+   - Maps chat principals to forum users (`ResolveUser`): forum ID from the avatar URL, falling back to the forum's whois endpoint, stored in `Users.PrincipalUuid`
    - Manages sent message tracking and auto-deletion
    - Handles GambaSesh presence detection
    - Coordinates with BotServices for external integrations
@@ -154,7 +160,7 @@ GambaSesh is another bot that the bot avoids conflicting with:
 
 ### Length Limits
 
-Sneedchat enforces a 1023-byte message limit:
+Sneedchat enforced a 1023-byte message limit. Ephyra's only known hard limit is 16KB for the whole frame, the bot still defaults to 2048 bytes:
 - `SendChatMessage()` accepts `LengthLimitBehavior` enum: TruncateNicely, TruncateExactly, RefuseToSend, DoNothing
 - Use `string.Utf8LengthBytes()` extension method to check length
 - Use `string.TruncateBytes(limit)` extension method to truncate safely
@@ -162,10 +168,10 @@ Sneedchat enforces a 1023-byte message limit:
 ### Session Management
 
 The bot handles KiwiFarms authentication via cookies:
-- `KfTokenService` manages login and cookie refresh
-- On `203` status code or "cannot join room" errors, cookies are refreshed
-- Cookies are persisted to the database
-- Bot can operate in "guest mode" with no cookies
+- `KfTokenService` manages forum login, KiwiFlare and cookie refresh
+- The chat host has its own session cookie (`ephyra_chat_session`). When it's refused, EphyraClient calls the bot's ticket provider (`ChatBot.GetChatTicketAsync` -> `KfTokenService.GetChatTicketAsync`) which logs in if needed and POSTs to `/ephyra-chat/ticket`
+- Cookies (including the chat session) are persisted to the database
+- `KfTokenService.WhoisAsync` resolves a principal UUID to a forum user via `/ephyra-chat/whois.json`
 
 ## Common Tasks
 
