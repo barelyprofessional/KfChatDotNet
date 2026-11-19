@@ -25,7 +25,7 @@ public class WhoisCommand : ICommand
         var queryUser = await db.Users.FirstOrDefaultAsync(u => u.KfUsername == query, cancellationToken: ctx);
         if (queryUser != null)
         {
-            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {queryUser.KfUsername}'s ID is {queryUser.KfId}", true);
+            await botInstance.SendChatMessageAsync($"{user.FormatUsername()}, {queryUser.KfUsername}'s forum ID is {queryUser.KfId} and their chat UUID is {queryUser.PrincipalUuid ?? "Unknown"}", true);
             return;
         }
 
