@@ -56,6 +56,19 @@ public partial class EphyraClient : IAsyncDisposable
 
     /// <summary>When anything at all was last received from the chat host (pongs included)</summary>
     public DateTime LastPacketReceived = DateTime.UtcNow;
+    /// <summary>
+    /// How long ago the event that's being handled right now came in, zero when the handlers are caught up.
+    /// Events are handed out one at a time, so if this keeps growing a handler is stuck and nothing behind it is being
+    /// delivered (messages included), even though the connection itself still looks perfectly healthy
+    /// </summary>
+    public TimeSpan EventBacklogAge
+    {
+        get
+        {
+            var since = Interlocked.Read(ref _dispatchingSince);
+            return since == 0 ? TimeSpan.Zero : TimeSpan.FromTicks(Math.Max(0, DateTime.UtcNow.Ticks - since));
+        }
+    }
     /// <summary>Who the chat host says we are. Null until the first welcome</summary>
     public string? PrincipalUuid { get; private set; }
     public string? DisplayName { get; private set; }
@@ -93,7 +106,10 @@ public partial class EphyraClient : IAsyncDisposable
     private readonly MessageStateCache _messageStates = new();
     private readonly KeyedLock _messageLocks = new();
 
-    private readonly Channel<Action> _events = Channel.CreateUnbounded<Action>(new UnboundedChannelOptions { SingleReader = true });
+    private readonly Channel<(Action Handler, long QueuedTicks)> _events =
+        Channel.CreateUnbounded<(Action Handler, long QueuedTicks)>(new UnboundedChannelOptions { SingleReader = true });
+    // When the event that's being handled right now was queued, 0 if nothing is being handled
+    private long _dispatchingSince;
 
     private class Connection(ClientWebSocket socket, CancellationTokenSource cts)
     {
@@ -1381,21 +1397,26 @@ public partial class EphyraClient : IAsyncDisposable
 
     private void Raise(Action action)
     {
-        _events.Writer.TryWrite(action);
+        _events.Writer.TryWrite((action, DateTime.UtcNow.Ticks));
     }
 
     private async Task DispatchEventsAsync()
     {
-        await foreach (var action in _events.Reader.ReadAllAsync())
+        await foreach (var (handler, queuedTicks) in _events.Reader.ReadAllAsync())
         {
+            Interlocked.Exchange(ref _dispatchingSince, queuedTicks);
             try
             {
-                action();
+                handler();
             }
             catch (Exception e)
             {
                 _logger.Error("An event handler threw an exception");
                 _logger.Error(e);
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _dispatchingSince, 0);
             }
         }
     }

@@ -37,7 +37,10 @@ public class ChatBot
     private KfTokenService _kfTokenService;
     private int _joinFailures = 0;
     private Task _kfDeadBotDetection;
+    // When the watchdog last kicked the chat client. Only there to stop it doing that more than once a minute
     private DateTime _lastReconnectAttempt = DateTime.UtcNow;
+    // When the bot was last seen in working order (see IsChatAlive). This is what the dead bot detection goes off
+    private DateTime _lastAlive = DateTime.UtcNow;
     private List<ScheduledAutoDeleteModel> _scheduledDeletions = [];
     private Task _scheduledAutoDeleteTask;
     private List<UserModel> _currentUsersInChat = [];
@@ -261,24 +264,50 @@ public class ChatBot
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
-            // The chat client pings and reconnects by itself. This is only here to give it a kick if it somehow
-            // manages to sit there receiving nothing at all (pongs count) for longer than the inactivity timeout
-            if (KfClient.IsHalted())
+            try
             {
-                _logger.Debug("Chat client has given up (banned or not permitted), leaving it to the dead bot detection");
-                continue;
-            }
-            var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
-            var lastReconnect = DateTime.UtcNow - _lastReconnectAttempt;
+                // The chat client pings and reconnects by itself. This is only here to give it a kick if it somehow
+                // manages to sit there receiving nothing at all (pongs count) for longer than the inactivity timeout
+                if (KfClient.IsHalted())
+                {
+                    _logger.Debug("Chat client has given up (banned or not permitted), leaving it to the dead bot detection");
+                    continue;
+                }
+                var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
+                var lastReconnect = DateTime.UtcNow - _lastReconnectAttempt;
 
-            _logger.Debug($"Last KF event was {inactivityTime:g} ago");
-            var inactivityTimeout = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
-            if (inactivityTime.TotalSeconds > inactivityTimeout && lastReconnect.TotalMinutes > 1)
+                _logger.Debug($"Last KF event was {inactivityTime:g} ago");
+                var inactivityTimeout = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.KiwiFarmsInactivityTimeout)).ToType<int>();
+                if (inactivityTime.TotalSeconds > inactivityTimeout && lastReconnect.TotalMinutes > 1)
+                {
+                    _logger.Error("Forcing reconnect as bot is completely dead");
+                    await RecreateKfClientAsync();
+                }
+            }
+            catch (Exception e)
             {
-                _logger.Error("Forcing reconnect as bot is completely dead");
-                await RecreateKfClientAsync();
+                // Nothing is watching this task, if it dies it takes the watchdog with it for good
+                _logger.Error("Chat watchdog threw an exception, it'll try again next tick");
+                _logger.Error(e);
             }
         }
+    }
+
+    /// <summary>
+    /// Whether the bot is in working order right now: connected, sat in its room, hearing from the chat host and
+    /// keeping up with what it's being sent
+    /// </summary>
+    private bool IsChatAlive()
+    {
+        // The dead bot detection starts before the client exists. A bot that's stuck starting up isn't alive either
+        if (KfClient is not { } client) return false;
+        if (client.IsHalted()) return false;
+        // Being connected isn't enough. If the chat won't let us in the room (or threw us out of it) the pongs keep
+        // coming and the bot is just as useless as if it were disconnected
+        if (RoomUuid == null ? !client.IsConnected() : !client.IsJoined(RoomUuid)) return false;
+        if (DateTime.UtcNow - client.LastPacketReceived > TimeSpan.FromMinutes(10)) return false;
+        // A stuck event handler means no messages get through to the bot even though the connection is fine
+        return client.EventBacklogAge < TimeSpan.FromMinutes(2);
     }
     
     private async Task KfDeadBotDetectionTask()
@@ -287,21 +316,49 @@ public class ChatBot
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(_cancellationToken))
         {
-            var inactivityTime = DateTime.UtcNow - KfClient.LastPacketReceived;
-            var deadTime = DateTime.UtcNow - _lastReconnectAttempt;
-            // No connection and no successful reconnection attempt in the last 5 minutes
-            // Either the site is completely dead or the bot got screwed by a nasty error and can't reconnect
-            if (inactivityTime > TimeSpan.FromMinutes(10) && deadTime > TimeSpan.FromMinutes(15))
+            try
             {
+                if (IsChatAlive())
+                {
+                    _lastAlive = DateTime.UtcNow;
+                    continue;
+                }
+
+                // This is counted from when the bot last actually worked, not from the last attempt at fixing it.
+                // It used to go off the last reconnect attempt, which the watchdog makes every minute while the bot is
+                // down, so the clock never ran out and the bot never got reaped
+                var deadTime = DateTime.UtcNow - _lastAlive;
+                // Read every time so it can be changed without restarting the bot
+                var threshold = TimeSpan.FromSeconds(
+                    (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotDeadBotThreshold)).ToType<int>());
+                // Not been in working order for that long straight (15 minutes by default), and the chat client and
+                // the watchdog have had plenty of goes at it by now. Either the site is completely dead or the bot
+                // got screwed by a nasty error and can't recover
+                if (deadTime <= threshold) continue;
                 var shouldExit = (await SettingsProvider.GetValueAsync(BuiltIn.Keys.BotExitOnDeath)).ToBoolean();
                 _logger.Error("The bot as is dead beyond belief right now");
-                _logger.Error($"IsConnected() -> {KfClient.IsConnected()}");
-                _logger.Error($"IsHalted() -> {KfClient.IsHalted()}");
-                _logger.Error($"inactivityTime -> {inactivityTime:g}");
-                _logger.Error($"deadTime -> {deadTime:g}");
+                _logger.Error($"IsConnected() -> {KfClient?.IsConnected()}");
+                _logger.Error($"IsHalted() -> {KfClient?.IsHalted()}");
+                _logger.Error($"In the room -> {(RoomUuid == null ? null : KfClient?.IsJoined(RoomUuid))}");
+                _logger.Error($"inactivityTime -> {DateTime.UtcNow - KfClient?.LastPacketReceived:g}");
+                _logger.Error($"Event backlog -> {KfClient?.EventBacklogAge:g}");
+                _logger.Error($"deadTime -> {deadTime:g} (threshold is {threshold:g})");
                 if (shouldExit) Environment.Exit(1);
+                // Start the clock again so this goes off once per threshold instead of every tick
+                _lastAlive = DateTime.UtcNow;
+                if (KfClient == null)
+                {
+                    _logger.Error("Since we didn't exit and there's no chat client yet (startup is stuck), there's nothing to reconnect");
+                    continue;
+                }
                 _logger.Error("Since we didn't exit, let's try forcing a reconnect");
                 await RecreateKfClientAsync();
+            }
+            catch (Exception e)
+            {
+                // Nothing is watching this task, if it dies there's no dead bot detection for the rest of the run
+                _logger.Error("Dead bot detection threw an exception, it'll try again next tick");
+                _logger.Error(e);
             }
         }
     }
