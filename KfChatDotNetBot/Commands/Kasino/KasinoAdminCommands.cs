@@ -60,9 +60,8 @@ public class TempExcludeCommand : ICommand
         var activeExclusion = await Money.GetActiveExclusionAsync(targetGambler!.Id, ctx);
         if (activeExclusion != null)
         {
-            var length = DateTimeOffset.UtcNow - activeExclusion.Expires;
             await botInstance.SendChatMessageAsync(
-                $"{user.FormatUsername()}, {targetUser.KfUsername} is already excluded for another {length.Humanize()}",
+                $"{user.FormatUsername()}, {targetUser.KfUsername} is already excluded until {activeExclusion.Expires}",
                 true);
             return;
         }
