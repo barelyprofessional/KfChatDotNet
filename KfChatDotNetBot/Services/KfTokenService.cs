@@ -62,18 +62,8 @@ public class KfTokenService
                     return;
                 }
                 var solution = await _kiwiFlare.SolveChallenge(challenge);
-                string token;
-                if (challenge.IsTtrs)
-                {
-                    token = await _kiwiFlare.SubmitAnswerTtrs(solution);
-                    _cookies.Add(new Cookie("ttrs_clearance", token, "/", _kfDomain));
-
-                }
-                else
-                {
-                    token = await _kiwiFlare.SubmitAnswer(solution);
-                    _cookies.Add(new Cookie("sssg_clearance", token, "/", _kfDomain));
-                }
+                var token = await _kiwiFlare.SubmitAnswer(solution);
+                _cookies.Add(new Cookie(KiwiFlare.ClearanceCookieName, token, "/", _kfDomain));
                 _logger.Debug("Successfully retrieved a new token and added to the cookie container");
                 return;
             }
