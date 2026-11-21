@@ -34,6 +34,13 @@ public class EphyraClientConfigModel
     /// <see cref="Cookies"/>, which is fine as long as nothing like KiwiFlare is standing in the way
     /// </summary>
     public Func<CancellationToken, Task<string>>? TicketProvider { get; set; }
+    /// <summary>
+    /// Called when a 203 comes back in place of what was asked for (the WebSocket upgrade included), which is how
+    /// KiwiFlare / Tartarus says it wants a challenge solved before it lets anything through. Solve it and return the
+    /// cookies that prove it (ttrs_clearance), they go in the jar and whatever got the 203 is tried again. Throw if it
+    /// can't be solved. Leave null and the client has no way past the challenge, it'll just keep retrying
+    /// </summary>
+    public Func<CancellationToken, Task<Dictionary<string, string>>>? ChallengeSolver { get; set; }
     /// <summary>Path of the forum's ticket route relative to <see cref="ForumBaseUri"/></summary>
     public string TicketPath { get; set; } = "/ephyra-chat/ticket";
     /// <summary>Path of the forum's principal lookup relative to <see cref="ForumBaseUri"/></summary>

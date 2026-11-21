@@ -44,7 +44,11 @@ public enum ChatAdmissionFailure
     /// <summary>Got a ticket, but the chat host wouldn't swap it for a session</summary>
     ChatHostRefused,
     /// <summary>The ticket provider you supplied threw</summary>
-    TicketProviderFailed
+    TicketProviderFailed,
+    /// <summary>
+    /// A challenge (203) is standing in the way and it couldn't be solved, or there's no challenge solver configured
+    /// </summary>
+    ChallengeFailed
 }
 
 public class ChatAdmissionFailedModel

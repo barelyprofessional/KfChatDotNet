@@ -95,7 +95,9 @@ public class ChatBot
             Proxy = settings[BuiltIn.Keys.KiwiFarmsProxy].Value,
             // The chat host calls on this whenever it stops accepting our session. Going through the token service
             // means KiwiFlare and logging back into the forum are taken care of
-            TicketProvider = GetChatTicketAsync
+            TicketProvider = GetChatTicketAsync,
+            // And this when KiwiFlare answers the chat with a 203 because it wants its challenge solved
+            ChallengeSolver = SolveChatChallengeAsync
         });
   
         _logger.Debug("Creating bot command instance");
@@ -156,7 +158,28 @@ public class ChatBot
             settings[BuiltIn.Keys.KiwiFarmsPassword].Value, ct);
         // We may have logged in or solved a challenge along the way
         await _kfTokenService.SaveCookies();
+        // The chat host sits behind the same KiwiFlare as the forum, so it needs any new clearance cookie as well
+        KfClient.UpdateCookies(ForumCookiesForChat());
         return ticket;
+    }
+
+    /// <summary>
+    /// Challenge solver for the chat client. Gets called from its connection loop when KiwiFlare answers with a 203
+    /// </summary>
+    private async Task<Dictionary<string, string>> SolveChatChallengeAsync(CancellationToken ct)
+    {
+        _logger.Info("Chat 203'd, solving the KiwiFlare challenge");
+        await _kfTokenService.SolveChallengeAsync();
+        await _kfTokenService.SaveCookies();
+        return ForumCookiesForChat();
+    }
+
+    // Everything in the token service's jar apart from the chat session. That one belongs to the chat client, the
+    // copy here is only for persisting it and might be an old one
+    private Dictionary<string, string> ForumCookiesForChat()
+    {
+        return _kfTokenService.GetCookies().Where(cookie => cookie.Key != EphyraClient.SessionCookieName)
+            .ToDictionary(cookie => cookie.Key, cookie => cookie.Value);
     }
 
     private void OnSessionEstablished(object sender)

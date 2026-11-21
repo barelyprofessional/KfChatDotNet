@@ -87,6 +87,15 @@ public class KfTokenService
         throw new Exception("Failed to solve the challenge");
     }
 
+    /// <summary>
+    /// Solve the KiwiFlare challenge and put the clearance cookie it earns in the jar. For when something outside this
+    /// class got a 203, such as the chat's WebSocket
+    /// </summary>
+    public async Task SolveChallengeAsync()
+    {
+        await GetNewClearanceToken();
+    }
+
     private async Task<string> GetLoginPage()
     {
         using var client = new HttpClient(GetHttpClientHandler());

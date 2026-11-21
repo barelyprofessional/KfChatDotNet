@@ -170,6 +170,7 @@ Sneedchat enforced a 1023-byte message limit. Ephyra's only known hard limit is 
 The bot handles KiwiFarms authentication via cookies:
 - `KfTokenService` manages forum login, KiwiFlare and cookie refresh
 - The chat host has its own session cookie (`ephyra_chat_session`). When it's refused, EphyraClient calls the bot's ticket provider (`ChatBot.GetChatTicketAsync` -> `KfTokenService.GetChatTicketAsync`) which logs in if needed and POSTs to `/ephyra-chat/ticket`
+- The chat host sits behind KiwiFlare too. A 203 to the WebSocket upgrade (or the chat's REST calls) makes EphyraClient call the bot's challenge solver (`ChatBot.SolveChatChallengeAsync` -> `KfTokenService.SolveChallengeAsync`) and retry with the clearance cookie it returns
 - Cookies (including the chat session) are persisted to the database
 - `KfTokenService.WhoisAsync` resolves a principal UUID to a forum user via `/ephyra-chat/whois.json`
 

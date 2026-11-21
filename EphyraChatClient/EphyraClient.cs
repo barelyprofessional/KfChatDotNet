@@ -30,6 +30,8 @@ public partial class EphyraClient : IAsyncDisposable
     public const string SessionCookieName = "ephyra_chat_session";
     /// <summary>Largest frame (as UTF-8 encoded JSON) the chat host will take</summary>
     public const int MaxFrameBytes = 16 * 1024;
+    // What KiwiFlare / Tartarus answers with when it wants a challenge solved before it'll pass anything on
+    private const int ChallengeStatusCode = 203;
     // Close code the web client uses when the host stops answering pings
     private const int PongTimeoutCloseCode = 4008;
 
@@ -95,6 +97,9 @@ public partial class EphyraClient : IAsyncDisposable
     private CancellationTokenSource? _runCts;
     private CancellationTokenSource? _delayCts;
     private int _forceReconnect;
+    private readonly SemaphoreSlim _challengeLock = new(1, 1);
+    // Goes up every time a challenge gets solved
+    private int _challengeGeneration;
     private volatile bool _halted;
     private volatile Connection? _connection;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
@@ -432,6 +437,7 @@ public partial class EphyraClient : IAsyncDisposable
     {
         var attempts = 0;
         var admissionTried = false;
+        var challengeTried = false;
         var staleRetries = 0;
         var readmittedAfter4003 = false;
         while (!ct.IsCancellationRequested)
@@ -507,6 +513,26 @@ public partial class EphyraClient : IAsyncDisposable
                     _halted = true;
                 }
                 return;
+            }
+
+            // A 203 to the upgrade never reached the chat host. It's the challenge in front of it wanting solving
+            if (end is { Connected: false, UpgradeStatus: ChallengeStatusCode })
+            {
+                considerAdmission = false;
+                if (!challengeTried && await SolveChallengeAsync(ct))
+                {
+                    // Straight back in with the clearance. Same latch idea as below: if that still gets a 203 it's
+                    // the backoff next instead of solving challenges flat out
+                    challengeTried = true;
+                    continue;
+                }
+
+                challengeTried = false;
+                delay = ReconnectDelay(attempts++);
+            }
+            else
+            {
+                challengeTried = false;
             }
 
             if (considerAdmission)
@@ -814,6 +840,89 @@ public partial class EphyraClient : IAsyncDisposable
     }
 
     /// <summary>
+    /// Get the challenge solver to solve whatever is standing in front of the chat host and put the cookies it comes
+    /// back with in the jar
+    /// </summary>
+    /// <returns>True if there are new cookies to try again with</returns>
+    private async Task<bool> SolveChallengeAsync(CancellationToken ct)
+    {
+        var solver = _config.ChallengeSolver;
+        if (solver == null)
+        {
+            _logger.Error("Got a 203, so there's a challenge to solve before the chat host can be reached, but no ChallengeSolver is configured");
+            Raise(() => OnAdmissionFailed?.Invoke(this, new ChatAdmissionFailedModel
+                { Failure = ChatAdmissionFailure.ChallengeFailed, StatusCode = ChallengeStatusCode }));
+            return false;
+        }
+
+        var generation = Volatile.Read(ref _challengeGeneration);
+        try
+        {
+            await _challengeLock.WaitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+
+        try
+        {
+            // Somebody else got a 203 at the same time and solved it while we were waiting, no need to do it twice
+            if (Volatile.Read(ref _challengeGeneration) != generation) return true;
+            _logger.Info("Got a 203, so there's a challenge to solve before the chat host can be reached. Solving it");
+            var cookies = await solver(ct);
+            if (cookies.Count == 0)
+            {
+                _logger.Error("Challenge solver came back without any cookies");
+                Raise(() => OnAdmissionFailed?.Invoke(this, new ChatAdmissionFailedModel
+                    { Failure = ChatAdmissionFailure.ChallengeFailed, StatusCode = ChallengeStatusCode }));
+                return false;
+            }
+
+            LoadCookies(cookies);
+            Interlocked.Increment(ref _challengeGeneration);
+            _logger.Info("Challenge solved");
+            return true;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception e)
+        {
+            _logger.Error("Caught an exception while trying to solve the challenge");
+            _logger.Error(e);
+            Raise(() => OnAdmissionFailed?.Invoke(this, new ChatAdmissionFailedModel
+                { Failure = ChatAdmissionFailure.ChallengeFailed, StatusCode = ChallengeStatusCode, Exception = e }));
+            return false;
+        }
+        finally
+        {
+            _challengeLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Send a request to the chat host. If it's answered with a challenge instead, solve that and send it once more.
+    /// A 203 can still come back from this if the challenge couldn't be solved, callers must not take it for success
+    /// </summary>
+    /// <param name="build">Builds the request. Called again for the second attempt as a request can't be sent twice</param>
+    /// <param name="ct">Cancellation token</param>
+    private async Task<HttpResponseMessage> SendPastChallengeAsync(Func<HttpRequestMessage> build, CancellationToken ct)
+    {
+        HttpResponseMessage response;
+        using (var request = build())
+        {
+            response = await Http().SendAsync(request, ct);
+        }
+
+        if ((int)response.StatusCode != ChallengeStatusCode || !await SolveChallengeAsync(ct)) return response;
+        response.Dispose();
+        using var retry = build();
+        return await Http().SendAsync(retry, ct);
+    }
+
+    /// <summary>
     /// Get a ticket off the forum and swap it for a chat session cookie
     /// </summary>
     private async Task<bool> AdmitAsync(CancellationToken ct)
@@ -861,13 +970,17 @@ public partial class EphyraClient : IAsyncDisposable
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, ApiUri("sessions"));
-            request.Content = new StringContent(JsonSerializer.Serialize(new Dictionary<string, string> { ["ticket"] = ticket }),
-                Encoding.UTF8, "application/json");
-            var origin = Origin();
-            if (origin != null) request.Headers.TryAddWithoutValidation("Origin", origin);
-            using var response = await Http().SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode)
+            using var response = await SendPastChallengeAsync(() =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, ApiUri("sessions"));
+                request.Content = new StringContent(JsonSerializer.Serialize(new Dictionary<string, string> { ["ticket"] = ticket }),
+                    Encoding.UTF8, "application/json");
+                var origin = Origin();
+                if (origin != null) request.Headers.TryAddWithoutValidation("Origin", origin);
+                return request;
+            }, ct);
+            // 203 counts as success as far as HttpClient is concerned, but it's a challenge page and not a session
+            if (!response.IsSuccessStatusCode || (int)response.StatusCode == ChallengeStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync(ct);
                 _logger.Error($"Chat host wouldn't take the ticket. Returned {(int)response.StatusCode}: {body}");

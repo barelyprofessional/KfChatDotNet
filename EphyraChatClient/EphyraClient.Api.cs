@@ -412,9 +412,7 @@ public partial class EphyraClient
     /// <returns>Null if the host has no such message (or we're not allowed to see it)</returns>
     public async Task<ChatRowModel?> GetMessageAsync(string messageUuid, CancellationToken ct = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, ApiUri($"messages/{Uri.EscapeDataString(messageUuid)}"));
-        request.Headers.Accept.ParseAdd("application/json");
-        using var response = await Http().SendAsync(request, ct);
+        using var response = await GetJsonAsync(ApiUri($"messages/{Uri.EscapeDataString(messageUuid)}"), ct);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
@@ -431,9 +429,7 @@ public partial class EphyraClient
     /// <param name="ct">Cancellation token</param>
     public async Task<List<ChatRoomHeadModel>> GetRoomHeadsAsync(string kind = "listed", CancellationToken ct = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, ApiUri($"rooms/heads?kind={Uri.EscapeDataString(kind)}"));
-        request.Headers.Accept.ParseAdd("application/json");
-        using var response = await Http().SendAsync(request, ct);
+        using var response = await GetJsonAsync(ApiUri($"rooms/heads?kind={Uri.EscapeDataString(kind)}"), ct);
         response.EnsureSuccessStatusCode();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
         var rooms = new List<ChatRoomHeadModel>();
@@ -451,6 +447,21 @@ public partial class EphyraClient
         }
 
         return rooms;
+    }
+
+    // GET something off the chat host's REST API, solving the challenge in front of it if there is one
+    private async Task<HttpResponseMessage> GetJsonAsync(Uri uri, CancellationToken ct)
+    {
+        var response = await SendPastChallengeAsync(() =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, uri);
+            request.Headers.Accept.ParseAdd("application/json");
+            return request;
+        }, ct);
+        if ((int)response.StatusCode != ChallengeStatusCode) return response;
+        // HttpClient counts a 203 as success, but what came back is a challenge page and not what was asked for
+        response.Dispose();
+        throw new HttpRequestException("Chat host is behind a challenge (203) which couldn't be solved", null, HttpStatusCode.NonAuthoritativeInformation);
     }
 
     /// <summary>
