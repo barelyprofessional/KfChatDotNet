@@ -10,9 +10,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="FlareSolverrSharp" Version="3.0.7" />
+      <PackageReference Include="FlareSolverrSharp" Version="4.0.0" />
       <PackageReference Include="Homoglyphic" Version="2.0.1" />
-      <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+      <PackageReference Include="HtmlAgilityPack" Version="1.13.1" />
       <PackageReference Include="Humanizer.Core" Version="3.0.10" />
       <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
@@ -21,18 +21,18 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9" />
-      <PackageReference Include="Nerdbank.GitVersioning" Version="3.10.85">
+      <PackageReference Include="Nerdbank.GitVersioning" Version="3.10.94">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="NLog" Version="6.1.3" />
-      <PackageReference Include="Raffinert.FuzzySharp" Version="5.0.2" />
+      <PackageReference Include="NLog" Version="6.2.2" />
+      <PackageReference Include="Raffinert.FuzzySharp" Version="6.0.2" />
       <PackageReference Include="RandN" Version="0.5.0" />
       <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
       <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
-      <PackageReference Include="StackExchange.Redis" Version="3.0.7" />
+      <PackageReference Include="StackExchange.Redis" Version="3.4.35" />
       <PackageReference Include="System.Runtime.Caching" Version="10.0.9" />
-      <PackageReference Include="Websocket.Client" Version="5.5.0" />
+      <PackageReference Include="Websocket.Client" Version="5.5.1" />
       <PackageReference Include="Zalgo" Version="0.3.0" />
     </ItemGroup>
 
